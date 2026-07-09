@@ -29,7 +29,7 @@ const config = {
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'Destiny-GPU',
   projectName: 'study-python',
-  
+  trailingSlash: false,
 
   onBrokenLinks: 'throw',
 
