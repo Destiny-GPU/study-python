@@ -88,7 +88,9 @@ instance/
 .scrapy
 
 # documentation
-docs/
+docs/node_modules/
+docs/build/
+docs/.docusaurus/
 
 # PyBuilder
 .pybuilder/
