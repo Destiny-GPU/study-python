@@ -1,0 +1,953 @@
+---
+sidebar_position: 4
+sidebar_label: '上下文管理器'
+title: 上下文管理器
+description: 学习 with 语句、__enter__/__exit__ 协议、contextlib.contextmanager 装饰器、ExitStack、async with 以及 contextlib.suppress/redirect_stdout 等实用工具，通过数据库连接管理实战掌握资源清理
+---
+
+# 上下文管理器
+
+上下文管理器（context manager）是 Python 中管理"资源获取—资源释放"配对的机制。无论代码块是正常结束还是因异常退出，它都能保证清理代码被执行——避免文件句柄泄漏、锁未释放、连接未关闭等常见问题。`with` 语句是它的语法入口，而 `contextlib` 标准库提供了大量工具，让你能写出更优雅、更健壮的资源管理代码。
+
+## with 语句
+
+最常见的用法是处理文件：
+
+```py
+# 不推荐：手动 open/close
+f = open("data.txt")
+try:
+    content = f.read()
+finally:
+    f.close()
+
+# 推荐：用 with 自动管理
+with open("data.txt", encoding="utf-8") as f:
+    content = f.read()
+# 离开 with 块后，文件自动关闭，即使 read() 抛异常也会关闭
+```
+
+`with` 语句保证：
+1. 进入时调用上下文管理器的 `__enter__`
+2. 离开时（无论正常退出还是异常）调用 `__exit__`
+3. 即便 `with` 块中有 `return`、`break`、`continue` 或抛异常，`__exit__` 也会执行
+
+### 多个上下文管理器
+
+Python 3.1+ 支持在一个 `with` 语句中放多个上下文管理器，按从前往后的顺序进入、从后往前退出：
+
+```py
+with open("input.txt", encoding="utf-8") as fin, \
+     open("output.txt", "w", encoding="utf-8") as fout:
+    for line in fin:
+        fout.write(line.upper())
+# 两个文件都会被正确关闭
+```
+
+:::tip Python 3.10+ 更优雅的多行写法
+Python 3.10 起允许用括号包裹多个上下文管理器，无需用反斜杠续行：
+
+```py
+with (
+    open("input.txt", encoding="utf-8") as fin,
+    open("output.txt", "w", encoding="utf-8") as fout,
+):
+    for line in fin:
+        fout.write(line.upper())
+```
+
+这种写法更易读，也更便于添加或删除条目。
+:::
+
+## __enter__ 与 __exit__
+
+任何实现了 `__enter__` 和 `__exit__` 两个方法的对象都是上下文管理器。
+
+- `__enter__(self)`：进入 `with` 块时调用，返回值通过 `as` 赋给变量
+- `__exit__(self, exc_type, exc_val, exc_tb)`：离开 `with` 块时调用，三个参数描述了"是否发生异常"
+
+### 最简实现
+
+```py
+class MyContext:
+    def __enter__(self):
+        print("进入上下文")
+        return self          # 返回值通过 as 赋给变量
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print("退出上下文")
+        # 三个参数说明是否发生异常：
+        # - 没异常时：exc_type 是 None
+        # - 有异常时：exc_type 是异常类，exc_val 是异常实例，exc_tb 是 traceback
+        if exc_type is not None:
+            print(f"  捕获到异常：{exc_type.__name__}: {exc_val}")
+        return False         # False 表示不抑制异常，让异常继续传播
+
+
+with MyContext() as ctx:
+    print("执行 with 块")
+# 输出：
+# 进入上下文
+# 执行 with 块
+# 退出上下文
+
+print("---")
+
+with MyContext() as ctx:
+    print("抛出异常")
+    raise ValueError("出错了")
+# 输出：
+# 进入上下文
+# 抛出异常
+# 退出上下文
+#   捕获到异常：ValueError: 出错了
+# ValueError: 出错了   ← 异常继续传播
+```
+
+### __exit__ 的返回值
+
+`__exit__` 的返回值控制是否"吞掉"异常：
+
+- 返回 `False`（或 `None`）：异常继续传播，与没处理一样
+- 返回 `True`：异常被吞掉，`with` 块外不会感知到异常
+
+```py
+class SuppressErrors:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            print(f"吞掉了异常：{exc_val}")
+            return True      # ← 返回 True 抑制异常
+        return False
+
+
+with SuppressErrors():
+    print("正常执行")
+    raise RuntimeError("假装出错了")
+print("with 块外继续执行")   # 这里会执行，因为异常被吞了
+# 输出：
+# 正常执行
+# 吞掉了异常：假装出错了
+# with 块外继续执行
+```
+
+:::warning 谨慎吞异常
+返回 `True` 吞异常是**危险操作**——它会掩盖所有异常（包括 `KeyboardInterrupt` 之外的）。除非有明确理由（如重试逻辑、静默忽略已知错误），否则 `__exit__` 应返回 `False`，让异常照常传播。如果只想忽略特定异常，用 `contextlib.suppress`（后面会讲）更安全。
+:::
+
+### 完整示例：计时器
+
+```py
+import time
+
+
+class Timer:
+    """计时上下文管理器，统计 with 块的执行耗时"""
+
+    def __init__(self, label: str = "耗时"):
+        self.label = label
+        self.elapsed: float = 0.0
+
+    def __enter__(self) -> "Timer":
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.elapsed = time.perf_counter() - self.start
+        print(f"[{self.label}] 耗时 {self.elapsed:.6f}s")
+        return False          # 不吞异常
+
+
+with Timer("数据处理") as t:
+    total = sum(i * i for i in range(1_000_000))
+    print(f"计算结果：{total}")
+# 输出：
+# 计算结果：333332833333500000
+# [数据处理] 耗时 0.123456s
+
+# 异常情况也会正确计时
+try:
+    with Timer("出错任务"):
+        raise ValueError("故意出错")
+except ValueError:
+    print("异常已传播到外层")
+# 输出：
+# [出错任务] 耗时 0.000123s
+# 异常已传播到外层
+```
+
+### 完整示例：文件锁
+
+```py
+class FileLock:
+    """简易文件锁：进入时创建锁文件，退出时删除"""
+
+    def __init__(self, lockfile: str):
+        self.lockfile = lockfile
+
+    def __enter__(self):
+        try:
+            # 用 'x' 模式创建文件，已存在则抛 FileExistsError
+            f = open(self.lockfile, "x")
+            f.close()
+        except FileExistsError:
+            raise RuntimeError(f"资源 {self.lockfile} 已被锁定")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        import os
+        try:
+            os.unlink(self.lockfile)
+        except FileNotFoundError:
+            pass
+        return False
+
+
+import tempfile, os
+lock_path = os.path.join(tempfile.gettempdir(), "myapp.lock")
+
+with FileLock(lock_path):
+    print("持锁中，做些工作")
+# 离开 with 块后锁文件被删除，即使工作抛异常也会删除
+```
+
+## contextlib.contextmanager
+
+写一个完整的类来实现 `__enter__`/`__exit__` 有时显得冗长。`contextlib.contextmanager` 装饰器允许你用**生成器函数**更简洁地实现上下文管理器：
+
+- `yield` 之前的代码相当于 `__enter__`
+- `yield` 出的值相当于 `__enter__` 的返回值
+- `yield` 之后的代码相当于 `__exit__`，放在 `finally` 中保证异常时也执行
+
+```py
+from contextlib import contextmanager
+import time
+
+
+@contextmanager
+def timer(label: str = "耗时"):
+    """计时上下文管理器（生成器版本）"""
+    start = time.perf_counter()
+    try:
+        yield                # with 块的代码在此处执行
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"[{label}] 耗时 {elapsed:.6f}s")
+
+
+with timer("数据处理"):
+    total = sum(i * i for i in range(1_000_000))
+    print(f"结果：{total}")
+# 输出：
+# 结果：333332833333500000
+# [数据处理] 耗时 0.123456s
+```
+
+### yield 返回值给 as
+
+`yield` 的值会通过 `as` 赋给变量：
+
+```py
+from contextlib import contextmanager
+
+
+@contextmanager
+def open_db(connection_string: str):
+    """模拟数据库连接管理"""
+    print(f"连接数据库：{connection_string}")
+    conn = {"connection_string": connection_string, "closed": False}
+    try:
+        yield conn                # 把连接对象交给 with 块
+    finally:
+        conn["closed"] = True
+        print("关闭数据库连接")
+
+
+with open_db("postgres://localhost/mydb") as conn:
+    print(f"使用连接：{conn['connection_string']}")
+    print(f"连接状态：closed={conn['closed']}")
+# 输出：
+# 连接数据库：postgres://localhost/mydb
+# 使用连接：postgres://localhost/mydb
+# 连接状态：closed=False
+# 关闭数据库连接
+```
+
+### 处理异常：try-except-finally
+
+如果想在生成器版本中"处理"异常（类似 `__exit__` 返回 `True`），用 `try-except` 包住 `yield`：
+
+```py
+from contextlib import contextmanager
+
+
+@contextmanager
+def ignore_errors(*exceptions):
+    """忽略指定异常"""
+    try:
+        yield
+    except exceptions as e:
+        print(f"忽略异常：{e}")
+        # 不 re-raise，相当于 __exit__ 返回 True
+
+
+with ignore_errors(ValueError, TypeError):
+    print("正常工作")
+    raise ValueError("被忽略的错误")
+print("with 块外继续执行")   # 异常被吞了，继续执行
+# 输出：
+# 正常工作
+# 忽略异常：被忽略的错误
+# with 块外继续执行
+```
+
+:::tip contextmanager 的核心机制
+`@contextmanager` 把生成器函数包装成上下文管理器。当 `with` 进入时，它执行到 `yield` 并返回 yield 的值；当 `with` 块抛出异常时，异常会通过 `generator.throw()` 抛回生成器内部——所以你需要在 `yield` 外层包 `try-except-finally` 来捕获它。如果不捕获，异常会从生成器中再次抛出，传播到 `with` 块外。
+:::
+
+### contextmanager vs 类实现
+
+| 比较项 | `@contextmanager` | 类实现 |
+| --- | --- | --- |
+| 代码量 | 少，适合简单场景 | 多，适合复杂状态 |
+| 跨调用共享状态 | 不便（每次创建新生成器） | 方便（实例属性） |
+| 异常处理 | try-except-finally | `__exit__` 返回值 |
+| 嵌套使用 | 容易组合 | 需手动管理 |
+
+经验法则：**简单的"获取-释放"用 `@contextmanager`，需要复杂状态或多次调用的用类**。
+
+## ExitStack
+
+`contextlib.ExitStack` 是一个动态管理多个上下文管理器的工具。它解决了几个问题：
+
+1. **数量不固定的上下文管理器**：运行时才知道要打开多少个文件
+2. **条件性进入上下文**：某些资源只在特定条件下需要管理
+3. **清理回调注册**：把任意清理函数注册到栈上，统一在退出时执行
+
+### 动态管理多个资源
+
+```py
+from contextlib import ExitStack
+
+
+def process_files(paths: list[str]):
+    """同时打开多个文件处理，数量在运行时确定"""
+    with ExitStack() as stack:
+        files = [
+            stack.enter_context(open(p, encoding="utf-8"))
+            for p in paths
+        ]
+        # files 是所有已打开的文件对象列表
+        # 离开 with 块时，ExitStack 会按"后进先出"顺序关闭所有文件
+        for i, f in enumerate(files):
+            print(f"文件 {i}：{f.read(20)!r}")
+
+
+import tempfile, os
+
+# 创建临时测试文件
+tmpdir = tempfile.mkdtemp()
+paths = []
+for i, content in enumerate(["AAA", "BBB", "CCC"], 1):
+    p = os.path.join(tmpdir, f"f{i}.txt")
+    with open(p, "w") as f:
+        f.write(content * 10)
+    paths.append(p)
+
+try:
+    process_files(paths)
+finally:
+    for p in paths:
+        os.unlink(p)
+    os.rmdir(tmpdir)
+```
+
+### 注册清理回调
+
+`stack.callback(fn, *args)` 把一个函数注册到栈上，退出时按"后进先出"顺序调用：
+
+```py
+from contextlib import ExitStack
+
+
+def cleanup_resource(name: str):
+    print(f"清理 {name}")
+
+
+with ExitStack() as stack:
+    stack.callback(cleanup_resource, "资源 A")
+    stack.callback(cleanup_resource, "资源 B")
+    stack.callback(cleanup_resource, "资源 C")
+    print("工作中...")
+# 输出：
+# 工作中...
+# 清理 资源 C
+# 清理 资源 B
+# 清理 资源 A
+```
+
+:::tip ExitStack 是资源管理的瑞士军刀
+- `enter_context(cm)`：把一个上下文管理器压入栈
+- `callback(fn, *args, **kwargs)`：注册一个清理回调
+- `push(cm)` 或 `push(exit_fn)`：手动压入上下文管理器或退出函数
+- 退出时按**后进先出**（LIFO）顺序执行清理，符合"先开后关"的资源管理直觉
+:::
+
+### 条件性进入上下文
+
+```py
+from contextlib import ExitStack
+
+
+def safe_write(path: str, data: str, backup: bool = False):
+    """写文件，可选地先备份原文件"""
+    with ExitStack() as stack:
+        if backup:
+            # 仅在需要时进入"备份"上下文
+            backup_path = path + ".bak"
+            with open(path, encoding="utf-8") as src, \
+                 open(backup_path, "w", encoding="utf-8") as dst:
+                dst.write(src.read())
+            print(f"已备份到 {backup_path}")
+
+        # 写入新内容
+        f = stack.enter_context(open(path, "w", encoding="utf-8"))
+        f.write(data)
+        print(f"已写入 {path}")
+
+
+import tempfile, os
+path = os.path.join(tempfile.gettempdir(), "demo.txt")
+with open(path, "w") as f:
+    f.write("原始内容")
+
+safe_write(path, "新内容", backup=True)
+# 输出：
+# 已备份到 .../demo.txt.bak
+# 已写入 .../demo.txt
+```
+
+## async with
+
+异步代码（`async`/`await`）中使用 `async with` 管理异步资源。异步上下文管理器实现的是 `__aenter__` 和 `__aexit__` 方法（注意是 `a` 前缀，且是协程）。
+
+```py
+import asyncio
+
+
+class AsyncDBConnection:
+    """模拟异步数据库连接"""
+
+    async def __aenter__(self):
+        print("异步连接数据库...")
+        await asyncio.sleep(0.1)        # 模拟异步连接
+        self.connected = True
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        print("异步关闭连接...")
+        await asyncio.sleep(0.05)        # 模拟异步关闭
+        self.connected = False
+        return False
+
+    async def query(self, sql: str) -> str:
+        if not self.connected:
+            raise RuntimeError("未连接")
+        await asyncio.sleep(0.01)
+        return f"结果：{sql}"
+
+
+async def main():
+    async with AsyncDBConnection() as conn:
+        result = await conn.query("SELECT 1")
+        print(result)
+    print(f"连接状态：connected={conn.connected}")
+# 输出：
+# 异步连接数据库...
+# 结果：SELECT 1
+# 异步关闭连接...
+# 连接状态：connected=False
+
+
+asyncio.run(main())
+```
+
+### contextlib.asynccontextmanager
+
+类似 `@contextmanager`，`@contextlib.asynccontextmanager` 用异步生成器函数实现异步上下文管理器：
+
+```py
+from contextlib import asynccontextmanager
+import asyncio
+
+
+@asynccontextmanager
+async def async_db(connection_string: str):
+    """异步数据库连接（生成器版本）"""
+    print(f"异步连接：{connection_string}")
+    await asyncio.sleep(0.1)
+    conn = {"id": 1, "closed": False}
+    try:
+        yield conn
+    finally:
+        await asyncio.sleep(0.05)
+        conn["closed"] = True
+        print("异步关闭连接")
+
+
+async def main():
+    async with async_db("postgres://localhost") as conn:
+        print(f"使用连接 id={conn['id']}")
+
+
+asyncio.run(main())
+# 输出：
+# 异步连接：postgres://localhost
+# 使用连接 id=1
+# 异步关闭连接
+```
+
+:::info 同步 with vs 异步 async with
+- 同步 `with`：调用 `__enter__`/`__exit__`（普通方法）
+- 异步 `async with`：调用 `__aenter__`/`__aexit__`（协程方法）
+
+两者不能混用：在 `async` 函数里必须用 `async with`，在普通函数里用 `with`。异步上下文管理器必须实现 `__aenter__`/`__aexit__`，普通 `__enter__`/`__exit__` 不行。
+:::
+
+## contextlib 实用工具
+
+`contextlib` 标准库提供了几个开箱即用的上下文管理器，覆盖常见场景。
+
+### contextlib.suppress
+
+静默忽略指定的异常，等价于 `try-except-pass` 但更明确：
+
+```py
+from contextlib import suppress
+
+# 旧写法：try-except-pass
+try:
+    os.remove("可能不存在的文件.txt")
+except FileNotFoundError:
+    pass
+
+# 新写法：用 suppress 更简洁
+with suppress(FileNotFoundError):
+    os.remove("可能不存在的文件.txt")
+
+# 可以同时忽略多种异常
+with suppress(FileNotFoundError, PermissionError):
+    os.remove("另一个文件.txt")
+```
+
+:::tip suppress 比 except pass 更明确
+`with suppress(FileNotFoundError):` 比 `try: ... except FileNotFoundError: pass` 更能表达"故意忽略此异常"的意图，代码更紧凑，也更不容易写错（不会漏掉异常类型而吞掉其他错误）。
+:::
+
+### contextlib.redirect_stdout
+
+把 `print` 等输出到 `sys.stdout` 的内容重定向到其他流：
+
+```py
+from contextlib import redirect_stdout
+import io
+
+
+def noisy_function():
+    print("这是一条日志")
+    print("这是另一条")
+
+
+# 旧写法：手动替换 sys.stdout
+import sys
+old = sys.stdout
+sys.stdout = io.StringIO()
+try:
+    noisy_function()
+    captured = sys.stdout.getvalue()
+finally:
+    sys.stdout = old
+
+# 新写法：用 redirect_stdout
+buffer = io.StringIO()
+with redirect_stdout(buffer):
+    noisy_function()
+    print("这条也被捕获")        # 不会显示
+print("捕获的内容：", repr(buffer.getvalue()))
+# 输出：
+# 捕获的内容： '这是一条日志\n这是另一条\n这条也被捕获\n'
+
+# 重定向到文件
+with open("output.log", "w", encoding="utf-8") as f, \
+     redirect_stdout(f):
+    print("这条写入文件，不在控制台显示")
+print("控制台输出正常")
+```
+
+还有 `redirect_stderr`（重定向 stderr）和 `redirect_stdin`（重定向 stdin）。
+
+### contextlib.redirect_stderr
+
+```py
+from contextlib import redirect_stderr
+import io
+import sys
+
+
+def log_warning():
+    print("普通输出", file=sys.stdout)
+    print("警告输出", file=sys.stderr)
+
+
+buffer = io.StringIO()
+with redirect_stderr(buffer):
+    log_warning()
+print(f"捕获的 stderr：{buffer.getvalue()!r}")
+# 输出：
+# 普通输出
+# 捕获的 stderr：'警告输出\n'
+```
+
+### contextlib.closing
+
+为只有 `close()` 方法但没有实现 `__enter__`/`__exit__` 的对象提供上下文管理器协议：
+
+```py
+from contextlib import closing
+
+
+class WebClient:
+    """只有 close() 方法，没有实现上下文管理器协议"""
+
+    def __init__(self, url: str):
+        self.url = url
+        print(f"创建 {url}")
+
+    def fetch(self) -> str:
+        return f"来自 {self.url} 的数据"
+
+    def close(self):
+        print(f"关闭 {self.url}")
+
+
+# 不用 closing：需要手动 try-finally
+client = WebClient("http://example.com")
+try:
+    data = client.fetch()
+    print(data)
+finally:
+    client.close()
+
+# 用 closing：自动调用 close()
+with closing(WebClient("http://example.com")) as client:
+    data = client.fetch()
+    print(data)
+# 输出：
+# 创建 http://example.com
+# 来自 http://example.com 的数据
+# 关闭 http://example.com
+```
+
+:::info closing 的现代替代品
+Python 标准库的绝大多数资源对象（文件、`urllib.request.urlopen` 返回的对象、`socket` 等）都已经实现了完整的上下文管理器协议，可以直接用 `with`，不需要 `closing`。`closing` 主要用于第三方库或老代码中只有 `close()` 方法的对象。
+:::
+
+### contextlib.chdir
+
+Python 3.11+ 引入，临时改变当前工作目录，退出时恢复：
+
+```py
+from contextlib import chdir
+import os
+
+
+print(f"原工作目录：{os.getcwd()}")
+
+with chdir("/tmp"):
+    print(f"块内工作目录：{os.getcwd()}")
+
+print(f"恢复后工作目录：{os.getcwd()}")
+```
+
+:::tip Python 3.11+ 新增
+`contextlib.chdir` 是 Python 3.11 才加入的。在更早版本中，需要手动保存并恢复 `os.getcwd()`：
+
+```py
+old_cwd = os.getcwd()
+try:
+    os.chdir("/tmp")
+    # ...
+finally:
+    os.chdir(old_cwd)
+```
+:::
+
+## 实战：数据库连接管理
+
+下面实现一个完整的数据库连接池，综合运用类上下文管理器、`@contextmanager`、`ExitStack` 和 `suppress`：
+
+```py
+from __future__ import annotations
+
+from contextlib import contextmanager, suppress
+import time
+import random
+from collections import deque
+from typing import Iterator
+
+
+# ========== 数据库连接类（类形式的上下文管理器）==========
+
+class DBConnection:
+    """模拟数据库连接，实现完整的上下文管理器协议"""
+
+    _next_id = 1
+
+    def __init__(self, dsn: str):
+        self.dsn = dsn
+        self.id = DBConnection._next_id
+        DBConnection._next_id += 1
+        self.connected = False
+        self.in_transaction = False
+
+    def __enter__(self) -> "DBConnection":
+        print(f"  [连接 {self.id}] 打开数据库：{self.dsn}")
+        self.connected = True
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.in_transaction:
+            # 在事务中异常时回滚
+            if exc_type is not None:
+                print(f"  [连接 {self.id}] 异常，回滚事务")
+                self.in_transaction = False
+            else:
+                print(f"  [连接 {self.id}] 提交事务")
+                self.in_transaction = False
+        print(f"  [连接 {self.id}] 关闭数据库")
+        self.connected = False
+        return False      # 不吞异常
+
+    def execute(self, sql: str) -> str:
+        if not self.connected:
+            raise RuntimeError(f"连接 {self.id} 已断开")
+        # 模拟执行 SQL
+        if "FAIL" in sql:
+            raise RuntimeError(f"SQL 执行失败：{sql}")
+        return f"执行结果：{sql}"
+
+    def begin_transaction(self):
+        print(f"  [连接 {self.id}] 开始事务")
+        self.in_transaction = True
+
+
+# ========== 连接池（用 @contextmanager 生成器版本）==========
+
+class ConnectionPool:
+    """简单的连接池"""
+
+    def __init__(self, dsn: str, max_size: int = 5):
+        self.dsn = dsn
+        self.max_size = max_size
+        self._pool: deque[DBConnection] = deque()
+        self._in_use: set[DBConnection] = set()
+        # 预创建两个连接
+        for _ in range(2):
+            self._pool.append(DBConnection(dsn))
+
+    @contextmanager
+    def acquire(self) -> Iterator[DBConnection]:
+        """从池中获取连接，使用完归还。
+
+        这是一个生成器形式的上下文管理器，使用 try-finally
+        保证连接无论如何都会归还到池中。
+        """
+        conn = self._get_or_create()
+        self._in_use.add(conn)
+        try:
+            yield conn
+        finally:
+            self._in_use.discard(conn)
+            self._pool.append(conn)
+            print(f"  [连接 {conn.id}] 归还到池中")
+
+    def _get_or_create(self) -> DBConnection:
+        if self._pool:
+            return self._pool.popleft()
+        if len(self._in_use) < self.max_size:
+            return DBConnection(self.dsn)
+        raise RuntimeError("连接池已满，请稍后再试")
+
+    @property
+    def stats(self) -> dict:
+        return {
+            "pool_size": len(self._pool),
+            "in_use": len(self._in_use),
+            "total": len(self._pool) + len(self._in_use),
+        }
+
+
+# ========== 事务上下文管理器（嵌套使用）==========
+
+@contextmanager
+def transaction(conn: DBConnection):
+    """事务上下文：进入时开始事务，退出时根据情况提交或回滚"""
+    conn.begin_transaction()
+    try:
+        yield conn
+    except Exception as exc:
+        print(f"  [事务] 异常 {exc}，将回滚")
+        raise       # 重新抛出，让连接的 __exit__ 也能感知
+    else:
+        print(f"  [事务] 正常结束，将提交")
+
+
+# ========== 业务逻辑：用连接池执行查询 ==========
+
+def fetch_user(pool: ConnectionPool, user_id: int) -> dict:
+    """通过连接池查询用户"""
+    with pool.acquire() as conn:
+        # 在连接上再嵌套一个事务上下文
+        with transaction(conn):
+            result = conn.execute(f"SELECT * FROM users WHERE id={user_id}")
+            return {"id": user_id, "name": f"用户{user_id}", "raw": result}
+
+
+def update_user(pool: ConnectionPool, user_id: int, name: str) -> None:
+    """更新用户名，演示事务回滚"""
+    with pool.acquire() as conn:
+        with transaction(conn):
+            conn.execute(f"UPDATE users SET name='{name}' WHERE id={user_id}")
+            # 故意在某些情况下让后续 SQL 失败，触发事务回滚
+            if "FAIL" in name:
+                conn.execute("UPDATE FAIL users")   # 抛 RuntimeError
+
+
+# ========== 演示 ==========
+
+def demo():
+    pool = ConnectionPool("postgres://localhost/myapp", max_size=3)
+
+    print("=== 场景 1：正常查询 ===")
+    user = fetch_user(pool, 42)
+    print(f"查询结果：{user}")
+    print(f"连接池状态：{pool.stats}\n")
+
+    print("=== 场景 2：正常更新 ===")
+    update_user(pool, 42, "Alice")
+    print(f"连接池状态：{pool.stats}\n")
+
+    print("=== 场景 3：事务回滚 ===")
+    try:
+        update_user(pool, 42, "FAIL")    # 触发回滚
+    except RuntimeError as e:
+        print(f"业务层捕获到错误：{e}")
+    print(f"连接池状态：{pool.stats}\n")
+
+    print("=== 场景 4：suppress 忽略特定异常 ===")
+    # 假设"删除不存在的用户"是非致命错误，用 suppress 静默忽略
+    from contextlib import suppress
+    with suppress(RuntimeError):
+        with pool.acquire() as conn:
+            conn.execute("DELETE FAIL FROM users WHERE id=999")
+    print("尽管 SQL 失败，但被静默忽略，继续执行")
+    print(f"连接池状态：{pool.stats}\n")
+
+    print("=== 场景 5：批量查询（模拟并发场景）===")
+    # 用 ExitStack 动态管理多个连接
+    from contextlib import ExitStack
+    user_ids = [1, 2, 3, 4]
+    with ExitStack() as stack:
+        conns = [stack.enter_context(pool.acquire()) for _ in user_ids]
+        print(f"同时持有了 {len(conns)} 个连接")
+        print(f"连接池状态：{pool.stats}")
+        for i, conn in enumerate(conns, 1):
+            result = conn.execute(f"SELECT id FROM users LIMIT {i}")
+            print(f"  连接 {conn.id}：{result}")
+    # 退出后所有连接归还
+    print(f"连接池状态：{pool.stats}")
+
+
+demo()
+```
+
+输出示例：
+
+```text
+=== 场景 1：正常查询 ===
+  [连接 1] 开始事务
+  [连接 1] 归还到池中
+  [事务] 正常结束，将提交
+  [连接 1] 提交事务
+  [连接 1] 关闭数据库
+查询结果：{'id': 42, 'name': '用户42', 'raw': "执行结果：SELECT * FROM users WHERE id=42"}
+连接池状态：{'pool_size': 2, 'in_use': 0, 'total': 2}
+
+=== 场景 2：正常更新 ===
+  [连接 1] 开始事务
+  [连接 1] 归还到池中
+  [事务] 正常结束，将提交
+  [连接 1] 提交事务
+  [连接 1] 关闭数据库
+连接池状态：{'pool_size': 2, 'in_use': 0, 'total': 2}
+
+=== 场景 3：事务回滚 ===
+  [连接 1] 开始事务
+  [事务] 异常 SQL 执行失败：UPDATE FAIL users，将回滚
+  [连接 1] 异常，回滚事务
+  [连接 1] 归还到池中
+  [连接 1] 关闭数据库
+业务层捕获到错误：SQL 执行失败：UPDATE FAIL users
+连接池状态：{'pool_size': 2, 'in_use': 0, 'total': 2}
+
+=== 场景 4：suppress 忽略特定异常 ===
+  [连接 1] 归还到池中
+  [连接 1] 关闭数据库
+尽管 SQL 失败，但被静默忽略，继续执行
+连接池状态：{'pool_size': 2, 'in_use': 0, 'total': 2}
+
+=== 场景 5：批量查询（模拟并发场景）===
+  [连接 2] 归还到池中
+  [连接 3] 打开数据库：postgres://localhost/myapp
+  [连接 3] 归还到池中
+  [连接 4] 打开数据库：postgres://localhost/myapp
+  [连接 4] 归还到池中
+同时持有了 3 个连接
+连接池状态：{'pool_size': 0, 'in_use': 3, 'total': 3}
+  连接 2：执行结果：SELECT id FROM users LIMIT 1
+  连接 3：执行结果：SELECT id FROM users LIMIT 2
+  连接 4：执行结果：SELECT id FROM users LIMIT 3
+  [连接 2] 关闭数据库
+  [连接 3] 关闭数据库
+  [连接 4] 关闭数据库
+连接池状态：{'pool_size': 3, 'in_use': 0, 'total': 3}
+```
+
+:::tip 嵌套上下文管理器的执行顺序
+上面 `with pool.acquire() as conn: with transaction(conn): ...` 涉及两个嵌套的上下文管理器。执行顺序是：
+1. 进入外层：`pool.acquire()` 的 `__enter__`（连接出池）
+2. 进入内层：`transaction()` 的 `__enter__`（开始事务）
+3. 执行 with 块
+4. 退出内层：`transaction()` 的 `__exit__`（提交或回滚）
+5. 退出外层：`pool.acquire()` 的 `__exit__`（连接归还）
+
+外层管理"连接资源"，内层管理"事务状态"——这种分层设计让每层只关注一件事。
+:::
+
+## 小结
+
+- `with` 语句保证资源在退出时被释放，无论是否发生异常
+- 类形式的上下文管理器实现 `__enter__` 和 `__exit__`，前者返回值通过 `as` 绑定，后者返回 `True` 可抑制异常
+- `@contextlib.contextmanager` 用生成器函数简化实现：`yield` 前是"进入"，`yield` 后是"退出"，通常用 `try-finally` 保证清理
+- `ExitStack` 用于动态管理数量不定的上下文管理器、条件性进入、注册回调，按 LIFO 顺序退出
+- `async with` 用于异步代码，对应 `__aenter__`/`__aexit__`，`@contextlib.asynccontextmanager` 是异步生成器版本
+- `contextlib` 实用工具：
+  - `suppress(*exceptions)`：静默忽略指定异常
+  - `redirect_stdout/stderr`：重定向输出流
+  - `closing(obj)`：为只有 `close()` 的对象提供上下文管理
+  - `chdir(path)`（3.11+）：临时切换工作目录
+- 实战：数据库连接池展示分层资源管理——`ConnectionPool.acquire()` 管理连接、`transaction()` 管理事务、嵌套使用各司其职
+
+至此，异常处理章节告一段落。从识别异常、try-except 处理、自定义异常到上下文管理，你已掌握编写健壮 Python 代码所需的核心技能。

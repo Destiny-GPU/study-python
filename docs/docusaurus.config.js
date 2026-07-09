@@ -11,7 +11,7 @@ import {themes as prismThemes} from 'prism-react-renderer';
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Study Python',
-  tagline: 'Dinosaurs are cool',
+  tagline: '从入门到精通的 Python 系统学习之旅',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -19,23 +19,20 @@ const config = {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
 
-  // Set the production url of your site here
-  url: 'https://Destiny-GPU.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
+  // 生产环境 URL（Vercel 部署后可在此修改为自定义域名）
+  url: 'https://study-python.vercel.app',
+  // Vercel 部署在根路径下
   baseUrl: '/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
+  // GitHub 仓库信息（用于 editUrl 等）
   organizationName: 'Destiny-GPU',
   projectName: 'study-python',
   trailingSlash: false,
 
   onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
 
-  // Even if you don't use internationalization, you can use this field to set
-  // useful metadata like html lang. For example, if your site is Chinese, you
-  // may want to replace "en" with "zh-Hans".
+  // 即使不使用国际化，也可以用此字段设置 html lang
   i18n: {
     defaultLocale: 'zh-Hans',
     locales: ['zh-Hans'],
@@ -48,10 +45,8 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          // 编辑链接指向本仓库
+          editUrl: 'https://github.com/Destiny-GPU/study-python/tree/main/docs/',
         },
         blog: {
           showReadingTime: true,
@@ -59,14 +54,14 @@ const config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
+          editUrl: 'https://github.com/Destiny-GPU/study-python/tree/main/docs/',
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
+          // 博客路由改为 /notes（学习笔记）
+          routeBasePath: 'notes',
+          blogTitle: 'Python 学习笔记',
+          blogDescription: '记录 Python 学习过程中的心得与进阶技巧',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -78,7 +73,6 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
-      // Replace with your project's social card
       image: 'img/docusaurus-social-card.jpg',
       colorMode: {
         respectPrefersColorScheme: true,
@@ -94,11 +88,11 @@ const config = {
             type: 'docSidebar',
             sidebarId: 'tutorialSidebar',
             position: 'left',
-            label: 'Tutorial',
+            label: '教程',
           },
-          {to: '/blog', label: 'Blog', position: 'left'},
+          {to: '/notes', label: '学习笔记', position: 'left'},
           {
-            href: 'https://github.com/facebook/docusaurus',
+            href: 'https://github.com/Destiny-GPU/study-python',
             label: 'GitHub',
             position: 'right',
           },
@@ -108,50 +102,59 @@ const config = {
         style: 'dark',
         links: [
           {
-            title: 'Docs',
+            title: '教程',
             items: [
               {
-                label: 'Tutorial',
+                label: '入门指南',
                 to: '/docs/intro',
               },
-            ],
-          },
-          {
-            title: 'Community',
-            items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+                label: '基础语法',
+                to: '/docs/basics/variables',
               },
               {
-                label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'X',
-                href: 'https://x.com/docusaurus',
+                label: '面向对象',
+                to: '/docs/oop/classes',
               },
             ],
           },
           {
-            title: 'More',
+            title: '学习资源',
             items: [
               {
-                label: 'Blog',
-                to: '/blog',
+                label: 'Python 官方文档',
+                href: 'https://docs.python.org/zh-cn/3/',
+              },
+              {
+                label: 'Python 官网',
+                href: 'https://www.python.org/',
+              },
+              {
+                label: 'PyPI 包索引',
+                href: 'https://pypi.org/',
+              },
+            ],
+          },
+          {
+            title: '更多',
+            items: [
+              {
+                label: '学习笔记',
+                to: '/notes',
               },
               {
                 label: 'GitHub',
-                href: 'https://github.com/facebook/docusaurus',
+                href: 'https://github.com/Destiny-GPU/study-python',
               },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+        copyright: `Copyright © ${new Date().getFullYear()} Study Python. Built with Docusaurus.`,
       },
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
+        additionalLanguages: ['python', 'toml', 'ini', 'bash'],
       },
     }),
 };

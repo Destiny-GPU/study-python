@@ -1,0 +1,767 @@
+---
+sidebar_position: 5
+sidebar_label: '魔术方法'
+title: 魔术方法
+description: 系统学习 Python 魔术方法（dunder methods）：__init__/__new__、__str__/__repr__、容器协议、迭代、比较、运算符、上下文管理器、__call__ 等。
+---
+
+# 魔术方法
+
+魔术方法（magic methods，又称 dunder methods，即 **d**ouble **under**score）是 Python 以双下划线开头和结尾的特殊方法，如 `__init__`、`__str__`、`__len__`。它们构成了 Python 的**对象协议（data model）**——通过重写这些方法，自定义类就能参与内置语法和函数的行为，比如 `len(obj)`、`obj[i]`、`for x in obj`、`with obj as o`、`a + b` 等。掌握魔术方法是写出"地道"Python 类的关键。
+
+## `__new__` 与 `__init__`
+
+- `__new__(cls, ...)`：**创建**实例，返回一个对象。是静态方法（无需装饰器）。
+- `__init__(self, ...)`：**初始化**实例，设置属性。无返回值。
+
+通常只重写 `__init__`；`__new__` 用于控制实例创建，如单例、不可变类型、元类编程。
+
+```py
+class Singleton:
+    _instance: "Singleton | None" = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, value: str = "default") -> None:
+        # __init__ 每次调用 Singleton() 都会执行
+        self.value = value
+
+a = Singleton("A")
+b = Singleton("B")  # __init__ 会再次执行，覆盖 value
+print(a is b)       # 输出：True（同一个实例）
+print(a.value)      # 输出：B
+print(b.value)      # 输出：B
+```
+
+:::warning 单例中 __init__ 重复执行
+`Singleton("B")` 仍会调用 `__init__`，把已存在实例的 `value` 改为 "B"。如果想避免，可以在 `__init__` 中用 `if hasattr(self, "value"): return` 跳过，或在 `__new__` 中检查后再调用。
+:::
+
+### 不可变类型的 `__new__`
+
+不可变类型（`tuple`、`str`、`int` 等）的属性在 `__init__` 调用前就已经定型，必须在 `__new__` 中设置：
+
+```py
+class ImmutablePoint:
+    def __new__(cls, x: float, y: float):
+        instance = super().__new__(cls)
+        instance._x = x  # 在 __new__ 中赋值
+        instance._y = y
+        return instance
+
+    @property
+    def x(self) -> float:
+        return self._x
+
+    @property
+    def y(self) -> float:
+        return self._y
+
+    def __repr__(self) -> str:
+        return f"ImmutablePoint({self._x}, {self._y})"
+
+p = ImmutablePoint(3, 4)
+print(p)        # 输出：ImmutablePoint(3, 4)
+print(p.x)      # 输出：3
+# p.x = 10  # AttributeError（只读）
+```
+
+## `__str__` 与 `__repr__`
+
+- `__str__`：`print(obj)` / `str(obj)` 调用，面向**用户**的友好字符串。
+- `__repr__`：`repr(obj)` / 交互终端直接输入 / 容器内打印 调用，面向**开发者**，理想情况是可重建对象的表达式。
+
+```py
+class Color:
+    def __init__(self, r: int, g: int, b: int) -> None:
+        self.r, self.g, self.b = r, g, b
+
+    def __repr__(self) -> str:
+        return f"Color(r={self.r}, g={self.g}, b={self.b})"
+
+    def __str__(self) -> str:
+        return f"#{self.r:02x}{self.g:02x}{self.b:02x}"
+
+c = Color(255, 128, 0)
+print(c)          # 输出：#ff8000       ← __str__
+print(repr(c))    # 输出：Color(r=255, g=128, b=0)  ← __repr__
+print([c, c])     # 输出：[Color(r=255, g=128, b=0), ...]  ← 容器用 __repr__
+print(f"{c!s} / {c!r}")  # 输出：#ff8000 / Color(r=255, g=128, b=0)
+```
+
+:::tip 实用建议
+如果只写一个，优先写 `__repr__`——未定义 `__str__` 时会回退到 `__repr__`。
+:::
+
+## 容器协议：序列与映射
+
+通过实现以下方法，自定义对象可以像列表、字典一样使用：
+
+| 方法           | 触发场景                          |
+|----------------|-----------------------------------|
+| `__len__`      | `len(obj)`                        |
+| `__getitem__`  | `obj[i]`、`obj[key]`、切片、`for` |
+| `__setitem__`  | `obj[i] = value`                  |
+| `__delitem__`  | `del obj[i]`                      |
+| `__contains__` | `x in obj`（默认可由 `__getitem__` 推导） |
+| `__missing__`  | 字典 `obj[key]` 找不到时调用       |
+
+```py
+class Matrix:
+    """二维矩阵：支持 [i][j] 双重索引。"""
+    def __init__(self, rows: int, cols: int, fill: float = 0.0) -> None:
+        self._data: list[list[float]] = [[fill] * cols for _ in range(rows)]
+        self._rows = rows
+        self._cols = cols
+
+    def __len__(self) -> int:
+        return self._rows * self._cols
+
+    def __getitem__(self, index):
+        # 支持整数索引（返回一行）和元组 (i, j) 索引
+        if isinstance(index, tuple):
+            i, j = index
+            return self._data[i][j]
+        return self._data[index]  # 返回一行
+
+    def __setitem__(self, index, value) -> None:
+        if isinstance(index, tuple):
+            i, j = index
+            self._data[i][j] = value
+        else:
+            # 整行替换：value 应是 list
+            if len(value) != self._cols:
+                raise ValueError(f"该行需要 {self._cols} 个元素")
+            self._data[index] = list(value)
+
+    def __contains__(self, item) -> bool:
+        return any(item in row for row in self._data)
+
+    def __repr__(self) -> str:
+        rows_str = "\n  ".join(str(row) for row in self._data)
+        return f"Matrix({self._rows}x{self._cols}):\n  {rows_str}"
+
+m = Matrix(3, 3, 0)
+m[0, 0] = 1
+m[1, 1] = 2
+m[2] = [9, 9, 9]  # 整行替换
+print(m)
+# 输出：
+# Matrix(3x3):
+#   [1, 0, 0]
+#   [0, 2, 0]
+#   [9, 9, 9]
+
+print(m[0, 0])   # 输出：1
+print(m[1][1])   # 输出：2（先 m[1] 返回一行，再 [1] 索引）
+print(9 in m)    # 输出：True
+print(len(m))    # 输出：9
+```
+
+### `__missing__`：字典键缺失时的钩子
+
+```py
+class DefaultDict(dict):
+    """简化版 defaultdict：键不存在时返回默认值。"""
+    def __init__(self, default) -> None:
+        super().__init__()
+        self.default = default
+
+    def __missing__(self, key):
+        value = self.default() if callable(self.default) else self.default
+        self[key] = value
+        return value
+
+d: DefaultDict = DefaultDict(list)
+d["a"].append(1)
+d["a"].append(2)
+d["b"].append("hi")
+print(d)  # 输出：{'a': [1, 2], 'b': ['hi']}
+```
+
+## 迭代协议：`__iter__` 与 `__next__`
+
+实现迭代协议后，对象就能用于 `for`、`list()`、`sum()`、生成器表达式等。
+
+### 方式一：可迭代对象 + 迭代器
+
+```py
+class Range2:
+    """类似 range，演示可迭代对象与迭代器分离。"""
+    def __init__(self, start: int, stop: int) -> None:
+        self.start = start
+        self.stop = stop
+
+    def __iter__(self) -> "_Range2Iterator":
+        # 每次调用 __iter__ 返回一个新的迭代器
+        return _Range2Iterator(self.start, self.stop)
+
+    def __len__(self) -> int:
+        return max(0, self.stop - self.start)
+
+
+class _Range2Iterator:
+    def __init__(self, start: int, stop: int) -> None:
+        self.current = start
+        self.stop = stop
+
+    def __iter__(self):  # 迭代器本身也可迭代
+        return self
+
+    def __next__(self) -> int:
+        if self.current >= self.stop:
+            raise StopIteration  # 迭代结束信号
+        value = self.current
+        self.current += 1
+        return value
+
+
+r = Range2(1, 5)
+print(list(r))      # 输出：[1, 2, 3, 4]
+print(sum(r))       # 输出：10
+print(len(r))       # 输出：4
+
+# 可重复迭代（每次 __iter__ 返回新迭代器）
+for x in r:
+    for y in r:  # 内层 r 又从头开始
+        pass
+print("嵌套循环正常完成")
+```
+
+### 方式二：生成器（更简洁）
+
+让 `__iter__` 返回生成器，是最 Pythonic 的写法：
+
+```py
+class Fibonacci:
+    def __init__(self, count: int) -> None:
+        self.count = count
+
+    def __iter__(self):
+        a, b = 0, 1
+        for _ in range(self.count):
+            yield a
+            a, b = b, a + b
+
+    def __len__(self) -> int:
+        return self.count
+
+fib = Fibonacci(10)
+print(list(fib))  # 输出：[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+```
+
+:::tip 可迭代 vs 迭代器
+- **可迭代对象（Iterable）**：实现 `__iter__`，能用于 `for`。
+- **迭代器（Iterator）**：同时实现 `__iter__` 和 `__next__`，且耗尽即废弃。
+- 生成器函数返回的对象天然是迭代器。
+
+判断方式：`from collections.abc import Iterable, Iterator`，然后 `isinstance(obj, Iterable)`。
+:::
+
+## 比较方法：`__eq__`、`__lt__`、`__hash__`
+
+Python 默认按对象身份（`is`）比较相等。重写比较方法后，可以按值比较：
+
+```py
+class Point:
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Point):
+            return NotImplemented  # 让 Python 尝试 other.__eq__
+        return self.x == other.x and self.y == other.y
+
+    def __lt__(self, other: "Point") -> bool:
+        return (self.x, self.y) < (other.x, other.y)
+
+    def __le__(self, other: "Point") -> bool:
+        return self == other or self < other
+
+    def __hash__(self) -> int:
+        # 重写 __eq__ 后默认 __hash__ 会变成 None，需要手动定义
+        return hash((self.x, self.y))
+
+    def __repr__(self) -> str:
+        return f"Point({self.x}, {self.y})"
+
+print(Point(1, 2) == Point(1, 2))  # 输出：True（按值相等）
+print(Point(1, 2) < Point(1, 3))  # 输出：True
+print(Point(1, 2) <= Point(1, 2)) # 输出：True
+
+# 可用作字典键、放入集合（因为定义了 __hash__）
+d = {Point(1, 2): "A", Point(3, 4): "B"}
+print(d[Point(1, 2)])  # 输出：A
+
+# 排序
+points = [Point(3, 1), Point(1, 2), Point(1, 1)]
+print(sorted(points))  # 输出：[Point(1, 1), Point(1, 2), Point(3, 1)]
+```
+
+:::warning 重写 __eq__ 必须重写 __hash__
+一旦定义了 `__eq__`，Python 会自动把 `__hash__` 设为 `None`，使对象不可哈希（不能用作字典键、不能放入集合）。要么：
+- 重写 `__hash__` 让对象可哈希（保证 a == b 时 hash(a) == hash(b)）
+- 设 `__hash__ = None` 显式标记不可哈希
+:::
+
+### `functools.total_ordering`：补全比较方法
+
+只需定义 `__eq__` 和一个比较方法（`__lt__` 或 `__le__` 等），用装饰器自动补全其他：
+
+```py
+from functools import total_ordering
+
+@total_ordering
+class Version:
+    def __init__(self, major: int, minor: int) -> None:
+        self.major = major
+        self.minor = minor
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Version):
+            return NotImplemented
+        return (self.major, self.minor) == (other.major, other.minor)
+
+    def __lt__(self, other: "Version") -> bool:
+        return (self.major, self.minor) < (other.major, other.minor)
+
+    def __hash__(self) -> int:
+        return hash((self.major, self.minor))
+
+    def __repr__(self) -> str:
+        return f"v{self.major}.{self.minor}"
+
+print(Version(1, 2) < Version(1, 3))   # 输出：True
+print(Version(1, 3) > Version(1, 2))   # 输出：True（自动生成）
+print(Version(1, 2) <= Version(1, 2)) # 输出：True（自动生成）
+print(Version(1, 2) >= Version(1, 1)) # 输出：True（自动生成）
+```
+
+## 运算符重载：`__add__`、`__mul__` 等
+
+```py
+class Vector:
+    def __init__(self, *components: float) -> None:
+        self.components = list(components)
+
+    def __add__(self, other: "Vector") -> "Vector":
+        if len(self) != len(other):
+            raise ValueError("向量长度必须相同")
+        return Vector(*(a + b for a, b in zip(self, other)))
+
+    def __sub__(self, other: "Vector") -> "Vector":
+        if len(self) != len(other):
+            raise ValueError("向量长度必须相同")
+        return Vector(*(a - b for a, b in zip(self, other)))
+
+    def __mul__(self, scalar: float) -> "Vector":
+        # 向量 * 标量
+        return Vector(*(a * scalar for a in self))
+
+    def __rmul__(self, scalar: float) -> "Vector":
+        # 标量 * 向量（左操作数不支持时调用）
+        return self * scalar
+
+    def __matmul__(self, other: "Vector") -> float:
+        # @ 运算符：点积
+        if len(self) != len(other):
+            raise ValueError("向量长度必须相同")
+        return sum(a * b for a, b in zip(self, other))
+
+    def __neg__(self) -> "Vector":
+        return Vector(*(-a for a in self))
+
+    def __abs__(self) -> float:
+        return sum(a ** 2 for a in self) ** 0.5
+
+    def __len__(self) -> int:
+        return len(self.components)
+
+    def __getitem__(self, i: int) -> float:
+        return self.components[i]
+
+    def __iter__(self):
+        return iter(self.components)
+
+    def __repr__(self) -> str:
+        return f"Vector{tuple(self.components)}"
+
+v1 = Vector(1, 2, 3)
+v2 = Vector(4, 5, 6)
+
+print(v1 + v2)       # 输出：Vector(5, 7, 9)
+print(v1 - v2)       # 输出：Vector(-3, -3, -3)
+print(v1 * 2)        # 输出：Vector(2, 4, 6)
+print(3 * v1)        # 输出：Vector(3, 6, 9)  ← __rmul__
+print(v1 @ v2)       # 输出：32  ← 点积
+print(-v1)           # 输出：Vector(-1, -2, -3)
+print(abs(v2))        # 输出：8.774964387392123
+print(v1[0])          # 输出：1
+print(sum(v1))        # 输出：6  ← __iter__ 让 sum 可用
+```
+
+:::info 常用算术运算符方法
+| 运算符      | 方法           | 反向方法          |
+|-------------|----------------|-------------------|
+| `+`         | `__add__`      | `__radd__`        |
+| `-`         | `__sub__`      | `__rsub__`        |
+| `*`         | `__mul__`      | `__rmul__`        |
+| `/`         | `__truediv__`  | `__rtruediv__`    |
+| `//`        | `__floordiv__` | `__rfloordiv__`   |
+| `%`         | `__mod__`      | `__rmod__`         |
+| `**`        | `__pow__`      | `__rpow__`        |
+| `@`         | `__matmul__`   | `__rmatmul__`     |
+
+对应原地运算符（`+=`、`-=` 等）：`__iadd__`、`__isub__`、`__imul__` 等。未定义时回退到普通运算符。
+:::
+
+### 增量赋值：`__iadd__`
+
+```py
+class Counter:
+    def __init__(self, value: int = 0) -> None:
+        self.value = value
+
+    def __add__(self, other: int) -> "Counter":
+        # c = c + 1：返回新对象
+        return Counter(self.value + other)
+
+    def __iadd__(self, other: int) -> "Counter":
+        # c += 1：原地修改，返回 self
+        self.value += other
+        return self  # 必须返回 self！
+
+    def __repr__(self) -> str:
+        return f"Counter({self.value})"
+
+c = Counter(10)
+new_c = c + 5
+print(c, new_c)  # 输出：Counter(10) Counter(15)  ← 原对象不变
+
+c += 5
+print(c)  # 输出：Counter(15)  ← 原地修改
+```
+
+## 上下文管理器：`__enter__` 与 `__exit__`
+
+实现这两个方法的对象可用于 `with` 语句，自动管理资源（文件、锁、连接等）：
+
+```py
+class FileManager:
+    def __init__(self, path: str, mode: str) -> None:
+        self.path = path
+        self.mode = mode
+        self.file = None
+
+    def __enter__(self):
+        print(f"  [进入] 打开 {self.path}")
+        self.file = open(self.path, self.mode)
+        return self.file  # with ... as f 中的 f 就是返回值
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(f"  [退出] 关闭 {self.path}，异常：{exc_type}")
+        if self.file:
+            self.file.close()
+        return False  # 返回 True 表示吞掉异常，False/None 表示继续抛出
+
+import tempfile, os
+
+path = os.path.join(tempfile.gettempdir(), "demo.txt")
+with FileManager(path, "w") as f:
+    f.write("hello")
+# 输出：
+#   [进入] 打开 /tmp/demo.txt
+#   [退出] 关闭 /tmp/demo.txt，异常：None
+```
+
+### 用 `__exit__` 捕获异常
+
+```py
+class SuppressErrors:
+    def __enter__(self):
+        print("  开始监控")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            print(f"  捕获到异常：{exc_type.__name__}: {exc_val}")
+            return True  # 吞掉异常
+        print("  正常结束")
+        return False
+
+with SuppressErrors():
+    print("  执行代码")
+    raise ValueError("故意抛出")
+    print("这行不会执行")  # 异常后跳过
+# 输出：
+#   开始监控
+#   执行代码
+#   捕获到异常：ValueError: 故意抛出
+print("with 块外继续执行")  # 异常被吞掉，继续执行
+```
+
+:::tip 用 contextlib 简化
+写上下文管理器不必每次定义类，可以用 `@contextmanager` 装饰器把生成器函数转换：
+
+```py
+from contextlib import contextmanager
+
+@contextmanager
+def opened(path, mode):
+    f = open(path, mode)
+    try:
+        yield f
+    finally:
+        f.close()
+```
+:::
+
+## `__call__`：让实例可调用
+
+实现 `__call__` 后，实例可以像函数一样被调用：
+
+```py
+class Multiplier:
+    def __init__(self, factor: float) -> None:
+        self.factor = factor
+
+    def __call__(self, x: float) -> float:
+        return x * self.factor
+
+    def __repr__(self) -> str:
+        return f"Multiplier({self.factor})"
+
+double = Multiplier(2)
+triple = Multiplier(3)
+
+print(double)        # 输出：Multiplier(2)
+print(double(10))    # 输出：20  ← 像函数一样调用
+print(triple(10))    # 输出：30
+
+# 可以用在需要可调用对象的地方
+nums = [1, 2, 3, 4, 5]
+print(list(map(double, nums)))  # 输出：[2, 4, 6, 8, 10]
+print(callable(double))  # 输出：True
+```
+
+:::tip __call__ 的应用场景
+- **函数对象**：保存状态的可调用对象（如带缓存的函数）
+- **装饰器类**：既可保存状态又能当装饰器
+- **配置化策略**：把策略封装成对象，传给需要函数的地方
+- **神经网络层**：PyTorch 的 `nn.Module` 就是典型的可调用对象
+:::
+
+## 其他常用魔术方法
+
+| 方法              | 用途                              |
+|-------------------|-----------------------------------|
+| `__bool__`        | `bool(obj)`、`if obj`             |
+| `__int__/__float__`| 类型转换                          |
+| `__format__`      | `f"{obj:spec}"`、`format(obj, spec)` |
+| `__sizeof__`      | `sys.getsizeof(obj)`              |
+| `__class_getitem__` | `类[类型]` 用于泛型（如 `list[int]`） |
+| `__copy__/__deepcopy__` | `copy.copy/deepcopy`        |
+
+```py
+class Threshold:
+    def __init__(self, value: float, threshold: float = 0.5) -> None:
+        self.value = value
+        self.threshold = threshold
+
+    def __bool__(self) -> bool:
+        return self.value >= self.threshold
+
+    def __format__(self, spec: str) -> str:
+        if spec == "pct":
+            return f"{self.value * 100:.1f}%"
+        elif spec == "raw":
+            return f"{self.value:.4f}"
+        return str(self.value)
+
+t1 = Threshold(0.8)
+t2 = Threshold(0.3)
+
+if t1:  # 调用 __bool__
+    print("t1 通过阈值")
+if not t2:
+    print("t2 未通过阈值")
+
+print(f"{t1:pct}")  # 输出：80.0%
+print(f"{t1:raw}")  # 输出：0.8000
+```
+
+## 实战：自定义向量类
+
+综合运用容器协议、迭代、比较、运算符、`__call__` 等，实现一个功能完整的 N 维向量：
+
+```py
+from functools import total_ordering
+import math
+
+
+@total_ordering
+class Vector:
+    """N 维向量：支持加减、标量乘、点积、长度、比较、迭代、索引。"""
+
+    __slots__ = ("_components",)
+
+    def __init__(self, *components: float) -> None:
+        if not components:
+            raise ValueError("向量至少要有一个分量")
+        self._components = list(components)
+
+    # ---------- 容器协议 ----------
+    def __len__(self) -> int:
+        return len(self._components)
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return Vector(*self._components[index])
+        return self._components[index]
+
+    def __setitem__(self, index: int, value: float) -> None:
+        self._components[index] = value
+
+    def __iter__(self):
+        return iter(self._components)
+
+    def __contains__(self, value: float) -> bool:
+        return value in self._components
+
+    # ---------- 运算符 ----------
+    def __add__(self, other: "Vector") -> "Vector":
+        if len(self) != len(other):
+            raise ValueError(f"维度不匹配：{len(self)} vs {len(other)}")
+        return Vector(*(a + b for a, b in zip(self, other)))
+
+    def __sub__(self, other: "Vector") -> "Vector":
+        if len(self) != len(other):
+            raise ValueError(f"维度不匹配：{len(self)} vs {len(other)}")
+        return Vector(*(a - b for a, b in zip(self, other)))
+
+    def __mul__(self, scalar: float) -> "Vector":
+        """标量乘法：vector * scalar。"""
+        return Vector(*(a * scalar for a in self))
+
+    def __rmul__(self, scalar: float) -> "Vector":
+        return self * scalar
+
+    def __matmul__(self, other: "Vector") -> float:
+        """点积：a @ b。"""
+        if len(self) != len(other):
+            raise ValueError(f"维度不匹配：{len(self)} vs {len(other)}")
+        return sum(a * b for a, b in zip(self, other))
+
+    def __neg__(self) -> "Vector":
+        return Vector(*(-a for a in self))
+
+    def __abs__(self) -> float:
+        """向量长度（模）。"""
+        return math.sqrt(sum(a * a for a in self))
+
+    # ---------- 比较 ----------
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Vector):
+            return NotImplemented
+        return self._components == other._components
+
+    def __lt__(self, other: "Vector") -> bool:
+        if len(self) != len(other):
+            raise ValueError("维度不匹配")
+        return abs(self) < abs(other)
+
+    def __hash__(self) -> int:
+        return hash(tuple(self._components))
+
+    # ---------- 转换与展示 ----------
+    def __bool__(self) -> bool:
+        return abs(self) > 1e-9  # 零向量为 False
+
+    def __repr__(self) -> str:
+        return f"Vector{tuple(self._components)}"
+
+    def __str__(self) -> str:
+        return f"⟨{', '.join(f'{c:.3f}' for c in self._components)}⟩"
+
+    def __format__(self, spec: str) -> str:
+        if spec == "raw":
+            return repr(self)
+        return str(self)
+
+    # ---------- 实例可调用 ----------
+    def __call__(self, other: "Vector") -> float:
+        """调用形式计算夹角余弦。"""
+        dot = self @ other
+        denom = abs(self) * abs(other)
+        if denom == 0:
+            raise ZeroDivisionError("零向量无法计算夹角")
+        return dot / denom
+
+
+# ===== 使用示例 =====
+v1 = Vector(1, 2, 3)
+v2 = Vector(4, 5, 6)
+
+# 展示
+print(repr(v1))  # 输出：Vector(1, 2, 3)
+print(str(v1))   # 输出：⟨1.000, 2.000, 3.000⟩
+
+# 运算
+print(v1 + v2)        # 输出：Vector(5, 7, 9)
+print(v1 - v2)        # 输出：Vector(-3, -3, -3)
+print(v1 * 2)         # 输出：Vector(2, 4, 6)
+print(3 * v1)         # 输出：Vector(3, 6, 9)  ← __rmul__
+print(v1 @ v2)        # 输出：32  ← 点积
+print(-v1)            # 输出：Vector(-1, -2, -3)
+print(abs(v1))         # 输出：3.7416573867739413
+
+# 容器
+print(len(v1))        # 输出：3
+print(v1[0])          # 输出：1
+print(v1[0:2])        # 输出：Vector(1, 2)  ← 切片返回新向量
+print(2 in v1)        # 输出：True
+print(list(v1))       # 输出：[1, 2, 3]
+print(sum(v1))        # 输出：6
+
+# 修改
+v1[0] = 10
+print(v1)             # 输出：⟨10.000, 2.000, 3.000⟩
+v1[0] = 1
+
+# 比较
+print(v1 == Vector(1, 2, 3))  # 输出：True
+print(v1 < v2)                  # 输出：True（按模长比较）
+print(sorted([v2, v1, Vector(0, 0, 0)]))  # 输出：[Vector(0, 0, 0), Vector(1, 2, 3), Vector(4, 5, 6)]
+
+# bool 与 hash
+print(bool(Vector(0, 0, 0)))  # 输出：False（零向量）
+print(bool(v1))                # 输出：True
+print(v1 in {Vector(1, 2, 3), Vector(4, 5, 6)})  # 输出：True
+
+# 实例可调用：计算夹角余弦
+cos_sim = v1(v2)
+angle = math.acos(max(-1.0, min(1.0, cos_sim)))
+print(f"夹角余弦：{cos_sim:.4f}，角度：{math.degrees(angle):.2f}°")
+# 输出：夹角余弦：0.9746，角度：12.93°
+
+# format
+print(f"{v1:raw} | {v1}")  # 输出：Vector(1, 2, 3) | ⟨1.000, 2.000, 3.000⟩
+```
+
+## 小结
+
+- `__new__` 创建实例、`__init__` 初始化；不可变类型必须在 `__new__` 中赋值属性。
+- `__str__` 面向用户、`__repr__` 面向开发者，简单场景只写 `__repr__` 即可。
+- **容器协议**：`__len__`、`__getitem__`、`__setitem__`、`__delitem__`、`__contains__`、`__missing__`。
+- **迭代协议**：`__iter__` 返回迭代器，`__next__` 推进迭代；最 Pythonic 的写法是让 `__iter__` 返回生成器。
+- **比较方法**：`__eq__`、`__lt__`、`__le__` 等；重写 `__eq__` 必须重写 `__hash__`；用 `@functools.total_ordering` 自动补全。
+- **运算符重载**：`__add__`、`__sub__`、`__mul__`、`__matmul__` 等，配合反向方法 `__radd__` 和原地方法 `__iadd__`。
+- **上下文管理器**：`__enter__` + `__exit__`，让对象支持 `with`，自动管理资源、捕获异常。
+- `__call__` 让实例像函数一样调用，适合函数对象、装饰器类、神经网络层等场景。
+- 其他常用：`__bool__`、`__format__`、`__class_getitem__`（泛型支持）。
+
+下一节将介绍**数据类**——用 `@dataclass` 装饰器自动生成样板代码，让数据建模更简洁。

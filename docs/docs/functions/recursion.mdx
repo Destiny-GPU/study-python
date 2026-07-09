@@ -1,0 +1,477 @@
+---
+sidebar_position: 5
+sidebar_label: '递归'
+title: 递归
+description: 学习递归思想、基线条件、递归深度限制、典型应用（阶乘/斐波那契/汉诺塔/目录遍历）以及递归与迭代的对比
+---
+
+# 递归
+
+递归（recursion）是一种函数调用自身来解决问题的编程技巧。它特别适合处理可以分解为**同类型子问题**的场景，例如树形结构遍历、分治算法、回溯问题等。掌握递归能让你以更优雅的方式解决许多复杂问题，但同时要注意 Python 中的递归深度限制和性能问题。
+
+## 递归思想
+
+递归的核心思想是"分而治之"：把一个大问题分解为规模更小的同类型问题，直到问题小到可以直接求解。
+
+每个递归函数必须包含两个部分：
+
+1. **基线条件（base case）**：不再递归，直接返回结果的终止条件
+2. **递归条件（recursive case）**：调用自身处理规模更小的子问题
+
+```py
+def countdown(n):
+    # 基线条件
+    if n <= 0:
+        print("发射！")
+        return
+    # 递归条件
+    print(n)
+    countdown(n - 1)
+
+countdown(3)
+# 输出：
+# 3
+# 2
+# 1
+# 发射！
+```
+
+:::warning 必须有基线条件
+没有基线条件的递归会无限调用自己，最终触发 `RecursionError`：
+```py
+def infinite():
+    return infinite()  # 没有终止条件
+
+infinite()  # RecursionError: maximum recursion depth exceeded
+```
+:::
+
+## 基线条件
+
+基线条件的设计是递归的关键。一个良好的基线条件应该满足：
+
+1. 一定能被达到（避免无限递归）
+2. 能直接给出答案，不需要再递归
+
+```py
+# 反例：基线条件设计不当
+def bad_sum(n):
+    """计算 1+2+...+n"""
+    if n == 0:
+        return 0
+    return n + bad_sum(n - 1)
+
+# bad_sum(-1)  # 无限递归！n 永远不会等于 0
+
+# 正例：基线条件更稳健
+def sum_to_n(n):
+    if n <= 0:  # 处理负数和 0
+        return 0
+    return n + sum_to_n(n - 1)
+
+print(sum_to_n(5))  # 输出：15
+print(sum_to_n(-3))  # 输出：0
+```
+
+## 递归深度限制
+
+Python 默认递归深度上限是 1000，超过会抛出 `RecursionError`：
+
+```py
+def recursive(n):
+    if n > 0:
+        return recursive(n - 1)
+    return "done"
+
+# print(recursive(2000))  # RecursionError
+
+import sys
+print(f"默认递归深度上限：{sys.getrecursionlimit()}")  # 通常输出：1000
+```
+
+### 修改递归深度限制
+
+使用 `sys.setrecursionlimit` 可以调整：
+
+```py
+import sys
+
+sys.setrecursionlimit(5000)  # 调高上限
+print(recursive(2000))  # 输出：done
+```
+
+:::warning 不要盲目调高上限
+Python 没有真正的尾调用优化（TCO），每次递归调用都会在调用栈上保留帧。调得过高可能导致：
+- 栈溢出（segfault，解释器崩溃）
+- 内存暴涨
+- 性能下降
+
+如果递归深度真的需要很大，**应该改用迭代**。
+:::
+
+## 典型应用
+
+### 1. 阶乘
+
+阶乘定义：`n! = n × (n-1) × ... × 1`，且 `0! = 1`
+
+```py
+def factorial(n: int) -> int:
+    """计算 n 的阶乘"""
+    if n < 0:
+        raise ValueError("阶乘要求 n >= 0")
+    if n <= 1:  # 基线条件：0! = 1! = 1
+        return 1
+    return n * factorial(n - 1)  # 递归条件
+
+print(factorial(5))  # 输出：120
+print(factorial(0))   # 输出：1
+```
+
+### 2. 斐波那契数
+
+斐波那契定义：`F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2)`
+
+#### 朴素递归（效率低）
+
+```py
+def fib_naive(n: int) -> int:
+    """朴素递归斐波那契，时间复杂度 O(2^n)"""
+    if n < 2:
+        return n
+    return fib_naive(n - 1) + fib_naive(n - 2)
+
+print(fib_naive(10))  # 输出：55
+# fib_naive(40)  # 极慢，因为有大量重复计算
+```
+
+#### 带缓存的递归（高效）
+
+使用 `functools.lru_cache` 缓存计算结果，时间复杂度降为 O(n)：
+
+```py
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def fib_cached(n: int) -> int:
+    """带缓存的递归斐波那契"""
+    if n < 2:
+        return n
+    return fib_cached(n - 1) + fib_cached(n - 2)
+
+print(fib_cached(100))  # 输出：354224848179261915075（瞬间完成）
+```
+
+#### Python 3.9+ 使用 functools.cache
+
+```py
+from functools import cache
+
+@cache
+def fib(n: int) -> int:
+    if n < 2:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+print(fib(100))  # 输出：354224848179261915075
+```
+
+:::info 缓存的原理
+`@cache` 装饰器把已经计算过的输入-输出对存到字典里。下次用相同参数调用时直接返回缓存值，不再递归。这就是"记忆化搜索"（memoization）技巧，能极大优化递归。
+:::
+
+### 3. 汉诺塔
+
+经典递归问题：把 n 个圆盘从柱 A 移到柱 C，借助柱 B，且大盘不能压在小盘上。
+
+```py
+def hanoi(n: int, source: str, target: str, auxiliary: str) -> None:
+    """将 n 个圆盘从 source 移动到 target，借助 auxiliary。"""
+    if n == 1:
+        print(f"  移动圆盘 1：{source} → {target}")
+        return
+    # 把上面 n-1 个圆盘移到辅助柱
+    hanoi(n - 1, source, auxiliary, target)
+    # 把最底下的大圆盘移到目标柱
+    print(f"  移动圆盘 {n}：{source} → {target}")
+    # 把 n-1 个圆盘从辅助柱移到目标柱
+    hanoi(n - 1, auxiliary, target, source)
+
+print("3 个圆盘的汉诺塔：")
+hanoi(3, "A", "C", "B")
+```
+
+输出：
+
+```text
+3 个圆盘的汉诺塔：
+  移动圆盘 1：A → C
+  移动圆盘 2：A → B
+  移动圆盘 1：C → B
+  移动圆盘 3：A → C
+  移动圆盘 1：B → A
+  移动圆盘 2：B → C
+  移动圆盘 1：A → C
+```
+
+汉诺塔的递推关系：`T(n) = 2*T(n-1) + 1`，移动次数为 `2^n - 1`。
+
+### 4. 目录遍历
+
+递归遍历文件系统是天然适合递归的场景：
+
+```py
+from pathlib import Path
+
+
+def list_files(path: Path, indent: int = 0) -> None:
+    """递归列出目录树。"""
+    prefix = "  " * indent
+    if path.is_file():
+        print(f"{prefix}📄 {path.name}")
+        return
+    if path.is_dir():
+        print(f"{prefix}📁 {path.name}/")
+        # 递归遍历子目录
+        for child in sorted(path.iterdir()):
+            list_files(child, indent + 1)
+
+
+# 示例：列出当前目录树
+# list_files(Path("."))
+```
+
+过滤特定扩展名的文件：
+
+```py
+def find_files_by_ext(path: Path, ext: str) -> list[Path]:
+    """递归查找指定扩展名的所有文件。"""
+    result: list[Path] = []
+    if path.is_file():
+        if path.suffix == ext:
+            result.append(path)
+    elif path.is_dir():
+        for child in path.iterdir():
+            result.extend(find_files_by_ext(child, ext))
+    return result
+
+# print(find_files_by_ext(Path("."), ".py"))
+```
+
+### 5. 树形数据处理
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass
+class TreeNode:
+    name: str
+    children: list["TreeNode"]
+
+
+def count_nodes(node: TreeNode) -> int:
+    """统计树中节点总数。"""
+    return 1 + sum(count_nodes(child) for child in node.children)
+
+
+def depth(node: TreeNode) -> int:
+    """计算树的深度。"""
+    if not node.children:
+        return 1
+    return 1 + max(depth(child) for child in node.children)
+
+
+def find_by_name(node: TreeNode, name: str) -> TreeNode | None:
+    """在树中按名查找节点。"""
+    if node.name == name:
+        return node
+    for child in node.children:
+        result = find_by_name(child, name)
+        if result is not None:
+            return result
+    return None
+
+
+# 构造示例树
+tree = TreeNode("root", [
+    TreeNode("src", [
+        TreeNode("main.py"),
+        TreeNode("utils.py"),
+    ]),
+    TreeNode("docs", [
+        TreeNode("index.md"),
+    ]),
+    TreeNode("README.md"),
+])
+
+print(f"节点总数：{count_nodes(tree)}")  # 输出：6
+print(f"树深度：{depth(tree)}")           # 输出：3
+found = find_by_name(tree, "main.py")
+print(f"查找结果：{found.name if found else '未找到'}")  # 输出：main.py
+```
+
+## 尾递归
+
+如果一个函数的递归调用是函数体中**最后一步操作**（返回值就是递归调用的返回值），称为尾递归。
+
+```py
+# 不是尾递归：递归调用后还要做乘法
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)  # ← 还要乘以 n
+
+# 改写为尾递归：用累加器传递中间结果
+def factorial_tail(n, acc=1):
+    if n <= 1:
+        return acc
+    return factorial_tail(n - 1, acc * n)  # ← 直接返回递归结果
+
+print(factorial_tail(5))  # 输出：120
+```
+
+:::warning Python 没有尾调用优化
+理论上尾递归可以转化为循环，不增加调用栈深度。但 **CPython 解释器不做尾调用优化**，因此尾递归在 Python 中并不能避免 `RecursionError`。
+
+如果递归深度可能很大，应该手动改写为循环：
+```py
+def factorial_iter(n: int) -> int:
+    result = 1
+    for i in range(2, n + 1):
+        result *= i
+    return result
+```
+:::
+
+## 递归 vs 迭代
+
+任何递归都可以改写为迭代（用栈或循环模拟），反之亦然。两者各有优劣：
+
+| 特性 | 递归 | 迭代 |
+| --- | --- | --- |
+| 代码可读性 | 通常更简洁、贴近问题定义 | 有时较冗长 |
+| 调用栈开销 | 每次调用都占栈帧 | 无栈帧开销 |
+| 深度限制 | 受 `sys.getrecursionlimit()` 限制 | 无限制 |
+| 性能 | 函数调用开销较大 | 通常更快 |
+| 调试 | 调用栈清晰 | 状态变量较多 |
+
+```py
+# 递归版：求列表元素之和
+def sum_recursive(lst):
+    if not lst:
+        return 0
+    return lst[0] + sum_recursive(lst[1:])
+
+# 迭代版
+def sum_iterative(lst):
+    total = 0
+    for x in lst:
+        total += x
+    return total
+
+print(sum_recursive([1, 2, 3, 4, 5]))  # 输出：15
+print(sum_iterative([1, 2, 3, 4, 5]))  # 输出：15
+```
+
+:::tip 选择建议
+- **天然递归结构**（树、图、分治、回溯）：用递归更自然
+- **简单循环**（求和、累加、计数）：用迭代更高效
+- **递归深度大**（> 几百层）：必须用迭代
+- **递归+缓存**（记忆化搜索）：可以解决很多动态规划问题
+:::
+
+## 实战：快速排序
+
+快速排序是经典的分治算法：
+1. 选一个基准（pivot）
+2. 把小于 pivot 的放左边，大于 pivot 的放右边
+3. 对左右两部分递归排序
+
+```py
+def quicksort(arr: list[int]) -> list[int]:
+    """快速排序（返回新列表，原地版本略复杂）。"""
+    if len(arr) <= 1:  # 基线条件
+        return arr
+
+    pivot = arr[len(arr) // 2]  # 选中间元素作为基准
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+
+    return quicksort(left) + middle + quicksort(right)
+
+
+print(quicksort([3, 6, 8, 10, 1, 2, 1]))
+# 输出：[1, 1, 2, 3, 6, 8, 10]
+
+
+# 原地版本（性能更好）
+def quicksort_inplace(arr: list[int], low: int = 0, high: int | None = None) -> None:
+    """原地快速排序。"""
+    if high is None:
+        high = len(arr) - 1
+    if low >= high:  # 基线条件
+        return
+
+    pivot = arr[high]
+    i = low - 1
+    for j in range(low, high):
+        if arr[j] <= pivot:
+            i += 1
+            arr[i], arr[j] = arr[j], arr[i]
+    arr[i + 1], arr[high] = arr[high], arr[i + 1]
+
+    quicksort_inplace(arr, low, i)
+    quicksort_inplace(arr, i + 2, high)
+
+
+data = [3, 6, 8, 10, 1, 2, 1]
+quicksort_inplace(data)
+print(data)  # 输出：[1, 1, 2, 3, 6, 8, 10]
+```
+
+:::info 分治与递归
+快速排序、归并排序、二分查找都是典型的分治算法，思路都是：
+1. **分**：把问题分解为子问题
+2. **治**：递归求解子问题
+3. **合**：合并子问题的解
+
+```py
+# 归并排序：另一个分治经典
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid])
+    right = merge_sort(arr[mid:])
+    return merge(left, right)
+
+def merge(a, b):
+    result = []
+    i = j = 0
+    while i < len(a) and j < len(b):
+        if a[i] <= b[j]:
+            result.append(a[i]); i += 1
+        else:
+            result.append(b[j]); j += 1
+    result.extend(a[i:])
+    result.extend(b[j:])
+    return result
+
+print(merge_sort([3, 1, 4, 1, 5, 9, 2, 6]))
+# 输出：[1, 1, 2, 3, 4, 5, 6, 9]
+```
+:::
+
+## 小结
+
+- 递归函数必须包含**基线条件**（终止）和**递归条件**（调用自身）
+- Python 默认递归深度上限 1000，可通过 `sys.setrecursionlimit()` 调整，但不要盲目调高
+- 典型应用：阶乘、斐波那契、汉诺塔、目录遍历、树形数据处理、分治算法
+- **朴素递归斐波那契效率极低**（O(2^n)），用 `@functools.cache` 记忆化搜索可优化到 O(n)
+- Python **不做尾调用优化**，需要大深度时改用迭代
+- 递归更贴近问题定义、可读性好；迭代性能更好、无深度限制
+- 快速排序、归并排序是分治思想的典型应用
+
+下一节将介绍 Python 中非常强大的特性——装饰器，它能让你在不修改函数源代码的前提下，扩展函数的功能。

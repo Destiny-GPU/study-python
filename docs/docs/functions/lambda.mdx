@@ -1,0 +1,499 @@
+---
+sidebar_position: 3
+sidebar_label: 'Lambda'
+title: Lambda 匿名函数
+description: 学习 lambda 表达式语法、与 def 的区别、作为参数传递、operator 模块及其与列表推导式的对比
+---
+
+# Lambda 匿名函数
+
+`lambda` 是 Python 中创建匿名函数（anonymous function）的关键字。它适合定义简单、一次性使用的函数，常用于 `sorted`、`map`、`filter` 等需要函数作为参数的场景。理解 lambda 的语法和适用范围能帮助你写出更简洁的代码。
+
+## lambda 语法
+
+lambda 表达式的语法非常简洁：
+
+```text
+lambda 参数列表: 表达式
+```
+
+注意：lambda 主体是**单个表达式**，不能包含语句（如 `if`/`while`/`for`/`def`/`return`）。
+
+```py
+# 等价于 def add(a, b): return a + b
+add = lambda a, b: a + b
+print(add(3, 5))  # 输出：8
+
+# 单参数
+square = lambda x: x ** 2
+print(square(5))  # 输出：25
+
+# 无参数
+greet = lambda: "Hello!"
+print(greet())  # 输出：Hello！
+
+# 多参数
+multiply = lambda x, y, z: x * y * z
+print(multiply(2, 3, 4))  # 输出：24
+```
+
+带默认值的 lambda：
+
+```py
+power = lambda x, n=2: x ** n
+print(power(3))      # 输出：9（默认 n=2）
+print(power(3, 4))   # 输出：81
+```
+
+带类型注解的 lambda（Python 3.12+ 中类型系统支持 lambda 注解，但实际很少用）：
+
+```py
+# 一般 lambda 不加类型注解，依靠上下文判断
+concat = lambda a, b: f"{a}-{b}"
+print(concat("x", "y"))  # 输出：x-y
+```
+
+## 与 def 的区别
+
+| 特性 | `def` 定义 | `lambda` 表达式 |
+| --- | --- | --- |
+| 语句 vs 表达式 | 是语句 | 是表达式 |
+| 函数体 | 多条语句，可有逻辑分支 | 单个表达式 |
+| 函数名 | 必须有名字 | 匿名（可赋给变量） |
+| 文档字符串 | 支持 `__doc__` | 不支持 |
+| 装饰器 | 支持 `@decorator` | 不支持 |
+| 可读性 | 适合复杂逻辑 | 适合简短逻辑 |
+
+```py
+# def 版本
+def get_full_name(first, last):
+    return f"{first} {last}"
+
+# lambda 版本
+get_full_name_lambda = lambda first, last: f"{first} {last}"
+
+print(get_full_name("Alice", "Smith"))         # 输出：Alice Smith
+print(get_full_name_lambda("Alice", "Smith"))   # 输出：Alice Smith
+
+# 文档字符串差异
+print(get_full_name.__doc__)           # 输出：None（未定义时）
+print(get_full_name_lambda.__doc__)    # 输出：None（lambda 不支持 docstring）
+```
+
+:::warning 不要滥用 lambda
+将 lambda 赋值给变量后当作普通函数使用，是一种反模式（PEP 8 不推荐）：
+```py
+# 不推荐
+f = lambda x: x * 2
+
+# 推荐
+def f(x):
+    return x * 2
+```
+原因：`def` 版本支持文档字符串、更好的堆栈跟踪、IDE 提示更友好。lambda 真正适合的场景是**就地使用**，例如作为参数传给 `sorted`/`map`/`filter`。
+:::
+
+## 作为参数传递
+
+lambda 最大的用武之地是作为高阶函数的参数。
+
+### sorted 的 key
+
+```py
+students = [
+    {"name": "Alice", "score": 88},
+    {"name": "Bob", "score": 95},
+    {"name": "Charlie", "score": 72},
+]
+
+# 按 score 升序
+sorted_by_score = sorted(students, key=lambda s: s["score"])
+print(sorted_by_score)
+# 输出：[{'name': 'Charlie', 'score': 72}, {'name': 'Alice', 'score': 88}, {'name': 'Bob', 'score': 95}]
+
+# 按 name 长度降序
+sorted_by_name_len = sorted(students, key=lambda s: len(s["name"]), reverse=True)
+print([s["name"] for s in sorted_by_name_len])
+# 输出：['Charlie', 'Alice', 'Bob']
+```
+
+### map 转换序列
+
+```py
+numbers = [1, 2, 3, 4, 5]
+
+squares = list(map(lambda x: x ** 2, numbers))
+print(squares)  # 输出：[1, 4, 9, 16, 25]
+
+# 同时对多个序列操作
+a = [1, 2, 3]
+b = [10, 20, 30]
+sums = list(map(lambda x, y: x + y, a, b))
+print(sums)  # 输出：[11, 22, 33]
+```
+
+### filter 过滤序列
+
+```py
+numbers = list(range(1, 11))
+
+# 过滤偶数
+evens = list(filter(lambda x: x % 2 == 0, numbers))
+print(evens)  # 输出：[2, 4, 6, 8, 10]
+
+# 过滤大于 5 的数
+big = list(filter(lambda x: x > 5, numbers))
+print(big)  # 输出：[6, 7, 8, 9, 10]
+```
+
+:::info map/filter vs 列表推导式
+虽然 `map` 和 `filter` 配合 lambda 很常见，但 Python 社区更推荐使用列表推导式，因为可读性更好：
+```py
+# map/filter 写法
+squares = list(map(lambda x: x ** 2, numbers))
+evens = list(filter(lambda x: x % 2 == 0, numbers))
+
+# 列表推导式写法（更 Pythonic）
+squares = [x ** 2 for x in numbers]
+evens = [x for x in numbers if x % 2 == 0]
+```
+:::
+
+## 常用场景
+
+### 1. 排序 key
+
+```py
+words = ["banana", "apple", "cherry", "date"]
+
+# 按字母顺序
+words_sorted = sorted(words, key=lambda w: w.lower())
+print(words_sorted)  # 输出：['apple', 'banana', 'cherry', 'date']
+
+# 按长度，长度相同按字母
+words_sorted2 = sorted(words, key=lambda w: (len(w), w))
+print(words_sorted2)  # 输出：['date', 'apple', 'banana', 'cherry']
+```
+
+### 2. 字典默认值
+
+```py
+from collections import defaultdict
+
+# 默认值为空列表
+counts = defaultdict(lambda: 0)
+for word in ["a", "b", "a", "c", "b", "a"]:
+    counts[word] += 1
+print(dict(counts))  # 输出：{'a': 3, 'b': 2, 'c': 1}
+
+# 默认值为自定义对象
+matrix = defaultdict(lambda: defaultdict(int))
+matrix[0][0] = 1
+matrix[1][2] = 5
+print(dict(matrix[0]))  # 输出：{0: 1}
+print(dict(matrix[1]))  # 输出：{2: 5}
+```
+
+### 3. GUI/事件回调
+
+```py
+# 模拟 GUI 按钮回调（简化示例）
+def create_button(label, on_click):
+    print(f"按钮 [{label}] 创建，回调已注册")
+    return on_click
+
+button_callback = create_button("提交", lambda: print("按钮被点击了"))
+# 后续触发
+button_callback()  # 输出：按钮被点击了
+```
+
+### 4. 元素取值
+
+```py
+data = [("Alice", 30), ("Bob", 25), ("Charlie", 35)]
+
+# 按第二个元素排序
+data_sorted = sorted(data, key=lambda item: item[1])
+print(data_sorted)
+# 输出：[('Bob', 25), ('Alice', 30), ('Charlie', 35)]
+```
+
+## 局限性
+
+lambda 也有不少限制：
+
+### 1. 不能包含语句
+
+```py
+# 错误：lambda 不能包含赋值语句
+# f = lambda x: (y = x + 1; y * 2)  # SyntaxError
+
+# 替代：用海象运算符（Python 3.8+）
+f = lambda x: (y := x + 1) * 2  # 海象运算符可以在表达式内赋值
+print(f(5))  # 输出：12
+```
+
+:::tip 海象运算符 :=
+`:=` 是 Python 3.8 引入的赋值表达式，可以在表达式内部赋值。配合 lambda 能突破部分限制：
+```py
+# 计算平方并返回原数和平方
+transform = lambda x: (x, (sq := x ** 2))
+print(transform(5))  # 输出：(5, 25)
+```
+:::
+
+### 2. 不能有分支逻辑（除非用三元表达式）
+
+```py
+# 用三元表达式模拟 if-else
+classify = lambda x: "正" if x > 0 else ("零" if x == 0 else "负")
+print(classify(5))   # 输出：正
+print(classify(0))   # 输出：零
+print(classify(-3))  # 输出：负
+
+# 太复杂时应改用 def
+```
+
+### 3. 没有文档字符串
+
+lambda 不支持 `__doc__`，调用 `help()` 时显示的只是 `<lambda>`：
+
+```py
+f = lambda x: x * 2
+help(f)
+# 输出：<lambda> function
+```
+
+### 4. 不能被装饰
+
+```py
+# 不能直接对 lambda 应用 @decorator 语法
+# 必须用 def 才能用 @ 语法
+```
+
+## 与列表推导式对比
+
+很多场景下，列表推导式比 `map`/`filter` + lambda 更直观：
+
+```py
+numbers = list(range(1, 6))
+
+# map + lambda
+squares_1 = list(map(lambda x: x ** 2, numbers))
+
+# 列表推导式
+squares_2 = [x ** 2 for x in numbers]
+
+# 两者结果相同
+print(squares_1 == squares_2)  # 输出：True
+```
+
+性能对比：
+
+```py
+import timeit
+
+setup = "numbers = list(range(1000))"
+
+# map + lambda
+t1 = timeit.timeit("list(map(lambda x: x ** 2, numbers))", setup=setup, number=10000)
+
+# 列表推导式
+t2 = timeit.timeit("[x ** 2 for x in numbers]", setup=setup, number=10000)
+
+print(f"map + lambda:  {t1:.3f}s")
+print(f"列表推导式:    {t2:.3f}s")
+```
+
+通常列表推导式更快、更易读，但 `map` 在配合内置函数（如 `str`、`int`）时仍然简洁：
+
+```py
+# 这种情况下 map 更简洁
+strings = ["1", "2", "3"]
+nums = list(map(int, strings))  # 直接传 int，无需 lambda
+print(nums)  # 输出：[1, 2, 3]
+
+# 等价列表推导式
+nums = [int(s) for s in strings]
+```
+
+:::info 选择建议
+- 简单转换：列表推导式更 Pythonic
+- 配合已有函数（无 lambda）：`map`/`filter` 仍然简洁
+- 复杂逻辑：使用 `def` 定义具名函数
+:::
+
+## operator 模块
+
+`operator` 模块提供了对应内置运算符的函数，能替代部分 lambda，让代码更清晰：
+
+```py
+import operator
+
+# 算术运算
+print(operator.add(3, 5))       # 输出：8  等价 lambda a, b: a + b
+print(operator.sub(10, 4))      # 输出：6
+print(operator.mul(3, 4))       # 输出：12
+print(operator.truediv(10, 4))  # 输出：2.5
+print(operator.mod(10, 3))      # 输出：1
+print(operator.pow(2, 10))      # 输出：1024
+
+# 比较
+print(operator.eq(3, 3))   # 输出：True
+print(operator.lt(3, 5))   # 输出：True
+print(operator.gt(3, 5))   # 输出：False
+```
+
+### itemgetter 与 attrgetter
+
+`itemgetter` 替代 `lambda x: x[key]`，`attrgetter` 替代 `lambda x: x.attr`：
+
+```py
+from operator import itemgetter, attrgetter
+
+students = [
+    {"name": "Alice", "score": 88},
+    {"name": "Bob", "score": 95},
+    {"name": "Charlie", "score": 72},
+]
+
+# 用 lambda
+sorted1 = sorted(students, key=lambda s: s["score"])
+
+# 用 itemgetter（更高效，因为内部用 C 实现）
+sorted2 = sorted(students, key=itemgetter("score"))
+
+print([s["name"] for s in sorted1])  # 输出：['Charlie', 'Alice', 'Bob']
+print([s["name"] for s in sorted2])  # 输出：['Charlie', 'Alice', 'Bob']
+
+# 多字段排序
+multi = sorted(students, key=itemgetter("score", "name"))
+```
+
+对对象属性排序：
+
+```py
+class Student:
+    def __init__(self, name, score):
+        self.name = name
+        self.score = score
+
+    def __repr__(self):
+        return f"Student({self.name!r}, {self.score})"
+
+students = [
+    Student("Alice", 88),
+    Student("Bob", 95),
+    Student("Charlie", 72),
+]
+
+# 用 attrgetter 替代 lambda s: s.score
+sorted_students = sorted(students, key=attrgetter("score"))
+print(sorted_students)
+# 输出：[Student('Charlie', 72), Student('Alice', 88), Student('Bob', 95)]
+```
+
+:::tip itemgetter 性能更好
+`itemgetter`、`attrgetter`、`methodcaller` 由 C 实现，比 lambda 略快。在性能敏感场景下推荐使用。
+:::
+
+### methodcaller
+
+```py
+from operator import methodcaller
+
+words = ["Hello", "WORLD", "Python"]
+uppercased = list(map(methodcaller("upper"), words))
+print(uppercased)  # 输出：['HELLO', 'WORLD', 'PYTHON']
+
+# 等价于
+uppercased = list(map(lambda s: s.upper(), words))
+```
+
+## 实战：按多字段排序
+
+下面实现一个综合示例，按多个字段对员工数据进行排序，并对比 lambda 和 operator 的写法：
+
+```py
+from operator import itemgetter
+
+employees = [
+    {"name": "Alice", "department": "工程", "salary": 25000, "level": 3},
+    {"name": "Bob", "department": "工程", "salary": 28000, "level": 4},
+    {"name": "Charlie", "department": "销售", "salary": 22000, "level": 3},
+    {"name": "Diana", "department": "销售", "salary": 28000, "level": 4},
+    {"name": "Eve", "department": "工程", "salary": 28000, "level": 3},
+]
+
+
+def sort_employees(emps: list[dict], *fields: str, reverse: bool = False) -> list[dict]:
+    """按多个字段排序员工列表。
+
+    Args:
+        emps: 员工列表。
+        *fields: 排序字段，按优先级排列。
+        reverse: 是否降序。
+
+    Returns:
+        排序后的新列表。
+    """
+    if not fields:
+        return list(emps)
+    # 使用 itemgetter 一次取出多个字段
+    key = itemgetter(*fields) if len(fields) > 1 else itemgetter(fields[0])
+    return sorted(emps, key=key, reverse=reverse)
+
+
+# 1. 按部门升序
+by_dept = sort_employees(employees, "department")
+print("按部门：", [e["name"] for e in by_dept])
+# 输出：['Alice', 'Bob', 'Eve', 'Charlie', 'Diana']
+
+# 2. 按部门、再按薪资降序（同部门内薪资高在前）
+by_dept_salary = sorted(
+    employees,
+    key=lambda e: (e["department"], -e["salary"]),
+)
+print("按部门+薪资降序：")
+for e in by_dept_salary:
+    print(f"  {e['department']:4s} {e['name']:8s} ¥{e['salary']}")
+# 输出：
+#   工程 Bob      ¥28000
+#   工程 Eve      ¥28000
+#   工程 Alice    ¥25000
+#   销售 Diana    ¥28000
+#   销售 Charlie  ¥22000
+
+# 3. 按级别、再按薪资（都升序），用 itemgetter
+by_level_salary = sorted(employees, key=itemgetter("level", "salary"))
+print("按级别+薪资：")
+for e in by_level_salary:
+    print(f"  L{e['level']} {e['name']:8s} ¥{e['salary']}")
+# 输出：
+#   L3 Charlie  ¥22000
+#   L3 Alice    ¥25000
+#   L3 Eve      ¥28000
+#   L4 Bob      ¥28000
+#   L4 Diana    ¥28000
+```
+
+:::tip 多字段排序技巧
+- 同方向（都升序/都降序）：用 `itemgetter("a", "b")` 一次取出元组
+- 混合方向：数值字段可用 `-value` 反转，字符串字段较复杂，需多次 `sorted`（Python 的 `sorted` 是稳定排序）
+```py
+# 多次稳定排序：先按次要字段，再按主要字段
+by_secondary = sorted(employees, key=lambda e: e["salary"])          # 先按薪资
+by_primary = sorted(by_secondary, key=lambda e: e["department"])      # 再按部门
+```
+:::
+
+## 小结
+
+- `lambda 参数: 表达式` 创建匿名函数，主体只能是单个表达式
+- 与 `def` 相比，lambda 简洁但缺少文档字符串、不支持装饰器、不适合复杂逻辑
+- lambda 最适合用作高阶函数（`sorted`/`map`/`filter`/`defaultdict`）的参数
+- 简单转换场景下，列表推导式通常比 `map + lambda` 更 Pythonic
+- `operator` 模块（`itemgetter`/`attrgetter`/`methodcaller`）能替代常用 lambda，更高效更清晰
+- 不要把 lambda 赋值给变量当作普通函数使用，那样做不如 `def`
+
+下一节将深入 Python 的作用域规则 LEGB，理解变量的查找顺序。

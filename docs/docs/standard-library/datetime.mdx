@@ -1,0 +1,572 @@
+---
+sidebar_position: 2
+sidebar_label: 'datetime'
+title: datetime 时间处理
+description: 掌握 datetime、date、time、timedelta、时区 aware 与 naive、zoneinfo、时间戳、日期运算与 calendar 模块。
+---
+
+# datetime 时间处理
+
+时间是无处不在却又极其微妙的概念：时区、闰秒、夏令时、闰年、月末日期……任何一处疏忽都会让程序在跨时区或跨季度时崩溃。Python 标准库 `datetime` 模块提供了完整的时间处理工具，配合 Python 3.9+ 引入的 `zoneinfo` 模块，可以优雅地处理时区问题。本章将系统讲解这些工具。
+
+## datetime 模块的核心类
+
+`datetime` 模块包含几个核心类：
+
+| 类 | 含义 | 是否含时区 |
+| --- | --- | --- |
+| `date` | 日期（年月日） | 无 |
+| `time` | 时间（时分秒微秒） | 可选 |
+| `datetime` | 日期 + 时间 | 可选 |
+| `timedelta` | 时间间隔 | 无 |
+| `tzinfo` | 时区信息抽象基类 | — |
+
+```py
+from datetime import date, time, datetime, timedelta
+
+# date：只有日期
+d = date(2025, 7, 10)
+print(d)  # 2025-07-10
+
+# time：只有时间
+t = time(14, 30, 0)
+print(t)  # 14:30:00
+
+# datetime：日期 + 时间
+dt = datetime(2025, 7, 10, 14, 30, 0)
+print(dt)  # 2025-07-10 14:30:00
+
+# timedelta：时间间隔
+delta = timedelta(days=7, hours=3)
+print(delta)  # 7 days, 3:00:00
+```
+
+## 获取当前时间：now / today / utcnow
+
+```py
+from datetime import datetime, date
+
+# datetime.now：当前本地时间（naive，无时区信息）
+now = datetime.now()
+print("now:", now)  # 2025-07-10 14:30:00.123456
+
+# datetime.today：与 now 等价
+today = datetime.today()
+print("today:", today)
+
+# date.today：今天的日期
+d_today = date.today()
+print("date.today:", d_today)  # 2025-07-10
+
+# utcnow：UTC 时间（已弃用，推荐用带时区的 now）
+import warnings
+warnings.warn("utcnow 已弃用", DeprecationWarning, stacklevel=1)
+utc_naive = datetime.utcnow()
+print("utcnow (naive):", utc_naive)
+```
+
+:::warning utcnow 已不推荐
+`datetime.utcnow()` 返回的是 **naive**（无时区）的 UTC 时间，容易和本地时间混淆，Python 3.12 起在文档中明确不推荐。正确做法是使用带时区的 `datetime.now(timezone.utc)`，下面会详细介绍。
+:::
+
+## 时间戳与 datetime 互转
+
+时间戳（timestamp）是自 1970-01-01 00:00:00 UTC 起的秒数，是跨语言、跨平台交换时间的标准格式：
+
+```py
+from datetime import datetime, timezone
+
+# 当前时间戳
+ts = datetime.now().timestamp()
+print("时间戳:", ts)  # 1752131400.123456
+
+# 时间戳转 datetime（本地时间）
+dt_from_ts = datetime.fromtimestamp(ts)
+print("fromtimestamp:", dt_from_ts)
+
+# 时间戳转 UTC datetime（aware）
+utc_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+print("UTC:", utc_dt)
+
+# datetime 转时间戳
+back = utc_dt.timestamp()
+print("还原时间戳:", back)  # 与 ts 相同
+```
+
+:::note 时间戳与时区无关
+时间戳本身与时区无关——它代表一个绝对时刻。同一个事件，无论用哪个时区查看，对应的时间戳都是同一个。差异只体现在 `datetime.fromtimestamp(ts)` 转换时是否指定 `tz`：不指定则按本地时区显示，指定则按指定时区显示。
+:::
+
+## 格式化与解析：strftime / strptime
+
+`strftime`（string format time）把 `datetime` 转字符串，`strptime`（string parse time）把字符串转 `datetime`：
+
+```py
+from datetime import datetime
+
+dt = datetime(2025, 7, 10, 14, 30, 45)
+
+# strftime：datetime -> str
+s = dt.strftime("%Y-%m-%d %H:%M:%S")
+print(s)  # 2025-07-10 14:30:45
+
+s_cn = dt.strftime("%Y年%m月%d日 %H时%M分")
+print(s_cn)  # 2025年07月10日 14时30分
+
+# strptime：str -> datetime
+parsed = datetime.strptime("2025-07-10 14:30:45", "%Y-%m-%d %H:%M:%S")
+print(parsed)  # 2025-07-10 14:30:45
+print(parsed == dt)  # True
+```
+
+### 常用格式代码
+
+| 代码 | 含义 | 示例 |
+| --- | --- | --- |
+| `%Y` | 四位年份 | 2025 |
+| `%m` | 两位月份 | 07 |
+| `%d` | 两位日期 | 10 |
+| `%H` | 24 小时制时 | 14 |
+| `%M` | 分钟 | 30 |
+| `%S` | 秒 | 45 |
+| `%f` | 微秒（6 位） | 000123 |
+| `%A` | 星期全名 | Thursday |
+| `%a` | 星期缩写 | Thu |
+| `%B` | 月份全名 | July |
+| `%b` | 月份缩写 | Jul |
+| `%p` | AM/PM | PM |
+| `%z` | 时区偏移 | +0800 |
+| `%Z` | 时区名 | CST |
+
+:::tip ISO 8601 捷径
+处理 ISO 8601 格式（如 `2025-07-10T14:30:45+08:00`）时，不必手写格式串，直接用 `isoformat()` 与 `fromisoformat()`：
+
+```py
+from datetime import datetime
+
+dt = datetime(2025, 7, 10, 14, 30, 45)
+s = dt.isoformat()  # 2025-07-10T14:30:45
+dt2 = datetime.fromisoformat(s)
+print(dt == dt2)  # True
+```
+
+Python 3.11+ 的 `fromisoformat` 还支持更多 ISO 变体，包括 `Z` 后缀。
+:::
+
+## 时区：aware 与 naive
+
+`datetime` 对象分两种：
+
+- **naive**：不带时区信息，`tzinfo is None`。代表"哪个时区由上下文决定"。
+- **aware**：带时区信息，`tzinfo is not None`。代表一个绝对时刻。
+
+```py
+from datetime import datetime, timezone
+
+# naive：不知道自己代表哪个时区
+naive = datetime(2025, 7, 10, 14, 30)
+print(naive.tzinfo)  # None
+
+# aware：使用 UTC
+aware = datetime(2025, 7, 10, 14, 30, tzinfo=timezone.utc)
+print(aware.tzinfo)  # UTC
+
+# aware 与 naive 不可比较
+# aware > naive  # 抛 TypeError
+```
+
+:::warning 不要混用 aware 与 naive
+`aware` 与 `naive` 的 `datetime` 不能直接比较、相减。代码中应保持一致——要么全部用 aware（推荐），要么全部用 naive（仅在单时区、纯本地场景）。生产代码强烈建议一律使用 aware，从源头杜绝时区 bug。
+:::
+
+### timezone 时区偏移
+
+`timezone` 表示固定偏移量的时区，适合简单场景：
+
+```py
+from datetime import datetime, timezone, timedelta
+
+# UTC+8
+cst = timezone(timedelta(hours=8))
+dt = datetime(2025, 7, 10, 14, 30, tzinfo=cst)
+print(dt)  # 2025-07-10 14:30:00+08:00
+
+# 转换为 UTC
+utc_dt = dt.astimezone(timezone.utc)
+print(utc_dt)  # 2025-07-10 06:30:00+00:00
+```
+
+## zoneinfo：IANA 时区（Python 3.9+）
+
+固定偏移量无法表达夏令时——同一个时区在不同季节偏移可能不同。Python 3.9 引入 `zoneinfo` 模块，使用 IANA 时区数据库（如 `Asia/Shanghai`、`America/New_York`）自动处理夏令时：
+
+```py
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# 上海时区（无夏令时）
+shanghai = ZoneInfo("Asia/Shanghai")
+dt_sh = datetime(2025, 7, 10, 14, 30, tzinfo=shanghai)
+print(dt_sh)  # 2025-07-10 14:30:00+08:00
+
+# 纽约时区（夏令时）
+new_york = ZoneInfo("America/New_York")
+dt_ny = datetime(2025, 7, 10, 14, 30, tzinfo=new_york)
+print(dt_ny)  # 2025-07-10 14:30:00-04:00（夏令时期间 UTC-4）
+
+# 同一天在冬天
+dt_winter = datetime(2025, 1, 10, 14, 30, tzinfo=new_york)
+print(dt_winter)  # 2025-01-10 14:30:00-05:00（标准时间 UTC-5）
+```
+
+:::tip ZoneInfo 解决夏令时
+纽约冬天 UTC-5，夏天 UTC-4。固定偏移量的 `timezone` 无法表达这种切换，而 `ZoneInfo` 会根据日期自动选择正确的偏移。所有跨时区应用都应使用 `zoneinfo`。
+:::
+
+### 时区转换
+
+```py
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# 北京时间
+beijing_time = datetime(2025, 7, 10, 20, 0, tzinfo=ZoneInfo("Asia/Shanghai"))
+print("北京:", beijing_time)  # 2025-07-10 20:00:00+08:00
+
+# 转为纽约时间
+ny_time = beijing_time.astimezone(ZoneInfo("America/New_York"))
+print("纽约:", ny_time)  # 2025-07-10 08:00:00-04:00
+
+# 转为 UTC
+utc_time = beijing_time.astimezone(ZoneInfo("UTC"))
+print("UTC:", utc_time)  # 2025-07-10 12:00:00+00:00
+```
+
+:::info Windows 上的 tzdata
+Windows 系统没有内置 IANA 时区数据库，需要安装 `tzdata` 包：
+
+```bash
+pip install tzdata
+```
+
+Linux 和 macOS 通常已预装。Python 3.9+ 的 `zoneinfo` 会优先用系统数据库，找不到时自动回退到 `tzdata` 包。
+:::
+
+## timedelta 时间运算
+
+`timedelta` 表示时间间隔，支持与 `datetime`、`date` 的加减运算：
+
+```py
+from datetime import datetime, timedelta
+
+now = datetime(2025, 7, 10, 14, 30)
+
+# 加减时间
+tomorrow = now + timedelta(days=1)
+print(tomorrow)  # 2025-07-11 14:30:00
+
+next_week = now + timedelta(weeks=1)
+print(next_week)  # 2025-07-17 14:30:00
+
+two_hours_later = now + timedelta(hours=2)
+print(two_hours_later)  # 2025-07-10 16:30:00
+
+# 两个 datetime 相减得到 timedelta
+diff = tomorrow - now
+print(diff)  # 1 day, 0:00:00
+print(diff.total_seconds())  # 86400.0
+
+# timedelta 之间运算
+half_day = timedelta(days=1) / 2
+print(half_day)  # 12:00:00
+```
+
+### 跨月跨年运算
+
+`timedelta` 不会自动处理"月末"或"跨月"——它只按天数推进日历。如果需要"加一个月"，得用其他方式：
+
+```py
+from datetime import date, timedelta
+
+d = date(2025, 1, 31)
+
+# timedelta 加 30 天：跨月但可能不是"下个月同一天"
+print(d + timedelta(days=30))  # 2025-03-02
+
+# "下个月同一天"需要手动处理
+def add_months(d: date, months: int) -> date:
+    month = d.month - 1 + months
+    year = d.year + month // 12
+    month = month % 12 + 1
+    import calendar
+    last_day = calendar.monthrange(year, month)[1]
+    day = min(d.day, last_day)
+    return date(year, month, day)
+
+print(add_months(d, 1))  # 2025-02-28（2 月没有 31 日，取月末）
+print(add_months(d, 2))  # 2025-03-31
+```
+
+:::note 没有 relativedelta
+标准库没有"加 N 个月"的工具。需要复杂日历运算（如"下个月最后一个工作日"）可以使用第三方库 `python-dateutil` 的 `relativedelta`。仅用标准库时，按上例手动处理即可。
+:::
+
+## date 与 time 的属性与方法
+
+```py
+from datetime import date, time, datetime
+
+d = date(2025, 7, 10)
+print(d.year)     # 2025
+print(d.month)    # 7
+print(d.day)      # 10
+print(d.weekday())     # 3（周一为 0）
+print(d.isoweekday())  # 4（周一为 1）
+
+# ISO 格式
+print(d.isoformat())   # 2025-07-10
+print(d.isocalendar())  # IsoCalendarDate(year=2025, week=28, weekday=4)
+
+# 替换部分字段
+print(d.replace(year=2026))  # 2026-07-10
+
+t = time(14, 30, 45, 123456)
+print(t.hour)   # 14
+print(t.minute) # 30
+print(t.second) # 45
+print(t.microsecond)  # 123456
+
+dt = datetime(2025, 7, 10, 14, 30)
+print(dt.date())  # 2025-07-10（提取 date）
+print(dt.time())  # 14:30:00（提取 time）
+print(dt.replace(hour=15))  # 2025-07-10 15:30:00
+```
+
+## calendar 模块
+
+`calendar` 模块提供日历相关功能，常用于判断闰年、获取月份天数、生成日历：
+
+```py
+import calendar
+
+# 判断闰年
+print(calendar.isleap(2024))  # True
+print(calendar.isleap(2025))  # False
+
+# 某月有多少天
+print(calendar.monthrange(2025, 2))  # (5, 28)
+# 第一个数字是该月 1 号是星期几（周一为 0），第二个是天数
+
+# 闰年数量
+print(calendar.leapdays(2000, 2025))  # 7
+
+# 一周的星期几名称
+for name in calendar.day_name:
+    print(name)
+
+# 文本日历
+print(calendar.month(2025, 7))
+#      July 2025
+#  Mo Tu We Th Fr Sa Su
+#      1  2  3  4  5  6
+#   7  8  9 10 11 12 13
+#  14 15 16 17 18 19 20
+#  21 22 23 24 25 26 27
+#  28 29 30 31
+```
+
+### Calendar 与 TextCalendar
+
+```py
+import calendar
+
+# 获取某月的二维日历（每周一组）
+c = calendar.Calendar()
+weeks = c.monthdayscalendar(2025, 7)
+print(weeks)
+# [[0, 1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12, 13], ...]
+# 0 表示该位置不属于本月
+
+# 自定义起始星期
+c = calendar.Calendar(firstweekday=calendar.SUNDAY)
+print(c.monthdayscalendar(2025, 7)[0])  # [0, 0, 1, 2, 3, 4, 5]
+
+# HTML 日历
+hc = calendar.HTMLCalendar()
+print(hc.formatmonth(2025, 7))  # 返回 HTML 字符串
+```
+
+:::tip 本地化日历
+`calendar` 默认用英文。要本地化月份、星期名称，设置 locale：
+
+```py
+import locale
+import calendar
+
+locale.setlocale(locale.LC_ALL, "zh_CN.UTF-8")
+print(calendar.month(2025, 7))
+#       七月 2025
+#  一 二 三 四 五 六 日
+#      1  2  3  4  5  6
+#  ...
+```
+
+注意系统必须已安装对应 locale，否则会抛 `locale.Error`。
+:::
+
+## 实战：工时计算器
+
+下面实现一个工时计算器，处理打卡记录、跨天班次、加班判断，综合运用 `datetime`、`timedelta`、`zoneinfo`：
+
+```py
+from datetime import datetime, timedelta, time
+from zoneinfo import ZoneInfo
+from dataclasses import dataclass
+
+
+@dataclass
+class WorkShift:
+    """一次打卡记录（含上班、下班时间）。"""
+    clock_in: datetime
+    clock_out: datetime
+
+    @property
+    def duration(self) -> timedelta:
+        return self.clock_out - self.clock_in
+
+    @property
+    def crosses_midnight(self) -> bool:
+        """班次是否跨过午夜。"""
+        return self.clock_out.date() != self.clock_in.date()
+
+
+def parse_clock_record(
+    date_str: str,
+    in_time: str,
+    out_time: str,
+    tz: ZoneInfo,
+) -> WorkShift:
+    """
+    解析打卡记录，自动处理跨午夜情况。
+
+    :param date_str: 日期，格式 YYYY-MM-DD
+    :param in_time: 上班时间，格式 HH:MM
+    :param out_time: 下班时间，格式 HH:MM
+    :param tz: 时区
+    """
+    base = datetime.strptime(date_str, "%Y-%m-%d")
+    clock_in = datetime.combine(base.date(), time.fromisoformat(in_time)).replace(tzinfo=tz)
+
+    out_dt = datetime.combine(base.date(), time.fromisoformat(out_time))
+    # 如果下班时间小于上班时间，说明跨过午夜，下班时间属于次日
+    if out_dt <= clock_in.replace(tzinfo=None):
+        out_dt += timedelta(days=1)
+    clock_out = out_dt.replace(tzinfo=tz)
+
+    return WorkShift(clock_in=clock_in, clock_out=clock_out)
+
+
+def compute_overtime(shift: WorkShift, standard_hours: float = 8.0) -> timedelta:
+    """计算加班时长（超出标准工时的部分）。"""
+    standard = timedelta(hours=standard_hours)
+    overtime = shift.duration - standard
+    return overtime if overtime > timedelta() else timedelta()
+
+
+def summarize_shifts(shifts: list[WorkShift]) -> dict:
+    """汇总一段时间的工时。"""
+    total = sum((shifts), start=timedelta()) if False else sum(
+        (s.duration for s in shifts), start=timedelta()
+    )
+    overtime = sum(
+        (compute_overtime(s) for s in shifts), start=timedelta()
+    )
+    return {
+        "总天数": len(shifts),
+        "总工时": total,
+        "平均每日": total / len(shifts) if shifts else timedelta(),
+        "加班时长": overtime,
+    }
+
+
+def format_timedelta(td: timedelta) -> str:
+    """把 timedelta 格式化为 'X小时Y分'。"""
+    total_minutes = int(td.total_seconds() // 60)
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours}小时{minutes}分"
+
+
+if __name__ == "__main__":
+    tz = ZoneInfo("Asia/Shanghai")
+
+    # 模拟一周打卡记录
+    records = [
+        ("2025-07-07", "09:00", "18:30"),  # 普通 9.5 小时
+        ("2025-07-08", "09:15", "20:00"),  # 加班到 20:00
+        ("2025-07-09", "22:00", "06:00"),  # 夜班跨午夜
+        ("2025-07-10", "09:00", "17:00"),  # 正好 8 小时
+    ]
+
+    shifts = [parse_clock_record(d, i, o, tz) for d, i, o in records]
+
+    print("=" * 60)
+    print("打卡明细")
+    print("=" * 60)
+    for record, shift in zip(records, shifts):
+        date_str, in_t, out_t = record
+        flag = " [跨午夜]" if shift.crosses_midnight else ""
+        ot = compute_overtime(shift)
+        ot_str = f"加班 {format_timedelta(ot)}" if ot else "无加班"
+        print(
+            f"{date_str} {in_t}-{out_t}{flag}  "
+            f"工时 {format_timedelta(shift.duration)}  {ot_str}"
+        )
+
+    print()
+    print("=" * 60)
+    print("周汇总")
+    print("=" * 60)
+    summary = summarize_shifts(shifts)
+    for k, v in summary.items():
+        if isinstance(v, timedelta):
+            print(f"{k}: {format_timedelta(v)}")
+        else:
+            print(f"{k}: {v}")
+```
+
+输出示例：
+
+```text
+============================================================
+打卡明细
+============================================================
+2025-07-07 09:00-18:30  工时 9小时30分  加班 1小时30分
+2025-07-08 09:15-20:00  工时 10小时45分  加班 2小时45分
+2025-07-09 22:00-06:00 [跨午夜]  工时 8小时0分  无加班
+2025-07-10 09:00-17:00  工时 8小时0分  无加班
+
+============================================================
+周汇总
+============================================================
+总天数: 4
+总工时: 36小时15分
+平均每日: 9小时3分
+加班时长: 4小时15分
+```
+
+:::tip 跨午夜班次的处理
+夜班从晚 22 点打卡到次日 6 点，单纯比较时间字符串会得出负数。代码中通过"下班时间早于上班时间则加一天"的简单规则自动修正。这种业务逻辑在排班、考勤、订单系统中极为常见。
+:::
+
+## 小结
+
+- `datetime` 模块核心类：`date`（日期）、`time`（时间）、`datetime`（日期+时间）、`timedelta`（间隔）、`tzinfo`（时区）。
+- 获取当前时间用 `datetime.now()`，UTC 时间用 `datetime.now(timezone.utc)`，避免 `utcnow()`。
+- 时间戳是跨语言交换绝对时刻的标准格式，与时区无关。
+- `strftime` 格式化、`strptime` 解析；ISO 格式直接用 `isoformat()` / `fromisoformat()`。
+- `datetime` 分 naive（无时区）与 aware（有时区）两种，不可混用，**生产代码一律用 aware**。
+- Python 3.9+ 的 `zoneinfo` 使用 IANA 时区数据库，自动处理夏令时，比固定偏移 `timezone` 更可靠。
+- `timedelta` 用于加减时间、计算间隔；跨月运算需手动处理或借助 `calendar.monthrange`。
+- `calendar` 模块提供闰年判断、月历生成、星期计算等日历工具，可配合 `locale` 实现本地化。
+
+下一节将学习 `collections` 模块——`namedtuple`、`deque`、`Counter`、`defaultdict` 等容器扩展工具。

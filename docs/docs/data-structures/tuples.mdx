@@ -1,0 +1,308 @@
+---
+sidebar_position: 2
+sidebar_label: '元组'
+title: 元组（Tuple）
+description: 元组是 Python 的不可变序列，常用于固定数据聚合、多返回值与字典键，理解不可变性与解包是关键。
+---
+
+# 元组（Tuple）
+
+元组（`tuple`）是 Python 中**有序、不可变**的序列。它和列表很像，但一旦创建就不能修改——这种"只读"特性让它在表达固定数据（如坐标、配置项、记录）时更安全、更高效。元组也是函数多返回值的底层载体。
+
+## 创建元组
+
+```py
+# 1. 圆括号字面量
+point = (3, 4)
+rgb = (255, 128, 0)
+
+# 2. 不带括号的"隐式元组"
+coordinates = 3, 4
+print(coordinates)      # (3, 4)
+print(type(coordinates))  # <class 'tuple'>
+
+# 3. tuple() 构造器
+from_tuple = tuple([1, 2, 3])
+from_string = tuple("abc")
+print(from_tuple)    # (1, 2, 3)
+print(from_string)   # ('a', 'b', 'c')
+
+# 4. 空元组
+empty: tuple = ()
+also_empty = tuple()
+```
+
+:::tip 圆括号可省略
+`x, y = 3, 4` 中右侧的 `3, 4` 其实就是一个元组。圆括号常用于提升可读性或在函数调用中消歧义，但语法上经常可省。
+:::
+
+## 不可变性
+
+元组的元素不可重新赋值，也不能增删。
+
+```py
+point = (3, 4)
+# point[0] = 5  # TypeError: 'tuple' object does not support item assignment
+
+# 但可以创建新元组
+new_point = (5, 4)
+point = point + (5,)   # 拼接生成新元组
+print(point)  # (3, 4, 5)
+```
+
+:::warning 不可变是"浅层"的
+元组本身的元素引用不能改，但如果元素本身是可变对象，仍可修改该对象内部。
+:::
+
+```py
+data = (1, [2, 3], 4)
+# data[1] = [9, 9]  # TypeError  不可改引用
+data[1].append(99)    # OK，改的是内层列表
+print(data)  # (1, [2, 3, 99], 4)
+```
+
+## 单元素元组陷阱
+
+这是元组最容易踩的坑：单元素元组必须带尾随逗号。
+
+```py
+# 正确：尾随逗号
+single = (42,)
+print(type(single))  # <class 'tuple'>
+
+# 错误：这只是带括号的表达式，不是元组
+not_tuple = (42)
+print(type(not_tuple))  # <class 'int'>
+
+# 隐式写法同样需要逗号
+also_single = 42,
+print(type(also_single))  # <class 'tuple'>
+```
+
+:::warning 为什么尾随逗号
+Python 语法中 `(42)` 只是普通表达式（如计算 `(2 + 3) * 4`），括号仅用于分组。要表示元组必须靠逗号 `(42,)`。空元组 `( )` 是唯一例外，不需要逗号。
+:::
+
+## 解包
+
+元组解包（unpacking）是把序列中的元素一次性赋给多个变量的优雅写法，是 Python 风格的标志性特性。
+
+```py
+point = (3, 4)
+
+# 基础解包
+x, y = point
+print(x, y)  # 3 4
+
+# 交换变量（无需临时变量）
+a, b = 1, 2
+a, b = b, a
+print(a, b)  # 2 1
+
+# 用 * 收集多余元素
+first, *rest = (1, 2, 3, 4, 5)
+print(first, rest)  # 1 [2, 3, 4, 5]
+
+*init, last = (1, 2, 3, 4, 5)
+print(init, last)  # [1, 2, 3, 4] 5
+
+first, *middle, last = (1, 2, 3, 4, 5)
+print(first, middle, last)  # 1 [2, 3, 4] 5
+```
+
+:::tip 函数返回值解包
+多返回值本质就是返回一个元组，再被解包。
+:::
+
+```py
+def min_max(numbers: list[int]) -> tuple[int, int]:
+    return min(numbers), max(numbers)
+
+low, high = min_max([3, 1, 4, 1, 5, 9, 2, 6])
+print(low, high)  # 1 9
+```
+
+:::info Python 3.12 更新
+Python 3.12 引入了更灵活的解包语法预览，未来版本将进一步放宽对 `*` 解包在表达式中的限制。当前 3.12+ 已稳定支持上述所有用法。
+:::
+
+## 命名元组
+
+普通元组靠位置访问，可读性差。`collections.namedtuple` 和 `typing.NamedTuple` 让元组既能按名字访问字段，又保持元组的不可变与轻量。
+
+### collections.namedtuple
+
+```py
+from collections import namedtuple
+
+# 创建类型
+Point = namedtuple("Point", ["x", "y"])
+
+p = Point(3, 4)
+print(p.x, p.y)       # 3 4  按字段名访问
+print(p[0], p[1])     # 3 4  仍可按索引访问
+print(p)              # Point(x=3, y=4)
+
+# 它是 tuple 的子类，可以用在需要元组的地方
+print(isinstance(p, tuple))  # True
+
+# 支持 _replace 生成新实例（不改原对象）
+p2 = p._replace(x=10)
+print(p, p2)  # Point(x=3, y=4) Point(x=10, y=4)
+
+# 转换为字典
+print(p._asdict())  # {'x': 3, 'y': 4}
+```
+
+### typing.NamedTuple
+
+`typing.NamedTuple` 支持类型注解，更现代、更推荐。
+
+```py
+from typing import NamedTuple
+
+
+class Point(NamedTuple):
+    x: float
+    y: float
+    label: str = "origin"
+
+
+p = Point(3.0, 4.0, "A")
+print(p.x, p.y, p.label)  # 3.0 4.0 A
+
+# 同样支持 _replace 和解包
+x, y, label = p
+print(x, y, label)  # 3.0 4.0 A
+
+p_moved = p._replace(x=5.0)
+print(p_moved)  # Point(x=5.0, y=4.0, label='A')
+```
+
+:::tip 选择哪一个
+新代码优先用 `typing.NamedTuple`，它带类型注解、与 IDE/类型检查器配合更好。`collections.namedtuple` 适合需要动态生成字段名的场景。
+:::
+
+## 元组 vs 列表
+
+| 特性 | 列表 `list` | 元组 `tuple` |
+| --- | --- | --- |
+| 可变性 | 可变 | 不可变 |
+| 语法 | `[]` | `()` 或 `a, b` |
+| 方法 | 多（append/pop/sort...） | 少（count/index） |
+| 性能 | 略慢、占内存稍多 | 更快、更省内存 |
+| 可哈希 | 否 | 元素均可哈希时，是 |
+| 用途 | 动态数据集合 | 固定数据记录、多返回值 |
+
+```py
+import sys
+
+lst = [1, 2, 3, 4, 5]
+tup = (1, 2, 3, 4, 5)
+print(sys.getsizeof(lst))  # 列表占用更大
+print(sys.getsizeof(tup))  # 元组占用更小
+```
+
+:::info 不可变的好处
+不可变性带来三点收益：①防止误改数据；②可作为字典键与集合元素（可哈希）；③解释器可以做更多优化，访问更快。
+:::
+
+## 元组作为字典键
+
+因为元组不可变，所以当其元素也都可哈希时，元组本身也可哈希，能作为字典的键。这是元组相比列表的核心优势之一。
+
+```py
+# 用 (城市, 日期) 作为键存储天气数据
+weather: dict[tuple[str, str], float] = {
+    ("北京", "2025-01-01"): -3.2,
+    ("上海", "2025-01-01"): 5.1,
+    ("北京", "2025-01-02"): -1.8,
+}
+
+# 查询
+key = ("北京", "2025-01-01")
+print(weather.get(key))  # -3.2
+
+# 列表不能作为键
+data = {}
+# data[[1, 2]] = "x"  # TypeError: unhashable type: 'list'
+data[(1, 2)] = "x"     # OK
+```
+
+:::warning 注意嵌套可变对象
+如果元组里包含列表，整个元组就不可哈希，不能作为字典键。
+:::
+
+```py
+# bad = {(1, [2, 3]): "x"}  # TypeError: unhashable type: 'list'
+good = {(1, (2, 3)): "x"}    # OK  内层也是不可变
+```
+
+## 实战：坐标点
+
+下面用 `typing.NamedTuple` 实现一个二维坐标点，并演示距离计算与不可变性带来的安全。
+
+```py
+from __future__ import annotations
+
+import math
+from typing import NamedTuple
+
+
+class Point(NamedTuple):
+    x: float
+    y: float
+
+    def distance_to(self, other: Point) -> float:
+        """计算到另一个点的欧几里得距离。"""
+        return math.hypot(self.x - other.x, self.y - other.y)
+
+    def translated(self, dx: float, dy: float) -> Point:
+        """返回平移后的新点（不修改原点）。"""
+        return Point(self.x + dx, self.y + dy)
+
+
+def main() -> None:
+    origin = Point(0.0, 0.0)
+    p = Point(3.0, 4.0)
+
+    print(f"原点: {origin}")
+    print(f"到原点距离: {p.distance_to(origin)}")  # 5.0
+
+    # 不可变：所有"修改"都返回新对象
+    moved = p.translated(1.0, 1.0)
+    print(f"平移后: {moved}")      # Point(x=4.0, y=5.0)
+    print(f"原点不变: {p}")        # Point(x=3.0, y=4.0)
+
+    # 可作为字典键
+    grid: dict[Point, str] = {
+        Point(0, 0): "原点",
+        Point(1, 0): "右",
+        Point(0, 1): "上",
+    }
+    print(grid[Point(0, 1)])  # 上
+
+    # 解包
+    x, y = p
+    print(f"解包: x={x}, y={y}")  # 解包: x=3.0, y=4.0
+
+
+if __name__ == "__main__":
+    main()
+```
+
+:::tip 不可变 + 方法
+这个例子体现了"函数式风格"：所有变换都返回新对象，原对象永不被修改，便于追踪与并发。这是元组/NamedTuple 的精髓用法。
+:::
+
+## 小结
+
+- 元组是**有序、不可变**的序列，用 `()` 或隐式逗号创建。
+- 单元素元组**必须带尾随逗号** `(x,)`，这是最常见的坑。
+- 不可变是浅层的：元素引用不能改，但可变元素内部仍可改。
+- 解包（含 `*` 收集）是 Python 风格的标志性特性，函数多返回值即基于此。
+- `typing.NamedTuple` 提供带类型注解的命名元组，是新代码首选。
+- 可哈希的元组可作字典键与集合元素，这是相对列表的核心优势。
+- 表达"固定记录"用元组，表达"动态集合"用列表。
+
+下一节，我们学习 Python 中功能最强的映射结构——**字典**。

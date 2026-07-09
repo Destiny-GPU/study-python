@@ -1,0 +1,584 @@
+---
+sidebar_position: 7
+sidebar_label: '生成器与 yield'
+title: 生成器与 yield
+description: 学习迭代器协议、yield 关键字、生成器函数与生成器表达式、惰性求值、yield from 以及生成器管道
+---
+
+# 生成器与 yield
+
+生成器（generator）是 Python 中一种特殊的迭代器，它使用 `yield` 关键字在函数执行过程中**暂停**并返回一个值，下次被调用时从暂停处继续。生成器最大的优势是**惰性求值**——只在需要时计算下一个值，从而节省内存。它特别适合处理大数据集、无限序列和流式数据。
+
+## 迭代器协议
+
+在了解生成器之前，先理解迭代器协议。一个对象要成为迭代器，必须实现两个方法：
+
+- `__iter__()`：返回迭代器自身
+- `__next__()`：返回下一个值，没有更多值时抛出 `StopIteration`
+
+```py
+class Counter:
+    """手动实现的迭代器"""
+    def __init__(self, start, end):
+        self.current = start
+        self.end = end
+
+    def __iter__(self):
+        return self  # 迭代器自身
+
+    def __next__(self):
+        if self.current >= self.end:
+            raise StopIteration
+        value = self.current
+        self.current += 1
+        return value
+
+# 使用
+for n in Counter(1, 5):
+    print(n, end=" ")
+# 输出：1 2 3 4
+print()
+
+# 也可以手动调用 next()
+counter = Counter(10, 13)
+print(next(counter))  # 输出：10
+print(next(counter))  # 输出：11
+print(next(counter))  # 输出：12
+# print(next(counter))  # StopIteration
+```
+
+:::info 可迭代对象 vs 迭代器
+- **可迭代对象（Iterable）**：实现了 `__iter__` 方法，能返回一个迭代器。如 list、tuple、str
+- **迭代器（Iterator）**：实现了 `__iter__` 和 `__next__`，能逐个产生值
+- 迭代器是"一次性"的，遍历完就空了；可迭代对象每次调用 `iter()` 都能得到新的迭代器
+
+```py
+lst = [1, 2, 3]
+it = iter(lst)  # 获取迭代器
+print(next(it))  # 输出：1
+print(next(it))  # 输出：2
+```
+:::
+
+## yield 关键字
+
+包含 `yield` 的函数叫**生成器函数**。调用它不会立即执行函数体，而是返回一个生成器对象。每次 `next()` 时执行到 `yield` 暂停并返回值，下次 `next()` 从暂停处继续。
+
+```py
+def simple_gen():
+    print("开始")
+    yield 1
+    print("继续")
+    yield 2
+    print("结束")
+
+gen = simple_gen()
+print(type(gen))   # 输出：<class 'generator'>
+
+print(next(gen))   # 输出：开始 / 1
+print(next(gen))   # 输出：继续 / 2
+print(next(gen))   # 输出：结束 / StopIteration
+```
+
+### 用 for 循环遍历生成器
+
+实际开发中通常用 `for` 循环消费生成器，它会自动处理 `StopIteration`：
+
+```py
+def count_up_to(n):
+    i = 1
+    while i <= n:
+        yield i
+        i += 1
+
+for num in count_up_to(5):
+    print(num, end=" ")
+# 输出：1 2 3 4 5
+print()
+```
+
+### yield 的执行流程
+
+```py
+def demo_yield():
+    print("step 1")
+    x = yield 10
+    print(f"step 2, x = {x}")
+    y = yield 20
+    print(f"step 3, y = {y}")
+    yield 30
+
+gen = demo_yield()
+# 第一次 next：执行到第一个 yield
+print(next(gen))      # 输出：step 1 / 10
+
+# send 方法：传值给 yield 表达式并继续执行到下一个 yield
+print(gen.send(100))  # 输出：step 2, x = 100 / 20
+print(gen.send(200))  # 输出：step 3, y = 200 / 30
+
+# 再 next 就结束了
+# print(next(gen))  # StopIteration
+```
+
+:::tip send() 方法
+`gen.send(value)` 能将值传回生成器内部，作为 `yield` 表达式的返回值。注意**第一次**必须用 `next()` 或 `gen.send(None)` 启动生成器，因为第一个 yield 还没"接收"任何值。
+:::
+
+## 生成器函数 vs 生成器表达式
+
+### 生成器函数
+
+使用 `def` + `yield` 定义的函数：
+
+```py
+def squares_gen(n):
+    for i in range(n):
+        yield i ** 2
+
+gen = squares_gen(5)
+print(list(gen))  # 输出：[0, 1, 4, 9, 16]
+```
+
+### 生成器表达式
+
+类似列表推导式，但用圆括号 `()` 包裹，返回生成器：
+
+```py
+# 列表推导式（立即生成所有元素）
+squares_list = [i ** 2 for i in range(5)]
+print(type(squares_list))  # 输出：<class 'list'>
+print(squares_list)         # 输出：[0, 1, 4, 9, 16]
+
+# 生成器表达式（惰性求值）
+squares_gen = (i ** 2 for i in range(5))
+print(type(squares_gen))  # 输出：<class 'generator'>
+
+# 转换为列表才能看到所有元素
+print(list(squares_gen))  # 输出：[0, 1, 4, 9, 16]
+
+# 直接迭代
+total = sum(i ** 2 for i in range(5))  # 注意：函数调用时括号可省略
+print(total)  # 输出：30
+```
+
+:::info 何时用函数，何时用表达式
+- **生成器表达式**：单行就能写完的简单转换/过滤
+- **生成器函数**：需要多个 yield、循环嵌套、复杂逻辑或接收外部参数
+
+```py
+# 简单场景：用表达式
+evens = (x for x in range(20) if x % 2 == 0)
+
+# 复杂场景：用函数
+def fibonacci_inf():
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+```
+:::
+
+## 惰性求值
+
+生成器最大的特点是**惰性求值**——只有在被消费时才计算下一个值。这带来两个重要优势：
+
+1. **节省内存**：不需要预先生成全部数据
+2. **支持无限序列**：理论上可以产生无限个值
+
+### 内存对比
+
+```py
+import sys
+
+# 列表：预先存储所有元素
+big_list = [i ** 2 for i in range(1_000_000)]
+print(f"列表占用：{sys.getsizeof(big_list)} bytes")  # 大约 8MB+
+
+# 生成器：只存储当前状态
+big_gen = (i ** 2 for i in range(1_000_000))
+print(f"生成器占用：{sys.getsizeof(big_gen)} bytes")  # 大约 200 bytes
+```
+
+:::warning 生成器是一次性的
+生成器迭代完就"空"了，不能重用：
+```py
+gen = (x for x in range(3))
+print(list(gen))  # 输出：[0, 1, 2]
+print(list(gen))  # 输出：[]  ← 已经空了
+```
+如果需要多次遍历，用 `list()` 物化为列表，或者重新创建生成器。
+:::
+
+## 无限序列
+
+生成器可以表示无限序列，因为它不需要真的生成所有元素：
+
+```py
+def natural_numbers():
+    """自然数无限序列：1, 2, 3, ..."""
+    n = 1
+    while True:
+        yield n
+        n += 1
+
+# 必须配合 break 或 islice 使用
+for n in natural_numbers():
+    if n > 5:
+        break
+    print(n, end=" ")
+# 输出：1 2 3 4 5
+print()
+
+# 使用 itertools.islice 取前 N 个
+from itertools import islice
+first_10 = list(islice(natural_numbers(), 10))
+print(first_10)  # 输出：[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+```
+
+### 经典：无限斐波那契序列
+
+```py
+def fibonacci():
+    """无限斐波那契序列"""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+
+# 取前 10 个
+fib_10 = list(islice(fibonacci(), 10))
+print(fib_10)  # 输出：[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+
+# 取前 N 个小于 1000 的斐波那契数
+def take_while_less_than(gen, limit):
+    """取生成器中小于 limit 的所有元素"""
+    for x in gen:
+        if x >= limit:
+            break
+        yield x
+
+small_fibs = list(take_while_less_than(fibonacci(), 100))
+print(small_fibs)  # 输出：[0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89]
+```
+
+## yield from
+
+`yield from` 用于从一个生成器中**委托**产出另一个生成器（或可迭代对象）的所有值。Python 3.3+ 引入：
+
+```py
+def inner():
+    yield 1
+    yield 2
+    yield 3
+
+def outer():
+    yield "start"
+    yield from inner()  # 等价于：for x in inner(): yield x
+    yield from [10, 20, 30]
+    yield "end"
+
+print(list(outer()))
+# 输出：['start', 1, 2, 3, 10, 20, 30, 'end']
+```
+
+### yield from 的优势
+
+相比手动 for 循环 yield，`yield from`：
+
+1. 代码更简洁
+2. 能正确传递 `send()` 和 `throw()` 调用
+3. 是实现协程（async/await）的基础
+
+```py
+# 手动写法
+def flatten_manual(nested):
+    for item in nested:
+        if isinstance(item, list):
+            for sub in item:
+                yield sub
+        else:
+            yield item
+
+# yield from 写法
+def flatten(nested):
+    for item in nested:
+        if isinstance(item, list):
+            yield from flatten(item)  # 递归 + 委托
+        else:
+            yield item
+
+nested = [1, [2, [3, 4], 5], 6, [7, 8]]
+print(list(flatten(nested)))
+# 输出：[1, 2, 3, 4, 5, 6, 7, 8]
+```
+
+:::tip yield from 与递归
+`yield from` 与递归结合是处理嵌套结构的利器。递归调用返回生成器时，用 `yield from` 把它的所有值"展开"传给外层，避免在调用者处再嵌套一层。
+:::
+
+## 生成器管道
+
+生成器可以像 Unix 管道一样串联起来：每个生成器处理前一阶段的输出，整个管道**惰性求值**——只在最终消费时才真正计算。
+
+```py
+def numbers():
+    """产生 1 到 100"""
+    for i in range(1, 101):
+        yield i
+
+def evens(source):
+    """过滤偶数"""
+    for n in source:
+        if n % 2 == 0:
+            yield n
+
+def squared(source):
+    """对每个元素平方"""
+    for n in source:
+        yield n ** 2
+
+def take_n(source, n):
+    """只取前 n 个"""
+    count = 0
+    for x in source:
+        if count >= n:
+            break
+        yield x
+        count += 1
+
+# 串联管道
+pipeline = take_n(squared(evens(numbers())), 5)
+print(list(pipeline))
+# 输出：[4, 16, 36, 64, 100]
+# 解释：偶数 2,4,6,8,10 → 平方 4,16,36,64,100 → 取前 5 个
+```
+
+:::info 管道的内存优势
+管道在每一步都只处理一个元素，**整条管道同一时刻只占一个元素的内存**。处理上亿条数据时，这点至关重要——你不需要为每一步都分配完整列表。
+:::
+
+## 内存优势
+
+### 对比：处理大文件
+
+```py
+# 错误：把整个文件读入内存
+def count_lines_bad(filename):
+    with open(filename) as f:
+        lines = f.readlines()  # 全部读入
+    return len(lines)
+
+# 正确：逐行读取
+def count_lines(filename):
+    with open(filename) as f:
+        count = 0
+        for _ in f:  # 文件对象本身就是迭代器，逐行读取
+            count += 1
+    return count
+
+# 生成器版本：返回行迭代器
+def iter_lines(filename):
+    """逐行产生文件内容"""
+    with open(filename) as f:
+        yield from f  # 委托给文件对象的迭代器
+
+# 可以与其他生成器组合
+def long_lines(filename, min_length=80):
+    """产生长度超过 min_length 的行"""
+    for line in iter_lines(filename):
+        if len(line.strip()) >= min_length:
+            yield line.rstrip()
+```
+
+### 对比：处理大序列
+
+```py
+# 列表版本（占用大量内存）
+def process_list():
+    data = [i ** 2 for i in range(10_000_000)]  # 8千万字节
+    result = [x for x in data if x % 2 == 0]
+    total = sum(x for x in result)
+    return total
+
+# 生成器版本（几乎不占内存）
+def process_gen():
+    data = (i ** 2 for i in range(10_000_000))      # 生成器
+    result = (x for x in data if x % 2 == 0)         # 生成器
+    total = sum(result)                              # 只在这里求值
+    return total
+
+# 两者结果相同，但内存占用天差地别
+```
+
+## 实战：读取大文件与斐波那契序列
+
+### 实战 1：流式处理 CSV 日志文件
+
+```py
+from pathlib import Path
+from collections.abc import Iterator
+
+
+def read_log_lines(path: Path) -> Iterator[dict[str, str]]:
+    """逐行读取 CSV 格式的日志，返回字典迭代器。
+
+    假设文件格式：timestamp,level,message
+    """
+    with open(path, encoding="utf-8") as f:
+        # 跳过表头
+        next(f, None)
+        for line in f:
+            parts = line.strip().split(",")
+            if len(parts) >= 3:
+                yield {
+                    "timestamp": parts[0],
+                    "level": parts[1],
+                    "message": ",".join(parts[2:]),  # 消息可能含逗号
+                }
+
+
+def filter_by_level(
+    entries: Iterator[dict], levels: set[str]
+) -> Iterator[dict]:
+    """过滤特定级别的日志"""
+    for entry in entries:
+        if entry["level"] in levels:
+            yield entry
+
+
+def count_by_level(entries: Iterator[dict]) -> dict[str, int]:
+    """按级别统计条数"""
+    counts: dict[str, int] = {}
+    for entry in entries:
+        level = entry["level"]
+        counts[level] = counts.get(level, 0) + 1
+    return counts
+
+
+# 演示：创建测试文件并处理
+def demo():
+    import tempfile
+    import os
+
+    # 创建临时日志文件
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False, encoding="utf-8"
+    ) as f:
+        f.write("timestamp,level,message\n")
+        f.write("2025-01-01 10:00:00,INFO,服务启动\n")
+        f.write("2025-01-01 10:01:00,WARN,内存使用偏高\n")
+        f.write("2025-01-01 10:02:00,ERROR,数据库连接失败\n")
+        f.write("2025-01-01 10:03:00,INFO,自动恢复\n")
+        f.write("2025-01-01 10:04:00,ERROR,重试失败\n")
+        path_str = f.name
+
+    try:
+        path = Path(path_str)
+
+        # 全量统计
+        all_entries = read_log_lines(path)
+        counts = count_by_level(all_entries)
+        print("日志级别统计：", counts)
+        # 输出：日志级别统计： {'INFO': 2, 'WARN': 1, 'ERROR': 2}
+
+        # 管道过滤：只看错误
+        all_entries = read_log_lines(path)
+        errors = filter_by_level(all_entries, {"ERROR", "WARN"})
+        print("\n错误与警告：")
+        for entry in errors:
+            print(f"  [{entry['level']}] {entry['timestamp']} - {entry['message']}")
+        # 输出：
+        #   [WARN] 2025-01-01 10:01:00 - 内存使用偏高
+        #   [ERROR] 2025-01-01 10:02:00 - 数据库连接失败
+        #   [ERROR] 2025-01-01 10:04:00 - 重试失败失败
+
+    finally:
+        os.unlink(path_str)
+
+
+demo()
+```
+
+### 实战 2：斐波那契数列生成器
+
+```py
+from itertools import islice
+
+
+def fibonacci(start: int = 0, step: int = 1) -> Iterator[int]:
+    """生成斐波那契序列，可指定起始和步长。
+
+    Args:
+        start: 起始索引（0 表示从 F(0)=0 开始）
+        step: 步长（每隔 step-1 个取一个）
+
+    Yields:
+        斐波那契数。
+    """
+    a, b = 0, 1
+    # 先跳过前 start 个
+    for _ in range(start):
+        a, b = b, a + b
+    while True:
+        yield a
+        # 步进 step 次
+        for _ in range(step):
+            a, b = b, a + b
+
+
+# 取前 10 个
+print("前 10 个斐波那契数：", list(islice(fibonacci(), 10)))
+# 输出：前 10 个斐波那契数： [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+
+# 从第 10 个开始，每隔 2 个取一个，取 5 个
+print("跳跃序列：", list(islice(fibonacci(start=10, step=3), 5)))
+# 输出示例：跳跃序列： [55, 377, 2584, 17711, 121393]
+
+# 找出第一个超过 1000 的斐波那契数
+def first_above(gen, threshold):
+    for x in gen:
+        if x > threshold:
+            return x
+    return None
+
+print("第一个超过 1000 的：", first_above(fibonacci(), 1000))
+# 输出：第一个超过 1000 的： 1597
+
+
+# 用生成器实现斐波那契的滑动窗口
+def fib_pairs():
+    """产出相邻斐波那契数对 (F(n), F(n+1))"""
+    gen = fibonacci()
+    prev = next(gen)
+    for curr in gen:
+        yield (prev, curr)
+        prev = curr
+
+print("\n相邻斐波那契数对的比值（趋近黄金分割）：")
+for prev, curr in islice(fib_pairs(), 1, 11):
+    print(f"  {curr}/{prev} = {curr / prev:.6f}")
+# 输出示例：
+#   1/1 = 1.000000
+#   2/1 = 2.000000
+#   3/2 = 1.500000
+#   5/3 = 1.666667
+#   ...
+#   89/55 = 1.618182  ← 趋近黄金比例 φ ≈ 1.618034
+```
+
+:::tip 生成器与协程
+`yield` 还可以用于**协程**——一种能暂停/恢复、可双向传递数据的并发单元。Python 早期的协程基于 `yield` + `send()`，现代异步编程（`async`/`await`）虽然语法不同，但本质思想相同。生成器是理解 Python 异步编程的基础。
+:::
+
+## 小结
+
+- 迭代器协议要求实现 `__iter__` 和 `__next__`，没有更多值时抛出 `StopIteration`
+- 含 `yield` 的函数是生成器函数，调用它返回一个生成器对象，不会立即执行
+- 每次 `next()` 执行到 `yield` 暂停并返回值，下次从暂停处继续
+- 生成器表达式 `(x for x in ...)` 是生成器函数的简写，适合简单转换
+- **惰性求值**让生成器只占很少内存，能表示无限序列
+- `yield from` 委托其他生成器/可迭代对象产出值，是递归处理嵌套结构的利器
+- 生成器管道像 Unix 管道一样串联处理数据流，每步只占一个元素的内存
+- 文件对象本身就是迭代器，逐行读取大文件是惯用法
+
+至此，函数章节告一段落。从函数定义、参数、lambda、作用域、递归、装饰器到生成器，这些知识覆盖了 Python 函数式编程的核心内容。后续章节将介绍面向对象编程，进一步提升你的代码组织能力。

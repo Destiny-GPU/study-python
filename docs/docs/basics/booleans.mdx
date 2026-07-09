@@ -1,0 +1,472 @@
+---
+sidebar_position: 4
+sidebar_label: '布尔与 None'
+title: 布尔值与 None
+description: 掌握 Python 的布尔类型 True/False、真值测试规则、短路求值的逻辑运算符，以及 None 与 is 运算符的用法。
+---
+
+# 布尔值与 None
+
+布尔类型（`bool`）和 `None` 是 Python 中两个非常基础但又常被误解的概念。布尔值用于表示"真"与"假"，是条件判断与逻辑运算的核心；`None` 是一个特殊的"空值"单例，表示"什么都没有"。本节将系统讲解它们的用法、真值测试规则、短路求值，以及 `==` 与 `is` 的关键区别。
+
+## 布尔类型 bool
+
+Python 的布尔类型只有两个值：`True` 和 `False`（注意首字母大写）。`bool` 实际上是 `int` 的子类，`True` 等于 `1`，`False` 等于 `0`：
+
+```py
+t = True
+f = False
+
+print(type(t))        # <class 'bool'>
+print(isinstance(t, int))  # True (bool 是 int 的子类)
+
+# bool 可以参与算术运算
+print(True + True)    # 2
+print(True + False)   # 1
+print(True * 5)       # 5
+print(False * 5)      # 0
+
+# True 等于 1，False 等于 0
+print(True == 1)      # True
+print(False == 0)     # True
+print(True + 1)       # 2
+
+# 统计列表中 True 的个数
+flags = [True, False, True, True, False]
+print(sum(flags))  # 3 (因为有 3 个 True，每个等价于 1)
+```
+
+:::tip 利用 bool 是 int 的子类
+由于 `bool` 是 `int` 子类，可以用 `sum()` 快速统计列表中满足条件的元素个数：
+
+```py
+nums = [1, 2, 3, 4, 5, 6]
+even_count = sum(n % 2 == 0 for n in nums)
+print(even_count)  # 3 (偶数个数)
+```
+:::
+
+## bool() 函数
+
+`bool()` 函数可将任意值转换为布尔值：
+
+```py
+print(bool(0))      # False
+print(bool(0.0))    # False
+print(bool(1))      # True
+print(bool(-1))     # True (非零即为 True)
+print(bool(""))     # False (空字符串)
+print(bool("a"))    # True (非空字符串)
+print(bool([]))     # False (空列表)
+print(bool([0]))    # True (非空列表，即使元素是 0)
+print(bool(None))   # False
+```
+
+## 真值测试规则
+
+Python 中的每个对象都可以用于 `if` 等条件判断，遵循"**真值测试**"规则：
+
+### Falsy 值（被判定为 False）
+
+以下值在布尔上下文中被认为是 `False`：
+
+| 值                | 说明           |
+| ----------------- | -------------- |
+| `False`           | 布尔假         |
+| `0`、`0.0`、`0j`  | 数字零         |
+| `""`、`''`        | 空字符串       |
+| `[]`、`()`、`{}`  | 空容器         |
+| `set()`           | 空集合         |
+| `None`            | 空值           |
+| 自定义对象的 `__bool__()` 返回 `False` 或 `__len__()` 返回 `0` |
+
+### Truthy 值（被判定为 True）
+
+**所有非 Falsy 的值都是 Truthy**，包括：
+
+```py
+print(bool(1))          # True
+print(bool(-1))         # True (负数也是 True)
+print(bool(0.001))      # True
+print(bool(" "))        # True (空格也是字符)
+print(bool("False"))    # True (非空字符串)
+print(bool([0]))        # True (含元素 0 的列表)
+print(bool([[]]))       # True (含空列表的列表)
+print(bool((None,)))    # True (含 None 的元组)
+```
+
+:::warning 注意"看起来像假"但实际为真的值
+以下值都是 Truthy，常被误判：
+- `"False"`、`"0"`、`"None"`（非空字符串都是 True）
+- `[0]`、`[[]]`、`[None]`（含元素的容器都是 True）
+- `-1`、`0.0 + 1e-10`（非零数字都是 True）
+
+判断字符串内容时，必须显式比较，不能直接 `if s:`：
+```py
+s = "False"
+if s:  # 这个判断永远为真
+    print("执行了")
+```
+:::
+
+### 自定义对象的真值
+
+自定义类可通过 `__bool__()` 或 `__len__()` 控制对象的真值：
+
+```py
+class User:
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+
+    def __bool__(self) -> bool:
+        """通过 __bool__ 控制真值"""
+        return self.age >= 18
+
+    def __len__(self) -> int:
+        """如果没有 __bool__，则使用 __len__"""
+        return len(self.name)
+
+
+# __bool__ 优先级高于 __len__
+user1 = User("Tom", 25)
+user2 = User("Kid", 10)
+print(bool(user1))  # True
+print(bool(user2))  # False
+
+# 在 if 中使用
+if user1:
+    print(f"{user1.name} 是成年人")
+```
+
+## 逻辑运算符 and / or / not
+
+Python 有三个逻辑运算符：
+
+| 运算符 | 含义 | 示例             |
+| ------ | ---- | ---------------- |
+| `and`  | 与   | `True and False` |
+| `or`   | 或   | `True or False`  |
+| `not`  | 非   | `not True`       |
+
+```py
+print(True and False)  # False
+print(True and True)  # True
+print(True or False)  # True
+print(False or False) # False
+print(not True)       # False
+print(not False)      # True
+print(not 0)          # True (0 是 Falsy)
+print(not "a")        # False (非空字符串是 Truthy)
+```
+
+## 短路求值
+
+`and` 和 `or` 都采用**短路求值（short-circuit evaluation）**：当结果已经能确定时，就不再计算后面的表达式。这是 Python 中一个非常重要且实用的特性。
+
+### and 的短路
+
+`a and b`：如果 `a` 是 Falsy，直接返回 `a`，不再计算 `b`；否则返回 `b`：
+
+```py
+# and 返回的是操作数本身，不一定是布尔值
+print(0 and 1)         # 0 (0 是 Falsy，直接返回 0)
+print(1 and 2)         # 2 (1 是 Truthy，返回 2)
+print(1 and 0)         # 0 (1 是 Truthy，返回 0)
+print("" and "hello")  # "" (空字符串 Falsy，直接返回)
+print("hi" and "yo")   # "yo" (两个都 Truthy，返回后者)
+```
+
+### or 的短路
+
+`a or b`：如果 `a` 是 Truthy，直接返回 `a`，不再计算 `b`；否则返回 `b`：
+
+```py
+print(1 or 2)          # 1 (1 是 Truthy，直接返回)
+print(0 or 2)          # 2 (0 是 Falsy，返回 2)
+print(0 or 0)          # 0
+print("" or "default") # "default" (空字符串 Falsy，返回后者)
+print(None or [])      # [] (None Falsy，返回 [])
+```
+
+### 短路的实际应用
+
+利用短路特性可以写出非常优雅的"默认值"代码：
+
+```py
+# 1. 提供默认值（最常见的用法）
+def greet(name: str | None) -> str:
+    name = name or "Guest"  # 如果 name 是 None 或空串，用 "Guest"
+    return f"Hello, {name}"
+
+print(greet("Alice"))  # Hello, Alice
+print(greet(None))     # Hello, Guest
+print(greet(""))       # Hello, Guest
+
+# 2. 条件执行（避免 if 语句）
+config = {"debug": True}
+debug = config.get("debug") or False  # 如果 key 不存在或为 None，用 False
+print(debug)  # True
+
+# 3. 安全调用（避免 None 导致的异常）
+user = None
+# user.name 会报错，但这样写不会：
+name = user and user.name  # None (user 是 None，短路返回)
+print(name)  # None
+
+# 4. 防御性编程：先检查再访问
+data = {"key": "value"}
+if data and "key" in data:  # 先确认 data 非空
+    print(data["key"])
+```
+
+:::warning 短路返回的不一定是布尔值
+`and` 和 `or` 返回的是**操作数本身**，而不是布尔值。这一点与 C/Java 不同：
+
+```py
+result = 0 or "default"
+print(result)        # default (字符串，不是 True)
+print(type(result))  # <class 'str'>
+```
+如果一定要布尔结果，请用 `bool()` 转换：`bool(a or b)`。
+:::
+
+## not 运算符
+
+`not` 总是返回布尔值（`True` 或 `False`）：
+
+```py
+print(not True)    # False
+print(not False)   # True
+print(not 0)       # True (0 Falsy)
+print(not 1)       # False (1 Truthy)
+print(not "")      # True (空字符串 Falsy)
+print(not "a")     # False (非空字符串 Truthy)
+print(not None)    # True
+print(not [1, 2])  # False
+print(not [])      # True
+
+# not 的优先级很高
+print(not True and False)  # False (等价于 (not True) and False)
+print(not (True and False))  # True
+```
+
+:::tip 避免对比较使用 not
+写 `not (a == b)` 不如直接写 `a != b` 清晰。`not` 主要用于对真值判断取反：
+
+```py
+# 不推荐
+if not (user is None):
+    ...
+
+# 推荐
+if user is not None:
+    ...
+```
+:::
+
+## None：空值
+
+`None` 是 Python 中表示"无值"的特殊单例对象，类型是 `NoneType`。它常用于：
+
+- 表示"没有值"或"未设置"
+- 函数默认返回值（不写 return 时默认返回 None）
+- 函数参数默认值
+- 占位符
+
+```py
+x = None
+print(type(x))  # <class 'NoneType'>
+print(None)     # None
+
+# 函数没有 return 语句时默认返回 None
+def do_nothing():
+    pass
+
+result = do_nothing()
+print(result)   # None
+print(result is None)  # True
+```
+
+:::info None 在 Python 中的角色
+`None` 类似于其他语言的 `null` / `nil`，但更严格：Python 中**只有一个** `None` 对象（单例），所有 `None` 都是同一个对象。它表示"什么都没有"或"未设置"，与 `0`、`False`、空字符串等不同——这些是具体的值，而 `None` 表示值的缺失。
+:::
+
+## is 运算符：身份比较
+
+`is` 用于判断**两个变量是否指向同一个对象**（身份相同），与 `==`（值相等）有本质区别：
+
+```py
+a = None
+b = None
+print(a is None)  # True (None 是单例，所有 None 都是同一个对象)
+print(a == None)  # True (但 is 更规范)
+
+# is 的典型用法：判断 None
+def find_user(user_id: int) -> str | None:
+    if user_id == 1:
+        return "Alice"
+    return None
+
+result = find_user(2)
+if result is None:
+    print("用户不存在")
+else:
+    print(f"找到用户: {result}")
+```
+
+:::tip 判断 None 一律用 is
+判断一个值是否为 `None`，**永远使用 `is None` 或 `is not None`**，不要用 `== None`。原因：
+1. `is` 比对象身份，速度更快
+2. `==` 可能被运算符重载，行为不可预测
+3. PEP 8 规范明确要求使用 `is None`
+:::
+
+## == 与 is 的区别
+
+这是 Python 中最常被混淆的概念之一：
+
+| 运算符 | 含义     | 比较什么         |
+| ------ | -------- | ---------------- |
+| `==`   | 相等     | 对象的**值**     |
+| `is`   | 身份相同 | 对象的**身份**（内存地址） |
+
+```py
+# 1. 字符串：值相等，但可能是不同对象
+a = "hello"
+b = "hello"
+print(a == b)  # True (值相等)
+print(a is b)  # True (短字符串可能被缓存，但不要依赖)
+
+# 2. 列表：值相等，但是不同对象
+list1 = [1, 2, 3]
+list2 = [1, 2, 3]
+print(list1 == list2)  # True (内容相同)
+print(list1 is list2)  # False (不同对象，内存地址不同)
+
+# 3. 小整数缓存：CPython 会缓存 [-5, 256] 的整数
+x = 256
+y = 256
+print(x is y)  # True (缓存命中)
+
+x = 257
+y = 257
+print(x is y)  # False (超出缓存范围，是新对象)
+# 注意：在交互式环境中执行；在脚本中可能因优化而不同
+
+# 4. None 是单例
+a = None
+b = None
+print(a is b)  # True (只有一个 None 对象)
+```
+
+:::warning 不要用 is 比较数字、字符串等值类型
+由于小整数缓存和字符串驻留（interning）的存在，`is` 在某些情况下"看起来"工作正常，但这种行为依赖于实现细节，可能在其他 Python 实现（如 PyPy）或不同环境下失效。
+
+**正确做法**：
+- 比较**值**：用 `==`
+- 比较**身份**（如 None、True、False）：用 `is`
+- 比较数字是否相等：永远用 `==`，不要用 `is`
+:::
+
+### 使用 id() 查看对象身份
+
+`id()` 返回对象的唯一标识（通常是内存地址），可用于理解 `is`：
+
+```py
+a = [1, 2, 3]
+b = [1, 2, 3]
+c = a  # c 和 a 指向同一对象
+
+print(id(a))  # 140234567890240 (示例地址)
+print(id(b))  # 140234567890432 (不同地址)
+print(id(c))  # 140234567890240 (与 a 相同)
+
+print(a is b)  # False (不同对象)
+print(a is c)  # True (同一对象)
+print(a == b)  # True (值相同)
+```
+
+## 实战：用户验证器
+
+下面用一个综合示例演示布尔值、None 与短路求值的实际应用：
+
+```py
+class UserValidator:
+    """用户数据验证器：综合演示布尔值与 None 的用法"""
+
+    def __init__(self, config: dict | None = None):
+        # 利用 or 提供默认值
+        self.config = config or {"min_age": 18, "max_age": 120}
+
+    def validate_user(self, user: dict) -> tuple[bool, str | None]:
+        """验证用户数据
+        :return: (是否通过, 错误信息)；
+                 通过时错误信息为 None
+        """
+        # 检查必填字段
+        name = user.get("name")
+        if not name:  # None 或空字符串都是 Falsy
+            return False, "姓名不能为空"
+
+        age = user.get("age")
+        if age is None:  # 用 is 判断 None
+            return False, "年龄不能为空"
+
+        # 验证年龄范围
+        if not isinstance(age, int):
+            return False, "年龄必须是整数"
+
+        min_age = self.config["min_age"]
+        max_age = self.config["max_age"]
+        if not (min_age <= age <= max_age):  # 链式比较
+            return False, f"年龄需在 {min_age}-{max_age} 之间"
+
+        # 检查邮箱（可选字段）
+        email = user.get("email")
+        if email is not None and "@" not in email:
+            return False, "邮箱格式错误"
+
+        # 一切正常
+        return True, None
+
+
+# 测试
+validator = UserValidator()
+
+test_cases = [
+    {"name": "Alice", "age": 25, "email": "alice@example.com"},
+    {"name": "", "age": 20, "email": "bob@example.com"},     # 姓名为空
+    {"name": "Kid", "age": 10, "email": None},               # 年龄不足
+    {"name": "Bob", "age": 30, "email": "invalid-email"},    # 邮箱错误
+    {"name": "Tom", "age": None, "email": "tom@example.com"}, # 年龄为 None
+]
+
+for user in test_cases:
+    is_valid, error = validator.validate_user(user)
+    name = user.get("name") or "(未填)"
+    if is_valid:
+        print(f"[✓] {name}: 验证通过")
+    else:
+        print(f"[✗] {name}: {error}")
+```
+
+运行结果：
+
+```text
+[✓] Alice: 验证通过
+[✗] (未填): 姓名不能为空
+[✗] Kid: 年龄需在 18-120 之间
+[✗] Bob: 邮箱格式错误
+[✗] Tom: 年龄不能为空
+```
+
+## 小结
+
+- `bool` 类型只有 `True` 和 `False`，且是 `int` 的子类（`True == 1`、`False == 0`）。
+- **真值测试**：Falsy 值包括 `False`、零、空容器、`None`；其他都是 Truthy。
+- `and` / `or` 采用**短路求值**，且返回的是**操作数本身**而非布尔值，可用于提供默认值与安全调用。
+- `not` 始终返回布尔值。
+- `None` 是表示"空值"的单例对象，判断 `None` 必须用 `is None` / `is not None`。
+- `==` 比较**值**，`is` 比较**身份**（内存地址）。比较数字、字符串等用 `==`，比较 `None`、`True`、`False` 用 `is`。
+- 自定义类可通过 `__bool__()` 或 `__len__()` 控制对象的真值行为。

@@ -1,0 +1,550 @@
+---
+sidebar_position: 4
+sidebar_label: 'itertools'
+title: itertools 迭代工具
+description: 掌握 chain、product、combinations、permutations、accumulate、groupby、islice、starmap、zip_longest 与无限迭代器，写出高效的迭代代码。
+---
+
+# itertools 迭代工具
+
+`itertools` 是 Python 中最具"函数式编程"气质的标准库。它提供一组"内存友好"的迭代器构造工具：所有函数都返回生成器，按需产出元素，可以处理超大或无限序列。掌握 `itertools` 能让你用极少的代码表达复杂的迭代逻辑，替代大量嵌套循环和临时列表。
+
+## chain：串联迭代器
+
+`chain` 把多个可迭代对象"首尾相连"，就像把它们拼接成一个序列：
+
+```py
+from itertools import chain
+
+# 串联多个列表
+for x in chain([1, 2, 3], ["a", "b"], (4, 5)):
+    print(x, end=" ")
+# 1 2 3 a b 4 5
+print()
+
+# 比 list + list + list 高效：不创建中间列表
+result = list(chain(range(3), range(10, 13)))
+print(result)  # [0, 1, 2, 10, 11, 12]
+```
+
+### chain.from_iterable：扁平化嵌套
+
+```py
+from itertools import chain
+
+# 嵌套列表扁平化
+nested = [[1, 2, 3], [4, 5], [6, 7, 8, 9]]
+flat = list(chain.from_iterable(nested))
+print(flat)  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# 等价于 chain(*nested)，但接受单个可迭代对象作为输入
+```
+
+:::tip chain vs sum(lists, [])
+新手常用 `sum(list_of_lists, [])` 扁平化，但这是 O(n²) 操作——每次 `+` 都创建新列表。`chain.from_iterable` 是 O(n)，应作为首选。仅一级嵌套时用 `chain.from_iterable`；多级不规则嵌套需要递归或第三方 `more-itertools.flatten`。
+:::
+
+## product：笛卡尔积
+
+`product` 计算多个序列的笛卡尔积，相当于多层嵌套循环的扁平化：
+
+```py
+from itertools import product
+
+# 两个序列的笛卡尔积
+for a, b in product("AB", "12"):
+    print(a, b)
+# A 1
+# A 2
+# B 1
+# B 2
+
+# 等价于嵌套循环
+for a in "AB":
+    for b in "12":
+        print(a, b)
+```
+
+### repeat：与自身笛卡尔积
+
+```py
+from itertools import product
+
+# 骰子投 3 次：6 × 6 × 6 = 216 种结果
+dice = list(product([1, 2, 3, 4, 5, 6], repeat=3))
+print(f"骰子三次共 {len(dice)} 种结果")
+print("前 3 种:", dice[:3])
+# [(1, 1, 1), (1, 1, 2), (1, 1, 3)]
+
+# 求和等于 10 的组合
+sums_to_10 = [combo for combo in dice if sum(combo) == 10]
+print(f"和为 10 的组合数：{len(sums_to_10)}")
+```
+
+:::info product 与 repeat 的关系
+`product(A, repeat=n)` 等价于 `product(A, A, ..., A)`（n 个 A）。这是密码爆破、组合优化的常用模式：枚举所有长度为 n 的可能序列。
+:::
+
+## combinations 与 permutations
+
+`combinations` 枚举无序组合（不考虑顺序），`permutations` 枚举有序排列：
+
+```py
+from itertools import combinations, permutations
+
+items = ["A", "B", "C", "D"]
+
+# C(4, 2) = 6 种 2 元组合（顺序无关）
+for combo in combinations(items, 2):
+    print(combo, end=" ")
+# ('A', 'B') ('A', 'C') ('A', 'D') ('B', 'C') ('B', 'D') ('C', 'D')
+print()
+
+# P(4, 2) = 12 种 2 元排列（顺序有关）
+for perm in permutations(items, 2):
+    print(perm, end=" ")
+# ('A', 'B') ('A', 'C') ... ('D', 'C')
+print()
+```
+
+### combinations_with_replacement：可重复组合
+
+```py
+from itertools import combinations_with_replacement
+
+# 允许同一元素多次出现（如 multisets）
+for combo in combinations_with_replacement("ABC", 2):
+    print(combo, end=" ")
+# ('A', 'A') ('A', 'B') ('A', 'C') ('B', 'B') ('B', 'C') ('C', 'C')
+print()
+```
+
+:::tip 组合数学公式
+- `combinations(n 个元素, k)`：C(n, k) = n! / (k!(n-k)!)
+- `permutations(n 个元素, k)`：P(n, k) = n! / (n-k)!
+- `combinations_with_replacement(n 个元素, k)`：C(n+k-1, k)
+- `product(n 个元素, repeat=k)`：n^k
+
+理解这些能避免在写算法时漏算或多算。
+:::
+
+## accumulate：累积运算
+
+`accumulate` 默认做累加，也可指定其他二元运算：
+
+```py
+from itertools import accumulate
+import operator
+
+# 默认累加
+nums = [1, 2, 3, 4, 5]
+print(list(accumulate(nums)))  # [1, 3, 6, 10, 15]
+
+# 累乘
+print(list(accumulate(nums, operator.mul)))  # [1, 2, 6, 24, 120]
+
+# 取最大值（保留前缀最大）
+print(list(accumulate([3, 1, 4, 1, 5, 9, 2, 6], max)))
+# [3, 3, 4, 4, 5, 9, 9, 9]
+
+# 字符串拼接
+print(list(accumulate("abc", initial="")))  # ['', 'a', 'ab', 'abc']
+```
+
+:::note initial 参数
+Python 3.8+ 支持 `initial` 参数，在结果开头插入一个初始值。`accumulate([1, 2, 3], initial=0)` 得到 `[0, 1, 3, 6]`——这相当于在序列前补一个起始元素，常用于"前缀和从 0 开始"的场景。
+:::
+
+## groupby：分组
+
+`groupby` 把**连续**的相同 key 元素分组。注意：它只对相邻的相同元素分组，不会全局排序：
+
+```py
+from itertools import groupby
+
+# 简单情况：相邻元素相同
+for key, group in groupby("AAABBBCCAA"):
+    print(key, list(group))
+# A ['A', 'A', 'A']
+# B ['B', 'B', 'B']
+# C ['C', 'C']
+# A ['A', 'A']   ← 注意这里又出现 A，因为是相邻分组
+
+# 按 key 函数分组
+data = [("fruit", "apple"), ("fruit", "banana"),
+        ("veg", "carrot"), ("fruit", "cherry"), ("veg", "potato")]
+
+# 必须先按 key 排序，否则不相邻的同 key 会被拆开
+data.sort(key=lambda x: x[0])
+
+for category, items in groupby(data, key=lambda x: x[0]):
+    print(category, [item[1] for item in items])
+# fruit ['apple', 'banana', 'cherry']
+# veg ['carrot', 'potato']
+```
+
+:::warning groupby 不全局排序
+`groupby` 只对**相邻**元素分组。如果数据未按 key 排序，相同 key 的元素会被分散到多组。需要全局分组时，**先用 `sorted(data, key=...)` 排序**，或干脆用 `defaultdict(list)` 收集。
+:::
+
+### 更直观的全局分组
+
+```py
+from collections import defaultdict
+
+data = [("fruit", "apple"), ("fruit", "banana"),
+        ("veg", "carrot"), ("fruit", "cherry")]
+
+# 不需排序，更直观
+groups: dict[str, list[str]] = defaultdict(list)
+for category, item in data:
+    groups[category].append(item)
+
+print(dict(groups))
+# {'fruit': ['apple', 'banana', 'cherry'], 'veg': ['carrot']}
+```
+
+## islice：切片迭代器
+
+`islice`（iterator slice）对迭代器做切片——普通切片 `iter[2:5]` 对迭代器无效：
+
+```py
+from itertools import islice
+
+# 跳过前 2 个，取 3 个
+it = iter(range(10))
+print(list(islice(it, 2, 5)))  # [2, 3, 4]
+
+# 取前 3 个
+print(list(islice(range(100), 3)))  # [0, 1, 2]
+
+# 无限迭代器上取一段
+from itertools import count
+print(list(islice(count(10), 5)))  # [10, 11, 12, 13, 14]
+
+# step 参数（Python 3.12 起支持负 step）
+print(list(islice(range(20), 0, 20, 3)))  # [0, 3, 6, 9, 12, 15, 18]
+```
+
+:::tip 处理大文件头几行
+`islice` 是处理"只需要前 N 个"的标准工具。比如读取超大日志文件的前 10 行：
+
+```py
+with open("huge.log", encoding="utf-8") as f:
+    for line in islice(f, 10):
+        print(line.strip())
+```
+
+不会把整个文件读入内存。
+:::
+
+## starmap：解包参数
+
+`map` 把单个元素传给函数，`starmap` 把每个元素（一个元组）解包成多个参数：
+
+```py
+from itertools import starmap
+
+# 把 [(1, 2), (3, 4)] 中的元组解包给 pow
+result = list(starmap(pow, [(2, 3), (3, 2), (10, 3)]))
+print(result)  # [8, 9, 1000]
+
+# 等价于
+result = [pow(2, 3), pow(3, 2), pow(10, 3)]
+
+# 实用场景：批量调用多参数函数
+points = [(0, 0), (3, 4), (5, 12)]
+distances = list(starmap(lambda x, y: (x ** 2 + y ** 2) ** 0.5, points))
+print(distances)  # [0.0, 5.0, 13.0]
+```
+
+## zip_longest：不等长 zip
+
+内置 `zip` 以最短序列为准截断，`zip_longest` 以最长为准，缺失位置填 `fillvalue`：
+
+```py
+from itertools import zip_longest
+
+# 内置 zip：以短为准
+print(list(zip([1, 2, 3], ["a", "b"])))
+# [(1, 'a'), (2, 'b')]
+
+# zip_longest：以长为准，缺位填 None
+print(list(zip_longest([1, 2, 3], ["a", "b"])))
+# [(1, 'a'), (2, 'b'), (3, None)]
+
+# 自定义 fillvalue
+print(list(zip_longest([1, 2, 3], ["a", "b"], fillvalue="-")))
+# [(1, 'a'), (2, 'b'), (3, '-')]
+```
+
+## 无限迭代器：count / cycle / repeat
+
+`itertools` 提供三个"无限"迭代器，需要配合 `islice` 或 `break` 使用：
+
+```py
+from itertools import count, cycle, repeat, islice
+
+# count：从 start 开始无限递增（支持浮点与 step）
+for i in count(10, 2):
+    print(i, end=" ")
+    if i >= 18:
+        break
+# 10 12 14 16 18
+print()
+
+# 取前 5 个
+print(list(islice(count(1.0, 0.5), 5)))  # [1.0, 1.5, 2.0, 2.5, 3.0]
+
+# cycle：循环重复序列
+colors = cycle(["red", "green", "blue"])
+print(list(islice(colors, 7)))
+# ['red', 'green', 'blue', 'red', 'green', 'blue', 'red']
+
+# repeat：重复同一对象
+print(list(repeat("hi", 3)))  # ['hi', 'hi', 'hi']
+# 不指定次数则无限重复
+greeting = repeat("hello")
+print(list(islice(greeting, 2)))  # ['hello', 'hello']
+```
+
+:::warning 无限迭代器必须配 islice
+`count()`、`cycle()`、无参数 `repeat()` 是真正的无限生成器。直接 `list(count())` 会卡死或 OOM。必须配合 `islice`、`break`、`zip`（以有限序列为准截断）使用。
+:::
+
+### 实用场景：自动编号
+
+```py
+from itertools import count
+
+# 给每个元素自动编号（无需 enumerate 处理复杂逻辑）
+line_no = count(1)
+for line in ["hello", "world", "python"]:
+    print(f"{next(line_no)}: {line}")
+# 1: hello
+# 2: world
+# 3: python
+```
+
+## 其他常用工具
+
+### takewhile 与 dropwhile
+
+```py
+from itertools import takewhile, dropwhile
+
+nums = [2, 4, 6, 1, 8, 3, 10]
+
+# takewhile：取直到条件不满足（首次失败就停止）
+print(list(takewhile(lambda x: x % 2 == 0, nums)))  # [2, 4, 6]
+# 注意：1 之后的 8 不会被取，因为已经"断"了
+
+# dropwhile：丢弃直到条件不满足，之后全部保留
+print(list(dropwhile(lambda x: x % 2 == 0, nums)))  # [1, 8, 3, 10]
+```
+
+### filterfalse：反向 filter
+
+```py
+from itertools import filterfalse
+
+nums = [1, 2, 3, 4, 5, 6]
+
+# filter：保留 True 的
+print(list(filter(lambda x: x % 2 == 0, nums)))  # [2, 4, 6]
+
+# filterfalse：保留 False 的
+print(list(filterfalse(lambda x: x % 2 == 0, nums)))  # [1, 3, 5]
+```
+
+### tee：复制迭代器
+
+```py
+from itertools import tee
+
+it = iter(range(5))
+a, b = tee(it, 2)
+
+print(list(a))  # [0, 1, 2, 3, 4]
+print(list(b))  # [0, 1, 2, 3, 4]
+# 原 it 已耗尽，tee 后不应再用
+```
+
+:::warning tee 的代价
+`tee` 在内部用队列缓存"超前消费"的元素。如果一个副本迭代得很远，另一个迟迟不前，会消耗大量内存。需要多次完整遍历就直接 `list()`，不要用 `tee`。
+:::
+
+## 实战：批处理与笛卡尔积密码枚举
+
+下面用一个综合示例展示 `islice` 做分批、`product` 做笛卡尔积、`groupby` 做分组：
+
+```py
+from itertools import islice, product, groupby, count, chain
+from collections import defaultdict
+
+
+# === 1. 分批处理大数据 ===
+def batched(iterable, n: int):
+    """
+    把可迭代对象切成大小为 n 的批次。
+    每个批次是一个 tuple，最后一批可能不足 n 个。
+    """
+    if n < 1:
+        raise ValueError("batch size must be >= 1")
+    iterator = iter(iterable)
+    while True:
+        batch = tuple(islice(iterator, n))
+        if not batch:
+            break
+        yield batch
+
+
+# Python 3.12+ 标准库已内置 itertools.batched
+# 上面是等价的实现，便于理解原理
+
+
+# === 2. 笛卡尔积生成密码候选 ===
+def generate_passwords(chars: str, length: int, max_count: int | None = None):
+    """
+    生成所有长度为 length 的密码组合（笛卡尔积）。
+    max_count 限制生成数量，避免内存爆炸。
+    """
+    generator = product(chars, repeat=length)
+    if max_count is None:
+        for combo in generator:
+            yield "".join(combo)
+    else:
+        for combo in islice(generator, max_count):
+            yield "".join(combo)
+
+
+# === 3. 按字段分组统计 ===
+def group_and_count(records: list[tuple[str, int]], key_func):
+    """按 key_func 分组，统计每组的数量与总和。"""
+    sorted_records = sorted(records, key=key_func)
+    result = {}
+    for key, group in groupby(sorted_records, key=key_func):
+        items = list(group)
+        result[key] = {
+            "count": len(items),
+            "total": sum(v for _, v in items),
+            "items": items,
+        }
+    return result
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("1. 分批处理（每批 3 个）")
+    print("=" * 60)
+    data = range(10)
+    for i, batch in enumerate(batched(data, 3)):
+        print(f"批次 {i}: {batch}")
+
+    print()
+    print("=" * 60)
+    print("2. 密码候选生成（4 位数字，仅取前 10 个）")
+    print("=" * 60)
+    digits = "0123456789"
+    for i, pwd in enumerate(generate_passwords(digits, 4, max_count=10)):
+        print(f"  {i + 1}: {pwd}")
+    print(f"  （4 位数字共 {10 ** 4} = 10000 种）")
+
+    print()
+    print("=" * 60)
+    print("3. 销售记录按地区分组")
+    print("=" * 60)
+    sales = [
+        ("north", 100), ("south", 200), ("north", 150),
+        ("east", 80), ("south", 120), ("east", 90),
+        ("north", 110), ("west", 50),
+    ]
+    summary = group_and_count(sales, key_func=lambda x: x[0])
+    for region, info in sorted(summary.items()):
+        print(f"  {region}: 共 {info['count']} 笔，总销售额 {info['total']}")
+
+    print()
+    print("=" * 60)
+    print("4. 无限编号 + 链式处理")
+    print("=" * 60)
+    # 给多段数据自动编号
+    sections = [["apple", "banana"], ["carrot", "date", "eggplant"]]
+    numbered = zip(count(1), chain.from_iterable(sections))
+    for no, item in numbered:
+        print(f"  {no}. {item}")
+```
+
+输出：
+
+```text
+============================================================
+1. 分批处理（每批 3 个）
+============================================================
+批次 0: (0, 1, 2)
+批次 1: (3, 4, 5)
+批次 2: (6, 7, 8)
+批次 3: (9,)
+
+============================================================
+2. 密码候选生成（4 位数字，仅取前 10 个）
+============================================================
+  1: 0000
+  2: 0001
+  3: 0002
+  4: 0003
+  5: 0004
+  6: 0005
+  7: 0006
+  8: 0007
+  9: 0008
+  10: 0009
+  （4 位数字共 10000 = 10000 种）
+
+============================================================
+3. 销售记录按地区分组
+============================================================
+  east: 共 2 笔，总销售额 170
+  north: 共 3 笔，总销售额 360
+  south: 共 2 笔，总销售额 320
+  west: 共 1 笔，总销售额 50
+
+============================================================
+4. 无限编号 + 链式处理
+============================================================
+  1. apple
+  2. banana
+  3. carrot
+  4. date
+  5. eggplant
+```
+
+:::tip Python 3.12 的 batched
+`itertools.batched` 是 Python 3.12 新增的官方分批工具：
+
+```py
+from itertools import batched
+
+for batch in batched(range(10), 3):
+    print(batch)
+# (0, 1, 2)
+# (3, 4, 5)
+# (6, 7, 8)
+# (9,)
+```
+
+3.12+ 直接用内置版本即可，本节实现仅用于演示原理。
+:::
+
+## 小结
+
+- `chain` 串联多个迭代器，`chain.from_iterable` 扁平化嵌套，比 `sum(lists, [])` 更高效。
+- `product` 笛卡尔积，`repeat=n` 表示 n 个相同序列的积；`permutations` 排列，`combinations` 组合，`combinations_with_replacement` 可重复组合。
+- `accumulate` 累积运算，可指定 `operator.mul`、`max` 等；`initial` 参数从 3.8 起支持。
+- `groupby` 只对**相邻**同 key 分组，全局分组需先排序或用 `defaultdict(list)`。
+- `islice` 切片迭代器，处理无限或大序列的"前 N 个"。
+- `starmap` 把每个元素解包成多参数调用，`zip_longest` 处理不等长 zip。
+- `count` / `cycle` / `repeat` 是三个无限迭代器，必须配合 `islice` 或 `break` 使用。
+- `takewhile` / `dropwhile` / `filterfalse` / `tee` 是辅助过滤与复制工具。
+- Python 3.12 新增 `itertools.batched`，分批处理有了官方工具。
+
+下一节将学习 `pathlib` 路径库——面向对象的现代路径操作。

@@ -1,0 +1,454 @@
+---
+sidebar_position: 4
+sidebar_label: '运行方式'
+title: 运行 Python 代码的方式
+description: 掌握 Python 脚本、python -c、REPL、python -i、__main__ 入口、uv run 与 Jupyter 等多种运行方式。
+---
+
+# 运行 Python 代码的方式
+
+写好代码之后，如何让它"跑起来"？Python 提供了多种运行方式，每种都对应不同的使用场景。本章把常用方式一次性梳理清楚，让你在写脚本、做实验、调试程序时都能选择最趁手的那一种。
+
+## 方式一：运行脚本文件
+
+最常见、也是生产环境使用最多的方式。把代码保存为 `.py` 文件，再用解释器执行：
+
+```bash
+python3 hello.py
+```
+
+假设 `hello.py` 内容如下：
+
+```py
+print("Hello, World!")
+```
+
+运行结果：
+
+```text
+Hello, World!
+```
+
+### 传递命令行参数
+
+脚本可以通过 `sys.argv` 接收命令行参数：
+
+```py
+# greet.py
+import sys
+
+def main() -> None:
+    name = sys.argv[1] if len(sys.argv) > 1 else "世界"
+    print(f"你好，{name}！")
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash
+python3 greet.py 张三
+# 输出：你好，张三！
+```
+
+:::tip 命令行参数都是字符串
+`sys.argv` 中的参数始终是字符串类型。如果需要数字，要自己转换：
+
+```py
+count = int(sys.argv[1])
+```
+
+参数较多时建议使用标准库 `argparse`，它会自动处理类型转换、默认值与帮助信息。
+:::
+
+### 运行模块：`-m` 标志
+
+`python3 -m 模块名` 会按模块方式执行，而不是按文件路径。这种方式的好处是能正确处理包内相对导入，并直接调用标准库工具：
+
+```bash
+# 运行当前目录下 mypackage 模块的 __main__
+python3 -m mypackage
+
+# 用标准库启动一个简易 HTTP 服务器
+python3 -m http.server 8000
+
+# 用标准库进入计时器
+python3 -m timeit -n 1000 "sum(range(100))"
+
+# 查看某个模块的文档
+python3 -m pydoc str
+
+# 列出已安装的包
+python3 -m pip list
+```
+
+:::info -m 与直接运行文件的区别
+直接运行 `python3 foo.py` 时，`foo.py` 的 `__name__` 是 `"__main__"`，但它的"所属包"信息会丢失，相对导入会失败。用 `python3 -m pkg.foo` 运行时，Python 会正确识别包结构，相对导入正常工作。所以**包内的入口脚本推荐用 `-m` 运行**。
+:::
+
+## 方式二：`python -c` 内联执行
+
+当你只想跑一句代码、不想建文件时，`-c`（code）标志非常有用：
+
+```bash
+python3 -c "print(2 ** 10)"
+# 输出：1024
+
+python3 -c "import sys; print(sys.version_info[:2])"
+# 输出：(3, 12)
+```
+
+多行代码用分号分隔可读性差，更优雅的方式是使用换行（在 bash 中通过 `$'...'` 或直接回车）：
+
+```bash
+python3 -c '
+import random
+print(random.choice(["石头", "剪刀", "布"]))
+'
+```
+
+:::tip 把 -c 当成计算器
+在终端临时算个数，`-c` 比打开 Python REPL 更快：
+
+```bash
+python3 -c "print(3.14 * 5 ** 2)"
+# 输出：78.5
+```
+:::
+
+## 方式三：REPL 交互式环境
+
+在终端直接输入 `python3` 进入交互式解释器，适合临时实验、查看 API、调试片段：
+
+```bash
+python3
+```
+
+```text
+Python 3.12.7 (main, Oct  1 2024, 08:00:00) [GCC 13.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+```
+
+在 REPL 中输入表达式会立即求值并打印结果（语句不会）：
+
+```py
+>>> 40 + 2
+42
+>>> name = "Python"
+>>> name
+'Python'
+>>> for i in range(3):
+...     print(i)
+...
+0
+1
+2
+```
+
+退出 REPL：
+
+- 输入 `exit()` 或 `quit()`
+- 按 `Ctrl+D`（Linux/macOS）或 `Ctrl+Z` 然后回车（Windows）
+
+:::note Python 3.13 REPL 改进
+3.13 起 REPL 支持多行编辑、彩色输出、历史搜索（`Ctrl+R`），还支持直接粘贴大段代码自动去除提示符 `>>>` / `...`，体验更接近 IPython。
+:::
+
+## 方式四：`python -i` 调试模式
+
+`-i`（interactive）标志会让 Python 在执行完脚本后**不退出**，而是进入交互模式，保留脚本中定义的所有变量与导入的模块。这是排查问题的利器：
+
+```bash
+python3 -i greet.py 张三
+```
+
+执行 `print(f"你好，{name}！")` 之后，提示符不会消失，你可以接着查看 `name` 的值：
+
+```py
+>>> name
+'张三'
+>>> sys.argv
+['greet.py', '张三']
+>>> exit()
+```
+
+:::warning -i 与异常
+如果脚本在运行中抛出了未捕获的异常，`-i` 仍然会让你进入交互环境。这时你可以查看异常发生时的变量状态，比单纯看堆栈信息更直观：
+
+```bash
+python3 -i buggy.py
+# 程序崩溃 → 自动进入 >>> 提示符
+>>> import pdb; pdb.pm()   # 进入事后调试，定位崩溃位置
+```
+:::
+
+## 方式五：`if __name__ == "__main__"` 入口
+
+这并非一种独立的"运行方式"，而是 Python 程序的**入口惯用写法**。理解它能让你的代码既能作为脚本运行，又能作为模块被复用。
+
+```py
+# calc.py
+def add(a: int, b: int) -> int:
+    return a + b
+
+
+def main() -> None:
+    print(add(2, 3))
+
+
+if __name__ == "__main__":
+    main()
+```
+
+原理：
+
+- 当直接运行 `python3 calc.py` 时，该文件的 `__name__` 等于 `"__main__"`，条件为真，`main()` 被调用。
+- 当被其他模块 `import calc` 时，`__name__` 等于 `"calc"`，条件为假，`main()` 不会自动执行。
+
+```py
+# another.py
+import calc
+print(calc.add(10, 20))   # 直接使用 add 函数，不会触发 calc.main()
+```
+
+:::tip 为什么推荐这种写法
+1. **可复用**：同一个文件既能独立运行，又能被其他文件 import 使用其中的函数。
+2. **可测试**：测试时 import 模块不会触发副作用（如启动服务器、写文件）。
+3. **可读性**：明确告诉读者"程序从这里开始"。
+
+几乎所有规范的 Python 项目都会在每个可执行模块底部写上这段。
+:::
+
+## 方式六：使用 uv run
+
+在本教程的 [IDE 配置指南](./ide-setup.mdx) 中我们介绍了 `uv`。它带来的 `uv run` 命令是现代 Python 项目运行脚本的标准方式。
+
+### 基本用法
+
+```bash
+# 在项目虚拟环境中运行脚本
+uv run python main.py
+
+# 运行模块
+uv run python -m http.server
+
+# 运行安装的工具
+uv run ruff check .
+uv run pytest
+
+# 运行带命令行参数的脚本
+uv run python main.py alice 30
+```
+
+### 为什么用 uv run
+
+直接 `python3 main.py` 的问题是：它使用系统 Python，无法访问项目依赖。而 `uv run` 会：
+
+1. 检查 `pyproject.toml` 与 `uv.lock`
+2. 若 `.venv` 不存在或依赖不全，自动 `uv sync` 重建环境
+3. 在隔离的项目环境中执行命令
+
+这意味着**只要项目里有 `pyproject.toml`，任何人 `git clone` 后一条 `uv run` 就能把代码跑起来**，无需手动 `pip install`。
+
+### 声明脚本入口
+
+你可以在 `pyproject.toml` 中声明脚本入口，让 `uv run` 直接通过名字调用：
+
+```toml
+[project]
+name = "python-demo"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["requests"]
+
+[project.scripts]
+greet = "python_demo.main:main"
+```
+
+之后直接运行：
+
+```bash
+uv run greet 张三
+# 等价于 uv run python -m python_demo.main 张三
+```
+
+:::info uv run --with 临时依赖
+有时你想跑一段代码，但不想把它写进项目依赖。`--with` 可以临时引入一个包：
+
+```bash
+uv run --with rich python -c "from rich import print; print('[bold green]Hello[/]')"
+```
+
+跑完即用，不会污染项目环境——非常适合一次性脚本。
+:::
+
+## 方式七：Jupyter Notebook
+
+[Jupyter](https://jupyter.org/) 是数据科学、教学、研究领域的标配工具。它以"单元格（cell）"为单位运行代码，每个单元格的输出会保留在文档中，形成一份"可执行的笔记"。
+
+### 安装
+
+```bash
+# 用 uv 一键安装（推荐）
+uv tool install jupyterlab
+
+# 或用 pip
+python3 -m pip install jupyterlab
+```
+
+### 启动
+
+```bash
+jupyter lab
+```
+
+浏览器会自动打开 `http://localhost:8888/lab`，你可以在里面新建 Notebook（`.ipynb` 文件），逐格写代码、看输出、写说明文字。
+
+:::tip 用 uv 管理的内核
+让 Notebook 使用项目的 uv 虚拟环境作为内核：
+
+```bash
+# 在项目里安装 ipykernel 并注册
+uv add --dev ipykernel
+uv run python -m ipykernel install --user --name my-project --display-name "Python (my-project)"
+```
+
+之后在 Jupyter 中选择这个内核，即可访问项目的所有依赖。
+:::
+
+### Notebook 适合做什么
+
+- **数据探索**：逐格运行，即时看到结果与图表
+- **教学演示**：把代码、说明、公式、输出整合在一份文档里
+- **原型验证**：快速试一个想法，无需拆分函数与文件
+
+:::warning Notebook 不适合生产
+Notebook 的"状态保留"特性是把双刃剑：单元格的执行顺序可能与文档顺序不一致，导致难以复现的 bug。生产代码请始终使用 `.py` 文件，把 Notebook 仅作为探索与展示工具。
+:::
+
+## 方式对比一览
+
+| 方式 | 命令 | 适用场景 |
+| --- | --- | --- |
+| 运行脚本 | `python3 hello.py` | 日常脚本、生产部署 |
+| 运行模块 | `python3 -m http.server` | 调用包内入口、标准库工具 |
+| 内联执行 | `python3 -c "print(1+1)"` | 一行命令、临时计算 |
+| REPL | `python3` | 探索 API、试代码片段 |
+| 调试模式 | `python3 -i hello.py` | 事后排查变量、即时实验 |
+| 入口惯用法 | `if __name__ == "__main__":` | 让脚本可复用、可测试 |
+| uv run | `uv run python main.py` | 现代项目运行标准方式 |
+| Jupyter | `jupyter lab` | 数据探索、教学演示 |
+
+## 实战：四种方式跑同一段代码
+
+我们用同一段代码——计算斐波那契数列前 N 项——展示不同运行方式的差异。先建一个项目：
+
+```bash
+uv init fib-demo
+cd fib-demo
+```
+
+把以下内容写入 `fib.py`：
+
+```py
+"""斐波那契数列工具模块。"""
+
+import sys
+
+
+def fib(n: int) -> list[int]:
+    """返回前 n 项斐波那契数。"""
+    if n <= 0:
+        return []
+    sequence = [0, 1]
+    for _ in range(2, n):
+        sequence.append(sequence[-1] + sequence[-2])
+    return sequence[:n]
+
+
+def main() -> None:
+    n = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    print(f"斐波那契数列前 {n} 项：{fib(n)}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### 1. 直接运行脚本
+
+```bash
+uv run python fib.py 8
+# 输出：斐波那契数列前 8 项：[0, 1, 1, 2, 3, 5, 8, 13]
+```
+
+### 2. 内联执行（不建文件）
+
+```bash
+uv run python -c "import sys; sys.path.insert(0,'.'); from fib import fib; print(fib(8))"
+# 输出：[0, 1, 1, 2, 3, 5, 8, 13]
+```
+
+### 3. REPL + 事后调试
+
+```bash
+uv run python -i fib.py 8
+```
+
+```py
+斐波那契数列前 8 项：[0, 1, 1, 2, 3, 5, 8, 13]
+>>> fib(20)
+[0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181]
+>>> exit()
+```
+
+### 4. 作为模块被 import
+
+在同目录下新建 `use_fib.py`：
+
+```py
+"""演示把 fib 当作模块导入使用。"""
+
+from fib import fib
+
+
+def show_golden_ratio(n: int = 30) -> None:
+    """观察相邻两项之比趋于黄金分割率。"""
+    seq = fib(n)
+    for i in range(2, len(seq)):
+        ratio = seq[i] / seq[i - 1]
+        print(f"第 {i} 项 / 第 {i - 1} 项 = {ratio:.6f}")
+
+
+if __name__ == "__main__":
+    show_golden_ratio(30)
+```
+
+运行：
+
+```bash
+uv run python use_fib.py
+# 输出（节选）：
+# 第 2 项 / 第 1 项 = 1.000000
+# 第 3 项 / 第 2 项 = 2.000000
+# ...
+# 第 29 项 / 第 28 项 = 1.618034
+```
+
+注意：导入 `fib` 模块时，它的 `if __name__ == "__main__":` 块不会执行，所以 `main()` 不会被触发——这正是入口惯用法带来的好处。
+
+:::tip 黄金分割率
+斐波那契数列相邻两项之比会越来越接近黄金分割率 φ ≈ 1.6180339887。这是数学上一个非常优雅的现象，常被用作编程入门的递归与迭代练习题。
+:::
+
+## 小结
+
+- **运行脚本** `python3 file.py` 是最基础也最常用的方式，配合 `sys.argv` 接收参数。
+- **`-m` 模块方式** 适合运行包内入口或标准库工具，能正确处理包结构。
+- **`-c` 内联执行** 适合一行命令、临时计算。
+- **REPL** 适合探索 API、试代码片段，`-i` 模式可让脚本运行后保留现场调试。
+- **`if __name__ == "__main__"`** 是 Python 程序入口的惯用写法，让文件既能运行又能被 import。
+- **`uv run`** 是现代项目运行的标准方式，自动管理虚拟环境与依赖。
+- **Jupyter Notebook** 适合数据探索与教学，但不要用于生产代码。
+
+掌握这些方式后，你就能在任何场景下选择最合适的运行手段。接下来我们将正式进入 Python 语法的世界。

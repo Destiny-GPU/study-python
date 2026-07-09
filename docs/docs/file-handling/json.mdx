@@ -1,0 +1,457 @@
+---
+sidebar_position: 3
+sidebar_label: 'JSON 处理'
+title: JSON 处理
+description: 掌握 Python 中 JSON 的序列化与反序列化，处理中文、缩进、自定义类型与日期，以及与 dataclass 的互转。
+---
+
+# JSON 处理
+
+JSON（JavaScript Object Notation）是当今最流行的数据交换格式，被广泛用于 Web API、配置文件、NoSQL 数据库等场景。Python 标准库的 `json` 模块提供了完整的 JSON 编解码能力。本章将带你从基础用法一路讲到自定义编码、日期处理与 dataclass 互转。
+
+## JSON 与 Python 类型对照
+
+JSON 只支持少量数据类型，与 Python 内置类型的对应关系如下：
+
+| JSON | Python |
+| --- | --- |
+| object `{}` | `dict` |
+| array `[]` | `list` |
+| string | `str` |
+| number (int) | `int` |
+| number (real) | `float` |
+| true / false | `True` / `False` |
+| null | `None` |
+
+:::warning Python 类型不全是 JSON 的反面
+`tuple`、`set`、`bytes`、`datetime`、自定义类等**都不能直接序列化为 JSON**。`json.dumps((1, 2, 3))` 会把元组当成数组 `[1, 2, 3]`，但 `set` 和 `bytes` 会直接抛出 `TypeError`。
+:::
+
+## dumps 与 loads：字符串互转
+
+`json.dumps()`（dump string）把 Python 对象序列化为 JSON 字符串，`json.loads()`（load string）则是反向操作：
+
+```py
+import json
+
+# 序列化
+data = {'name': '张三', 'age': 30, 'hobbies': ['读书', '编程']}
+text = json.dumps(data)
+print(text)
+# {"name": "\u5f20\u4e09", "age": 30, "hobbies": ["\u8bfb\u4e66", "\u7f16\u7a0b"]}
+
+# 反序列化
+obj = json.loads(text)
+print(obj['name'])  # 张三
+```
+
+:::warning 默认会转义中文
+可以看到，默认输出的中文被转义成 `\uXXXX` 形式。这是为了兼容 ASCII-only 的传输场景，但对人很不友好。**实际使用时记得加 `ensure_ascii=False`**。
+:::
+
+## dump 与 load：文件互转
+
+`json.dump()` 和 `json.load()` 直接读写文件对象，避免中间的字符串拷贝：
+
+```py
+import json
+from pathlib import Path
+
+data = {'name': '李四', 'age': 25}
+
+# 写入文件
+with open('user.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+# 读取文件
+with open('user.json', encoding='utf-8') as f:
+    obj = json.load(f)
+print(obj)  # {'name': '李四', 'age': 25}
+
+# 用 pathlib 更简洁
+Path('user2.json').write_text(
+    json.dumps(data, ensure_ascii=False, indent=2),
+    encoding='utf-8',
+)
+obj = json.loads(Path('user2.json').read_text(encoding='utf-8'))
+```
+
+## 让输出更友好：ensure_ascii 与 indent
+
+```py
+import json
+
+data = {
+    'name': '王五',
+    'scores': {'语文': 95, '数学': 88, '英语': 92},
+    'tags': ['学生', '班长'],
+}
+
+# 默认：单行，中文转义
+print(json.dumps(data))
+
+# 加 ensure_ascii=False：保留中文
+print(json.dumps(data, ensure_ascii=False))
+
+# 加 indent=2：缩进美化
+print(json.dumps(data, ensure_ascii=False, indent=2))
+```
+
+输出：
+
+```text
+{"name": "\u738b\u4e94", "scores": {...}}
+{"name": "王五", "scores": {"语文": 95, ...}}
+{
+  "name": "王五",
+  "scores": {
+    "语文": 95,
+    "数学": 88,
+    "英语": 92
+  },
+  "tags": [
+    "学生",
+    "班长"
+  ]
+}
+```
+
+### 其他常用参数
+
+```py
+# sort_keys=True：按键名字典序排序
+print(json.dumps({'b': 1, 'a': 2}, sort_keys=True))  # {"a": 2, "b": 1}
+
+# separators：紧凑输出，去掉多余空格
+print(json.dumps([1, 2, 3], separators=(',', ':')))  # [1,2,3]
+
+# default：遇到无法序列化的对象时调用
+# 见下文「自定义编码」
+
+# allow_nan=False：禁止 NaN/Infinity（默认允许）
+print(json.dumps(float('nan')))  # NaN
+```
+
+:::tip JSON 标准不包含 NaN
+严格的 JSON 规范不包含 `NaN`、`Infinity`、`-Infinity`。如果数据要传给非 Python 程序，建议用 `allow_nan=False` 来提前发现潜在问题。
+:::
+
+## 自定义编码：default 函数
+
+当 `json.dumps()` 遇到无法直接序列化的对象时，会调用 `default` 函数。这个函数接收原对象，返回一个可序列化的值：
+
+```py
+import json
+from datetime import datetime, date
+
+
+def default_encoder(obj):
+    """处理 JSON 标准库不支持的对象。"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, set):
+        return sorted(obj)  # 排序保证输出稳定
+    if isinstance(obj, bytes):
+        return obj.hex()
+    raise TypeError(f'无法序列化类型：{type(obj).__name__}')
+
+
+data = {
+    'time': datetime(2026, 7, 10, 12, 0, 0),
+    'birthday': date(1995, 5, 1),
+    'tags': {'python', 'json'},
+    'raw': b'\x00\x01\xff',
+}
+
+text = json.dumps(data, ensure_ascii=False, default=default_encoder, indent=2)
+print(text)
+```
+
+输出：
+
+```json
+{
+  "time": "2026-07-10T12:00:00",
+  "birthday": "1995-05-01",
+  "tags": [
+    "json",
+    "python"
+  ],
+  "raw": "0001ff"
+}
+```
+
+### 使用 cls 自定义 JSONEncoder
+
+如果项目里有大量自定义类型需要序列化，可以继承 `json.JSONEncoder`：
+
+```py
+import json
+from datetime import datetime, date
+
+
+class MyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        if isinstance(obj, set):
+            return sorted(obj)
+        return super().default(obj)
+
+
+data = {'now': datetime.now(), 'tags': {'a', 'b'}}
+print(json.dumps(data, cls=MyEncoder, ensure_ascii=False))
+```
+
+## dataclass 与 JSON 互转
+
+Python 3.7 引入的 `dataclass` 是定义数据类的简洁方式。把它和 JSON 互转有几种常见做法。
+
+### 手动转换：最可控
+
+```py
+from dataclasses import dataclass, asdict
+import json
+
+
+@dataclass
+class User:
+    name: str
+    age: int
+    email: str | None = None
+
+
+# dataclass -> dict -> JSON
+user = User(name='赵六', age=28)
+text = json.dumps(asdict(user), ensure_ascii=False, indent=2)
+print(text)
+
+# JSON -> dict -> dataclass
+obj = json.loads(text)
+user2 = User(**obj)
+print(user2)  # User(name='赵六', age=28, email=None)
+```
+
+### 使用 dataclasses-json 等第三方库
+
+如果项目里 dataclass 与 JSON 转换频繁，可以使用第三方库简化：
+
+```py
+# pip install dataclasses-json
+from dataclasses_json import dataclass_json
+from dataclasses import dataclass
+
+
+@dataclass_json
+@dataclass
+class User:
+    name: str
+    age: int
+
+
+user = User('赵六', 28)
+text = user.to_json()  # 序列化
+user2 = User.from_json(text)  # 反序列化
+```
+
+:::info 标准库也有新工具
+PEP 757（Python 3.14 计划）正在讨论为标准库引入 `dataclass.json()` 之类的方法。在 3.12 阶段，仍推荐用 `asdict()` 手动转换或借助第三方库。
+:::
+
+## 处理日期
+
+日期时间在 JSON 中没有原生表示，常见的方案有三种：
+
+### 1. ISO 8601 字符串（推荐）
+
+```py
+from datetime import datetime
+import json
+
+def to_json(obj):
+    return json.dumps(obj, default=lambda o: o.isoformat(), ensure_ascii=False)
+
+def from_json(text):
+    return json.loads(text, object_hook=parse_dates)
+
+def parse_dates(obj):
+    for k, v in obj.items():
+        if isinstance(v, str):
+            try:
+                obj[k] = datetime.fromisoformat(v)
+            except ValueError:
+                pass
+    return obj
+
+data = {'now': datetime(2026, 7, 10, 12, 0)}
+text = to_json(data)
+print(text)  # {"now": "2026-07-10T12:00:00"}
+back = from_json(text)
+print(back)  # {'now': datetime.datetime(2026, 7, 10, 12, 0)}
+```
+
+### 2. 时间戳（整数/浮点）
+
+```py
+data = {'now': datetime.now().timestamp()}
+# {"now": 1752134400.0}
+```
+
+### 3. 自定义格式字符串
+
+```py
+def to_json(obj):
+    return json.dumps(obj, default=lambda o: o.strftime('%Y/%m/%d %H:%M:%S'), ensure_ascii=False)
+```
+
+:::note ISO 8601 的优势
+`datetime.fromisoformat()` 从 Python 3.7 起支持解析 ISO 格式字符串，3.11 起更完整地支持带时区的格式。它是跨语言通用的标准，**强烈推荐**。
+:::
+
+## 反序列化进阶
+
+### object_hook：递归转换 dict
+
+`object_hook` 会在每一层 dict 反序列化完毕后调用，可以用来做键名映射或类型转换：
+
+```py
+import json
+
+def snake_to_camel(obj):
+    """把下划线键名转成驼峰。"""
+    return {
+        k.split('_')[0] + ''.join(w.capitalize() for w in k.split('_')[1:]): v
+        for k, v in obj.items()
+    }
+
+text = '{"user_name": "tom", "user_age": 30}'
+print(json.loads(text, object_hook=snake_to_camel))
+# {'userName': 'tom', 'userAge': 30}
+```
+
+### parse_int / parse_float：自定义数字解析
+
+```py
+import json
+from decimal import Decimal
+
+# 用 Decimal 替代 float，避免浮点精度问题
+text = '{"price": 19.99}'
+obj = json.loads(text, parse_float=Decimal)
+print(obj['price'])          # Decimal('19.99')
+print(type(obj['price']))   # <class 'decimal.Decimal'>
+```
+
+:::tip 财务数据用 Decimal
+JSON 中的浮点数会被 Python 解析成 `float`，而 `float` 存在精度问题（`0.1 + 0.2 == 0.30000000000000004`）。涉及金额、价格时，用 `parse_float=Decimal` 来避免精度丢失。
+:::
+
+## 实战：配置文件读写
+
+我们来实现一个类型安全的 JSON 配置文件读写工具，支持默认值合并、自动备份：
+
+```py
+import json
+import shutil
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+from datetime import datetime
+
+
+@dataclass
+class AppConfig:
+    """应用配置。"""
+    app_name: str = 'MyApp'
+    version: str = '1.0.0'
+    debug: bool = False
+    port: int = 8000
+    allowed_hosts: list[str] = field(default_factory=lambda: ['localhost'])
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+
+
+class ConfigManager:
+    """带自动备份与默认值合并的 JSON 配置管理器。"""
+
+    def __init__(self, path: str | Path):
+        self.path = Path(path)
+
+    def load(self) -> AppConfig:
+        """加载配置，缺失的字段用默认值填充。"""
+        if not self.path.exists():
+            config = AppConfig()
+            self.save(config)
+            return config
+
+        raw = json.loads(self.path.read_text(encoding='utf-8'))
+        # 用 dataclass 字段名做过滤，忽略多余字段
+        valid_keys = AppConfig.__dataclass_fields__.keys()
+        filtered = {k: v for k, v in raw.items() if k in valid_keys}
+        return AppConfig(**filtered)
+
+    def save(self, config: AppConfig, backup: bool = False) -> None:
+        """保存配置，可选先备份旧文件。"""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+
+        if backup and self.path.exists():
+            stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_path = self.path.with_suffix(f'.{stamp}.bak.json')
+            shutil.copy2(self.path, backup_path)
+
+        text = json.dumps(asdict(config), ensure_ascii=False, indent=2)
+        self.path.write_text(text, encoding='utf-8')
+
+
+if __name__ == '__main__':
+    manager = ConfigManager('config/app.json')
+
+    # 首次加载会创建默认配置
+    cfg = manager.load()
+    print('当前配置：')
+    print(json.dumps(asdict(cfg), ensure_ascii=False, indent=2))
+
+    # 修改后保存（带备份）
+    cfg.debug = True
+    cfg.port = 9000
+    cfg.allowed_hosts.append('example.com')
+    manager.save(cfg, backup=True)
+
+    # 重新加载验证
+    cfg2 = manager.load()
+    print('\n重新加载后：')
+    print(f'debug = {cfg2.debug}, port = {cfg2.port}')
+```
+
+运行后会生成 `config/app.json`：
+
+```json
+{
+  "app_name": "MyApp",
+  "version": "1.0.0",
+  "debug": true,
+  "port": 9000,
+  "allowed_hosts": [
+    "localhost",
+    "example.com"
+  ],
+  "created_at": "2026-07-10T12:00:00.000000"
+}
+```
+
+:::tip 配置文件的最佳实践
+1. **用 dataclass 定义配置结构**，借助类型提示获得 IDE 自动补全。
+2. **加载时过滤未知字段**，防止旧版配置破坏新版代码。
+3. **保存前自动备份**，避免手滑覆盖。
+4. **敏感信息（密码、密钥）永远不要写进 JSON 文件**，应使用环境变量或密钥管理服务。
+:::
+
+## 小结
+
+- `json.dumps()` / `json.loads()` 处理字符串，`json.dump()` / `json.load()` 处理文件对象。
+- **永远加 `ensure_ascii=False`** 才能正确输出中文。
+- 用 `indent=2` 让输出美观，用 `sort_keys=True` 让输出稳定。
+- 自定义类型通过 `default` 函数或 `cls=MyEncoder` 处理，日期时间统一用 ISO 8601 字符串。
+- dataclass 借助 `asdict()` 与解构 `**dict` 实现与 JSON 的互转。
+- 金额等精度敏感数据用 `parse_float=Decimal`。
+- 配置文件记得默认值合并与备份，敏感信息切勿入库。
+
+下一章我们学习另一种常见的结构化数据格式——CSV。

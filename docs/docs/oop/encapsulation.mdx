@@ -1,0 +1,553 @@
+---
+sidebar_position: 4
+sidebar_label: '封装'
+title: 封装
+description: 学习命名约定、_protected/__private 名称改写、@property 装饰器、只读属性与 __slots__，合理控制对象内部状态的访问。
+---
+
+# 封装
+
+封装（encapsulation）是面向对象的三大特性之一，指**把数据（属性）和行为（方法）包到对象内部，并控制外部如何访问它们**。通过封装，我们可以隐藏实现细节、保护对象不变量（invariant）、对外暴露稳定接口。Python 的封装哲学与 Java/C++ 不同——它没有真正的访问修饰符（public/private/protected），而是用**命名约定**和**属性协议**来达成"君子协定"。
+
+## 命名约定
+
+Python 用下划线约定属性的可见性：
+
+| 命名          | 含义             | 说明                                 |
+|---------------|------------------|--------------------------------------|
+| `name`        | 公开             | 任何地方都可访问                     |
+| `_name`       | 受保护（约定）   | 仅约定，外部**仍可访问**            |
+| `__name`      | 私有（名称改写） | 会被改写为 `_类名__name`，外部难访问 |
+| `__name__`    | 魔术方法        | 由 Python 解释器调用，不要自创       |
+
+### 单下划线：`_protected`
+
+```py
+class Account:
+    def __init__(self, owner: str, balance: float) -> None:
+        self.owner = owner
+        self._balance = balance  # 约定：受保护，外部不应该直接改
+
+    def deposit(self, amount: float) -> None:
+        if amount <= 0:
+            raise ValueError("存款必须为正")
+        self._balance += amount
+
+    def withdraw(self, amount: float) -> None:
+        if amount > self._balance:
+            raise ValueError("余额不足")
+        self._balance -= amount
+
+    def get_balance(self) -> float:
+        return self._balance
+
+acc = Account("小明", 1000)
+acc.deposit(500)
+print(acc.get_balance())  # 输出：1500
+
+# 单下划线只是约定，Python 不会阻止访问
+print(acc._balance)  # 输出：1500（能访问，但属于"你不应该这么做"）
+```
+
+:::note 约定而非强制
+`_balance` 只是约定，Python 不会阻止外部访问。这反映了 Python "我们都是成年人"的哲学——开发者应该尊重约定。如果你硬要访问，那是你自己的责任。
+:::
+
+:::tip 模块的"私有"
+单下划线在**模块级别**也有意义：`from module import *` 默认不会导入以 `_` 开头的名字。但显式 `from module import _name` 仍然可以导入。
+:::
+
+### 双下划线：`__private` 与名称改写
+
+双下划线开头的属性会被 Python **名称改写（name mangling）**：`__attr` 变成 `_类名__attr`。这不是真正的私有，但能有效避免子类无意覆盖，并阻止直接访问：
+
+```py
+class BankAccount:
+    def __init__(self, owner: str, balance: float) -> None:
+        self.owner = owner
+        self.__balance = balance  # 会被改写为 _BankAccount__balance
+
+    def deposit(self, amount: float) -> None:
+        if amount <= 0:
+            raise ValueError("存款必须为正")
+        self.__balance += amount  # 内部访问正常
+
+    def get_balance(self) -> float:
+        return self.__balance
+
+acc = BankAccount("小明", 1000)
+print(acc.owner)        # 输出：小明
+print(acc.get_balance())  # 输出：1000
+
+# print(acc.__balance)  # AttributeError: 'BankAccount' object has no attribute '__balance'
+print(acc._BankAccount__balance)  # 输出：1000（绕过改写仍可访问，但极不推荐）
+print(acc.__dict__)  # {'owner': '小明', '_BankAccount__balance': 1000}
+```
+
+:::warning 双下划线的副作用
+名称改写容易在继承场景下造成困惑——子类访问父类的 `__attr` 必须用 `_父类名__attr`。日常编码中**优先用单下划线 `_attr`**，只在需要避免子类同名属性覆盖时才用双下划线。
+:::
+
+### 名称改写避免子类覆盖
+
+```py
+class Base:
+    def __init__(self) -> None:
+        self.__value = 1  # _Base__value
+
+class Derived(Base):
+    def __init__(self) -> None:
+        super().__init__()
+        self.__value = 2  # _Derived__value（与父类的不同！）
+
+d = Derived()
+print(d.__dict__)  # 输出：{'_Base__value': 1, '_Derived__value': 2}
+```
+
+两个 `__value` 互不冲突，正是因为名称改写让它们成了不同属性。
+
+## `@property` 装饰器
+
+`@property` 是 Python 实现封装的核心工具，它把方法"伪装"成属性，让外部以 `obj.attr` 形式访问，但内部能加入校验、计算逻辑。配合 `@attr.setter` 实现可读写控制：
+
+### getter：只读属性
+
+```py
+class Circle:
+    def __init__(self, radius: float) -> None:
+        self._radius = radius
+
+    @property
+    def radius(self) -> float:
+        """半径（只读访问）。"""
+        return self._radius
+
+    @property
+    def area(self) -> float:
+        """面积（计算属性）。"""
+        return 3.14159 * self._radius ** 2
+
+    @property
+    def perimeter(self) -> float:
+        """周长（计算属性）。"""
+        return 2 * 3.14159 * self._radius
+
+c = Circle(5)
+# 像属性一样访问，无需加括号
+print(c.radius)      # 输出：5
+print(c.area)        # 输出：78.53975
+print(c.perimeter)   # 输出：31.4159
+
+# c.area = 100  # AttributeError: property 'area' has no setter（只读）
+```
+
+:::tip property 的好处
+- **接口稳定**：把方法改成属性不影响调用方代码
+- **惰性计算**：每次访问才计算，无需缓存
+- **可加校验**：在 setter 中加入参数验证
+- **可演进**：先用普通属性，将来需要逻辑时改用 `@property`，调用代码不变
+:::
+
+### setter：带校验的写
+
+```py
+class Temperature:
+    def __init__(self, celsius: float) -> None:
+        # 注意：直接赋值会触发 setter，从而进行校验
+        self.celsius = celsius
+
+    @property
+    def celsius(self) -> float:
+        return self._celsius
+
+    @celsius.setter
+    def celsius(self, value: float) -> None:
+        if value < -273.15:
+            raise ValueError(f"温度不能低于绝对零度：{value}°C")
+        self._celsius = value
+
+    @property
+    def fahrenheit(self) -> float:
+        return self._celsius * 9 / 5 + 32
+
+    @fahrenheit.setter
+    def fahrenheit(self, value: float) -> None:
+        self.celsius = (value - 32) * 5 / 9  # 复用 celsius 的 setter
+
+t = Temperature(25)
+print(t.celsius)      # 输出：25
+print(t.fahrenheit)   # 输出：77.0
+
+t.celsius = 100        # 通过 setter 修改
+print(t.fahrenheit)   # 输出：212.0
+
+t.fahrenheit = 32      # 通过华氏度 setter 修改
+print(t.celsius)       # 输出：0.0
+
+# t.celsius = -300  # ValueError: 温度不能低于绝对零度：-300°C
+```
+
+:::warning 初始化陷阱
+在 `__init__` 中直接 `self.celsius = celsius` 会触发 setter。如果此时属性还未定义，setter 内部对 `self._celsius` 赋值是 OK 的，但要确保 setter 不依赖其他尚未初始化的属性。
+:::
+
+### 只读属性的三种写法
+
+```py
+# 方法 1：只定义 getter，不定义 setter
+class ReadOnly1:
+    def __init__(self) -> None:
+        self._value = 42
+    @property
+    def value(self) -> int:
+        return self._value
+
+# 方法 2：双下划线 + 只暴露 getter
+class ReadOnly2:
+    def __init__(self) -> None:
+        self.__value = 42
+    @property
+    def value(self) -> int:
+        return self.__value
+
+# 方法 3：用 property 内置的 fget 参数（不推荐 setter 写法，仅作了解）
+class ReadOnly3:
+    def __init__(self) -> None:
+        self._value = 42
+    def _get_value(self) -> int:
+        return self._value
+    value = property(_get_value)  # 仅提供 getter
+
+r1, r2, r3 = ReadOnly1(), ReadOnly2(), ReadOnly3()
+print(r1.value, r2.value, r3.value)  # 输出：42 42 42
+# 都无法通过 .value = xxx 修改
+```
+
+## 使用 `@property` 实现封装
+
+下面是一个完整的封装示例：内部用 `_attrs` 存储，对外暴露受控接口：
+
+```py
+class User:
+    """用户信息：邮箱规范化、密码不能明文存储。"""
+    def __init__(self, name: str, email: str) -> None:
+        self.name = name
+        self.email = email  # 触发 setter
+        self._password_hash: str | None = None
+
+    @property
+    def email(self) -> str:
+        return self._email
+
+    @email.setter
+    def email(self, value: str) -> None:
+        value = value.strip().lower()
+        if "@" not in value:
+            raise ValueError(f"非法邮箱：{value}")
+        self._email = value
+
+    def set_password(self, raw_password: str) -> None:
+        """对外只提供设置密码的方法，不暴露哈希细节。"""
+        import hashlib
+        if len(raw_password) < 6:
+            raise ValueError("密码至少 6 位")
+        self._password_hash = hashlib.sha256(raw_password.encode()).hexdigest()
+
+    def verify_password(self, raw_password: str) -> bool:
+        if self._password_hash is None:
+            return False
+        import hashlib
+        return hashlib.sha256(raw_password.encode()).hexdigest() == self._password_hash
+
+    def __repr__(self) -> str:
+        return f"User(name={self.name!r}, email={self.email!r})"
+
+u = User("Alice", "  Alice@Example.COM ")
+print(u)            # 输出：User(name='Alice', email='alice@example.com')
+u.set_password("secret123")
+print(u.verify_password("secret123"))  # 输出：True
+print(u.verify_password("wrong"))      # 输出：False
+# 外部无法直接读取密码哈希（_password_hash 约定受保护）
+# 也不能直接修改邮箱绕过校验
+```
+
+## `__slots__`：限制属性与节省内存
+
+默认情况下，每个实例都有 `__dict__` 字典存储属性——这很灵活，但占用内存。用 `__slots__` 可以**声明实例只能有的属性**，从而省去 `__dict__`，节省内存并阻止动态添加属性：
+
+```py
+class Point:
+    __slots__ = ("x", "y")  # 实例只能有 x 和 y 两个属性
+
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+    def __repr__(self) -> str:
+        return f"Point({self.x}, {self.y})"
+
+p = Point(3, 4)
+print(p.x, p.y)  # 输出：3 4
+
+# p.z = 5  # AttributeError: 'Point' object has no attribute 'z'
+# print(p.__dict__)  # AttributeError: 'Point' object has no attribute '__dict__'
+```
+
+:::info __slots__ 的权衡
+**优点**：
+- 节省内存：每个实例少了 `__dict__`，约省 40~100 字节，海量实例时收益显著
+- 属性访问稍快：少了字典查找
+- 防止拼写错误：`p.xa = 5`（本想写 `x`）会直接报错
+
+**缺点**：
+- 不能动态添加属性
+- 子类默认不继承 `__slots__`，需要重新声明
+- 影响某些依赖 `__dict__` 的库（如 pickle 的某些版本）
+:::
+
+### 大量实例的内存对比
+
+```py
+import sys
+
+
+class PointDict:
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+
+class PointSlots:
+    __slots__ = ("x", "y")
+
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+
+p1 = PointDict(1, 2)
+p2 = PointSlots(1, 2)
+
+print(sys.getsizeof(p1.__dict__))  # 输出：104（字典开销）
+# PointSlots 没有 __dict__
+print(sys.getsizeof(p2))           # 输出：48（更小）
+
+# 大量实例场景下的内存差异
+n = 1_000_000
+list_dict = [PointDict(i, i + 1) for i in range(n)]   # 约 100MB+
+list_slots = [PointSlots(i, i + 1) for i in range(n)]  # 显著更小
+print("创建完成")
+```
+
+### `__slots__` 与继承
+
+```py
+class Base:
+    __slots__ = ("a",)
+
+class ChildDict(Base):  # 不声明 __slots__，会有 __dict__
+    pass
+
+class ChildSlots(Base):  # 继承并扩展 __slots__
+    __slots__ = ("b",)
+
+c1 = ChildDict()
+c1.a = 1
+c1.anything = 2  # 可以！子类没有 __slots__，恢复了 __dict__
+
+c2 = ChildSlots()
+c2.a = 1
+c2.b = 2
+# c2.c = 3  # AttributeError，被 __slots__ 限制
+print(c2.a, c2.b)  # 输出：1 2
+```
+
+:::warning __slots__ 与 property 共存
+`__slots__` 中**不应该**包含 `@property` 定义的名字，否则会导致冲突。`@property` 创建的是类级别的描述符，与 `__slots__` 的实例存储机制不兼容。需要只读属性时，可以把真实存储字段放进 `__slots__`，再对外用 property 别名：
+
+```py
+class Temp:
+    __slots__ = ("_celsius",)  # 存储字段
+
+    def __init__(self, c: float) -> None:
+        self._celsius = c
+
+    @property
+    def celsius(self) -> float:  # 别名，不放 __slots__
+        return self._celsius
+```
+:::
+
+## 实战：银行账户
+
+综合运用命名约定、`@property`、`__slots__`，实现一个安全的银行账户系统：
+
+```py
+from datetime import datetime
+
+
+class InsufficientFundsError(Exception):
+    """余额不足异常。"""
+
+
+class BankAccount:
+    """银行账户：封装余额、交易历史，保证不变量。"""
+
+    __slots__ = ("_owner", "_balance", "_transactions", "_frozen")
+
+    def __init__(self, owner: str, initial_balance: float = 0.0) -> None:
+        if initial_balance < 0:
+            raise ValueError("初始余额不能为负")
+        self._owner = owner
+        self._balance: float = initial_balance
+        self._transactions: list[tuple[str, float, float, str]] = []
+        self._frozen: bool = False
+        self._record("开户", initial_balance)
+
+    # ---------- 只读属性 ----------
+    @property
+    def owner(self) -> str:
+        return self._owner
+
+    @property
+    def balance(self) -> float:
+        """余额（只读，不能直接赋值修改）。"""
+        return self._balance
+
+    @property
+    def is_frozen(self) -> bool:
+        return self._frozen
+
+    @property
+    def transaction_count(self) -> int:
+        return len(self._transactions)
+
+    # ---------- 业务方法（封装状态变更逻辑） ----------
+    def _check_frozen(self) -> None:
+        if self._frozen:
+            raise RuntimeError(f"账户 {self._owner} 已冻结")
+
+    def _record(self, kind: str, amount: float) -> None:
+        """内部方法：记录交易（约定受保护）。"""
+        self._transactions.append(
+            (kind, amount, self._balance, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+
+    def deposit(self, amount: float) -> None:
+        """存款：必须为正数。"""
+        self._check_frozen()
+        if amount <= 0:
+            raise ValueError("存款金额必须为正")
+        self._balance += amount
+        self._record("存款", amount)
+
+    def withdraw(self, amount: float) -> None:
+        """取款：必须为正数且不超额。"""
+        self._check_frozen()
+        if amount <= 0:
+            raise ValueError("取款金额必须为正")
+        if amount > self._balance:
+            raise InsufficientFundsError(
+                f"余额不足：当前 {self._balance:.2f}，需取 {amount:.2f}"
+            )
+        self._balance -= amount
+        self._record("取款", amount)
+
+    def transfer(self, target: "BankAccount", amount: float) -> None:
+        """转账：保证原子性，失败回滚。"""
+        self._check_frozen()
+        target._check_frozen()
+        # 先取款（可能抛异常）
+        original_balance = self._balance
+        try:
+            self.withdraw(amount)
+            target.deposit(amount)
+        except Exception as e:
+            # 回滚（简化版，真实场景需要事务/锁）
+            self._balance = original_balance
+            raise RuntimeError(f"转账失败已回滚：{e}") from e
+
+    def freeze(self) -> None:
+        self._frozen = True
+
+    def unfreeze(self) -> None:
+        self._frozen = False
+
+    def statement(self, limit: int = 5) -> str:
+        """打印最近交易记录。"""
+        lines = [f"=== {self._owner} 的交易记录 ==="]
+        for kind, amount, balance, ts in self._transactions[-limit:]:
+            lines.append(f"  [{ts}] {kind} {amount:+.2f}  余额:{balance:.2f}")
+        lines.append(f"  当前余额：{self._balance:.2f}")
+        return "\n".join(lines)
+
+    def __repr__(self) -> str:
+        return f"BankAccount(owner={self._owner!r}, balance={self._balance:.2f})"
+
+
+# ===== 使用示例 =====
+acc = BankAccount("小明", 1000)
+print(acc)  # 输出：BankAccount(owner='小明', balance=1000.00)
+
+# 通过方法操作，不能直接改 balance
+acc.deposit(500)
+acc.withdraw(200)
+print(acc.balance)  # 输出：1300.0
+
+# acc.balance = 9999  # AttributeError: can't set attribute（只读）
+
+# 校验生效
+try:
+    acc.deposit(-100)  # ValueError
+except ValueError as e:
+    print(f"拦截：{e}")
+
+try:
+    acc.withdraw(99999)  # 余额不足
+except InsufficientFundsError as e:
+    print(f"拦截：{e}")
+
+# 转账
+bob = BankAccount("Bob", 500)
+acc.transfer(bob, 300)
+print(f"小明：{acc.balance}, Bob：{bob.balance}")  # 输出：1000.0, 800.0
+
+# 冻结
+acc.freeze()
+try:
+    acc.withdraw(100)  # RuntimeError
+except RuntimeError as e:
+    print(f"拦截：{e}")
+acc.unfreeze()
+
+# 交易记录
+print("\n" + acc.statement())
+# 输出示例：
+# === 小明 的交易记录 ===
+#   [2026-07-10 ...] 开户 +1000.00  余额:1000.00
+#   [2026-07-10 ...] 存款 +500.00  余额:1500.00
+#   [2026-07-10 ...] 取款 -200.00  余额:1300.00
+#   [2026-07-10 ...] 取款 -300.00  余额:1000.00
+#   [2026-07-10 ...] 存款 +300.00  余额:800.00
+#   当前余额：1000.00
+```
+
+:::tip 封装的核心收益
+这个例子展示了封装的核心价值：
+1. **不变量保护**：余额永远 >= 0（取款前校验），交易记录永远完整
+2. **统一入口**：所有状态变更都通过方法，便于加日志、校验、审计
+3. **接口稳定**：把 `balance` 从属性改成 `@property` 后，外部调用方 `acc.balance` 不变
+4. **限制扩展**：`__slots__` 防止误添加属性，内存占用也更小
+:::
+
+## 小结
+
+- Python 的封装依靠**命名约定**而非访问修饰符：
+  - 单下划线 `_attr`：约定受保护，外部仍可访问
+  - 双下划线 `__attr`：名称改写为 `_类名__attr`，避免子类覆盖
+- `@property` 是封装的利器：把方法伪装成属性，可读可写可校验
+- **只读属性**：只定义 getter 不定义 setter；或在 `__slots__` 中存真实字段，对外暴露别名
+- `__slots__` 限制实例属性、节省内存，海量实例场景下收益明显；但会影响继承和 `__dict__`
+- 良好的封装让对象**对外稳定、对内可控**：通过方法变更状态、保护不变量、保留演进空间
+
+下一节将系统学习**魔术方法**——Python 对象协议的核心，让自定义类像内置类型一样自然。

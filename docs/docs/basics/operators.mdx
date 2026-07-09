@@ -1,0 +1,581 @@
+---
+sidebar_position: 5
+sidebar_label: '运算符'
+title: 运算符
+description: 系统学习 Python 的各类运算符：算术、比较、逻辑、赋值、位运算，以及海象运算符 := 与运算符优先级、链式比较。
+---
+
+# 运算符
+
+运算符是程序中执行运算的符号。Python 提供了丰富的运算符体系，包括算术、比较、逻辑、赋值、位运算等几大类。本节将系统讲解各类运算符的用法、Python 3.8+ 引入的**海象运算符 `:=`**、运算符优先级，以及 Python 特色的**链式比较**。
+
+## 算术运算符
+
+算术运算符用于数值计算：
+
+| 运算符 | 含义     | 示例        | 结果    |
+| ------ | -------- | ----------- | ------- |
+| `+`    | 加       | `3 + 5`     | `8`     |
+| `-`    | 减       | `10 - 4`    | `6`     |
+| `*`    | 乘       | `3 * 4`     | `12`    |
+| `/`    | 除       | `10 / 4`    | `2.5`   |
+| `//`   | 整除     | `10 // 4`   | `2`     |
+| `%`    | 取模     | `10 % 3`    | `1`     |
+| `**`   | 幂       | `2 ** 10`   | `1024`  |
+
+```py
+print(7 + 3)   # 10
+print(7 - 3)   # 4
+print(7 * 3)   # 21
+print(7 / 3)   # 2.3333333333333335
+print(7 // 3)  # 2 (整除，向下取整)
+print(7 % 3)   # 1 (取余)
+print(2 ** 8)  # 256 (幂)
+
+# 字符串与列表的 + 和 *（拼接与重复）
+print("ab" + "cd")    # abcd
+print("ab" * 3)        # ababab
+print([1, 2] + [3, 4]) # [1, 2, 3, 4]
+print([0] * 5)         # [0, 0, 0, 0, 0]
+```
+
+:::tip + 与 * 的扩展用法
+`+` 和 `*` 不仅用于数字，还可用于字符串、列表、元组等"序列"类型，实现拼接和重复，这是 Python 的一致性设计。
+:::
+
+### 关于 / 与 // 的细节
+
+```py
+# / 总是返回 float
+print(10 / 2)   # 5.0 (即使能整除，也是 float)
+print(10 / 4)   # 2.5
+
+# // 整除：向下取整
+print(10 // 3)    # 3
+print(-10 // 3)   # -4 (向下取整到 -4，不是 -3)
+print(10 // -3)   # -4
+
+# // 对浮点数仍保留小数位
+print(7.5 // 2)  # 3.0
+print(7.5 // 2.5) # 3.0
+```
+
+## 比较运算符
+
+比较运算符返回布尔值，支持所有可比较类型：
+
+| 运算符 | 含义       | 示例         |
+| ------ | ---------- | ------------ |
+| `==`   | 等于       | `3 == 3`     |
+| `!=`   | 不等于     | `3 != 4`     |
+| `>`    | 大于       | `5 > 3`      |
+| `<`    | 小于       | `3 < 5`      |
+| `>=`   | 大于等于   | `5 >= 5`     |
+| `<=`   | 小于等于   | `3 <= 5`     |
+
+```py
+print(3 == 3)    # True
+print(3 != 4)    # True
+print(5 > 3)     # True
+print(5 < 3)     # False
+print(5 >= 5)    # True
+print(5 <= 4)    # False
+
+# 字符串比较：按字典序（Unicode 码点）
+print("apple" < "banana")   # True
+print("apple" < "apricot") # True (前缀相同，比下一位)
+print("Z" < "a")           # True (大写字母码点小于小写)
+
+# 列表、元组也可比较（逐元素比较）
+print([1, 2, 3] < [1, 2, 4])  # True
+print((1, 2) < (1, 3))        # True
+print([1, 2] < [1, 2, 3])     # True (前缀相同，短的更小)
+```
+
+:::info 字符串比较的细节
+字符串比较按 Unicode 码点逐字符进行。所有大写字母（A-Z: 65-90）的码点都小于小写字母（a-z: 97-122），所以 `"Z" < "a"`。如果要做"不区分大小写"的比较，应先将两边统一为相同大小写：`s1.lower() == s2.lower()`。
+:::
+
+## 链式比较
+
+Python 支持数学中常见的**链式比较**，这是 Python 一个非常优雅的特性：
+
+```py
+x = 5
+
+# 链式比较：等价于 1 < x and x < 10
+print(1 < x < 10)   # True
+print(1 < x > 3)    # True (1 < x 且 x > 3)
+
+# 等价写法
+print(1 < x and x < 10)  # True
+
+# 链式比较的优势：x 只计算一次
+# 假设 get_value() 是个昂贵的函数：
+def get_value():
+    print("调用 get_value")
+    return 5
+
+# 链式：只调用一次
+print(1 < get_value() < 10)
+# 输出: 调用 get_value
+#       True
+
+# 等价的 and 写法也只调用一次（因为 and 短路）
+print(1 < get_value() and get_value() < 10)
+# 输出: 调用 get_value (只调用一次，因为 and 的左边为 True 才计算右边)
+```
+
+:::tip 链式比较的实用场景
+链式比较让代码更接近数学表达：
+
+```py
+# 判断范围
+age = 25
+if 18 <= age <= 60:
+    print("适龄工作人口")
+
+# 判断字符是否为数字
+ch = "5"
+if "0" <= ch <= "9":
+    print("数字字符")
+```
+:::
+
+## 逻辑运算符
+
+Python 使用英文单词作为逻辑运算符（不是 `&&`、`||`、`!`）：
+
+| 运算符 | 含义 | 示例                     |
+| ------ | ---- | ------------------------ |
+| `and`  | 与   | `True and False` → False |
+| `or`   | 或   | `True or False` → True   |
+| `not`  | 非   | `not True` → False       |
+
+```py
+print(True and True)    # True
+print(True and False)   # False
+print(False and False)  # False
+print(True or False)    # True
+print(False or False)   # False
+print(not True)         # False
+
+# 短路求值
+print(0 and 1)         # 0 (0 Falsy，直接返回 0，不计算 1)
+print(1 and 2)         # 2 (1 Truthy，返回 2)
+print(0 or "default")  # default (0 Falsy，返回 default)
+print(1 or "default")  # 1 (1 Truthy，直接返回 1)
+
+# 用 or 提供默认值
+name = None
+display = name or "匿名"
+print(display)  # 匿名
+```
+
+## 赋值运算符
+
+### 基本赋值
+
+```py
+x = 10       # 基本赋值
+x = y = 0    # 链式赋值（同时给多个变量赋同值）
+a, b = 1, 2  # 多重赋值
+```
+
+### 增强赋值运算符
+
+增强赋值运算符将运算与赋值合并，更简洁：
+
+| 运算符 | 等价于       | 示例          |
+| ------ | ------------ | ------------- |
+| `+=`   | `x = x + y`  | `x += 5`      |
+| `-=`   | `x = x - y`  | `x -= 3`      |
+| `*=`   | `x = x * y`  | `x *= 2`      |
+| `/=`   | `x = x / y`  | `x /= 4`      |
+| `//=`  | `x = x // y` | `x //= 3`     |
+| `%=`   | `x = x % y`  | `x %= 7`      |
+| `**=`  | `x = x ** y` | `x **= 2`     |
+| `&=`   | `x = x & y`  | `x &= 0b1100` |
+| `|=`   | `x = x | y`  | `x |= 0b0011` |
+| `^=`   | `x = x ^ y`  | `x ^= 0b1111` |
+| `<<=`  | `x = x << y` | `x <<= 2`     |
+| `>>=`  | `x = x >> y` | `x >>= 1`     |
+
+```py
+x = 10
+x += 5    # x = x + 5 = 15
+print(x)  # 15
+
+x -= 3    # 12
+x *= 2    # 24
+x //= 5   # 4
+x **= 3   # 64
+print(x)  # 64
+
+# 字符串拼接
+s = "Hello"
+s += ", World"
+print(s)  # Hello, World
+
+# 列表扩展
+nums = [1, 2]
+nums += [3, 4]   # 等价于 extend，原地修改
+print(nums)       # [1, 2, 3, 4]
+```
+
+:::warning 增强赋值与可变对象
+对于可变对象（如列表），`+=` 是**原地修改**，而 `x = x + y` 是**创建新对象**：
+
+```py
+a = [1, 2]
+b = a
+a += [3]       # 原地修改，a 和 b 都指向同一对象
+print(a, b)    # [1, 2, 3] [1, 2, 3]  (b 也变了)
+
+a = [1, 2]
+b = a
+a = a + [3]    # 创建新对象，a 指向新对象
+print(a, b)    # [1, 2, 3] [1, 2]  (b 不变)
+```
+:::
+
+## 位运算符
+
+位运算符直接对整数的二进制位进行操作：
+
+| 运算符 | 含义     | 示例                |
+| ------ | -------- | ------------------- |
+| `&`    | 按位与   | `0b1010 & 0b1100` → `8`   |
+| `|`    | 按位或   | `0b1010 | 0b1100` → `14`  |
+| `^`    | 按位异或 | `0b1010 ^ 0b1100` → `6`   |
+| `~`    | 按位取反 | `~5` → `-6`         |
+| `<<`   | 左移     | `1 << 3` → `8`      |
+| `>>`   | 右移     | `8 >> 2` → `2`      |
+
+```py
+# 二进制表示（用 0b 前缀）
+a = 0b1010  # 10
+b = 0b1100  # 12
+
+print(bin(a & b))   # 0b1000  (8)   按位与：都为 1 才为 1
+print(bin(a | b))   # 0b1110  (14)  按位或：有一个 1 即为 1
+print(bin(a ^ b))   # 0b0110  (6)   异或：不同为 1，相同为 0
+print(~a)           # -11  (取反：-(a+1))
+
+# 位移
+print(1 << 3)  # 8 (左移 3 位：1 -> 1000，相当于乘 2^3)
+print(8 >> 2)  # 2 (右移 2 位：1000 -> 10，相当于除 2^2)
+
+# 位运算的实际应用：标志位
+READ = 0b0001   # 1: 读权限
+WRITE = 0b0010  # 2: 写权限
+EXEC = 0b0100   # 4: 执行权限
+ADMIN = 0b1000  # 8: 管理权限
+
+# 组合权限（按位或）
+perm = READ | WRITE
+print(bin(perm))  # 0b11 (3)
+
+# 检查是否有某权限（按位与）
+print(perm & READ)   # 1 (有读权限)
+print(perm & EXEC)   # 0 (无执行权限)
+
+# 移除权限（按位与 + 取反）
+perm &= ~WRITE
+print(bin(perm))  # 0b1 (只剩读权限)
+```
+
+:::tip 位运算的性能优势
+位运算速度极快，常用于：
+1. **标志位管理**：用一个整数表示多个布尔标志（如文件权限）
+2. **哈希与加密**：位运算是许多加密算法的基础
+3. **性能优化**：`x << 1` 比 `x * 2` 快，`x >> 1` 比 `x // 2` 快（但在 Python 中差异不大，因为整数对象本身的开销远大于运算）
+:::
+
+### 异或的妙用
+
+异或有几个非常实用的性质：
+
+```py
+# 性质 1：a ^ a = 0，a ^ 0 = a
+print(5 ^ 5)  # 0
+print(5 ^ 0)  # 5
+
+# 性质 2：交换律、结合律
+# 不用临时变量交换两个数（仅限整数）
+a, b = 10, 20
+a = a ^ b
+b = a ^ b  # (a^b) ^ b = a
+a = a ^ b  # (a^b) ^ a = b
+print(a, b)  # 20 10
+
+# 应用：找出数组中只出现一次的数字
+# 所有数字都出现两次，只有一个出现一次
+nums = [4, 1, 2, 1, 2]
+result = 0
+for n in nums:
+    result ^= n
+print(result)  # 4 (唯一出现一次的数字)
+```
+
+## 海象运算符 := (Python 3.8+)
+
+海象运算符（walrus operator）`:=` 是 Python 3.8 (PEP 572) 引入的，它**在表达式内部进行赋值**，也叫"赋值表达式"。它的语法是 `name := value`，返回 `value`，同时将 `value` 赋给 `name`。
+
+```py
+# 传统写法：先赋值，再判断
+n = 10
+if n > 5:
+    print(f"{n} 大于 5")
+
+# 海象运算符：在条件中赋值
+if (n := 10) > 5:
+    print(f"{n} 大于 5")
+```
+
+### 海象运算符的常见场景
+
+#### 1. while 循环中读取输入
+
+```py
+# 传统写法：需要重复写 input()
+lines = []
+# while True:
+#     line = input("输入 (q 退出): ")
+#     if line == "q":
+#         break
+#     lines.append(line)
+
+# 海象运算符：更简洁
+# while (line := input("输入 (q 退出): ")) != "q":
+#     lines.append(line)
+# print(f"你输入了: {lines}")
+```
+
+#### 2. 列表推导式中复用计算结果
+
+```py
+# 传统写法：计算两次
+data = [1, 5, 10, 3, 8, 2]
+# squares = [x**2 for x in data if x**2 > 20]  # x**2 计算两次
+
+# 海象运算符：只计算一次
+squares = [y for x in data if (y := x**2) > 20]
+print(squares)  # [25, 100, 64]
+
+# 处理函数返回值
+def get_score(name: str) -> int | None:
+    scores = {"Alice": 90, "Bob": 85}
+    return scores.get(name)
+
+names = ["Alice", "Bob", "Charlie"]
+# 想收集分数非 None 的结果，并保留分数
+results = [(name, score) for name in names if (score := get_score(name)) is not None]
+print(results)  # [('Alice', 90), ('Bob', 85)]
+```
+
+#### 3. 条件判断中复用值
+
+```py
+# 传统：调用两次函数
+def get_data():
+    print("调用 get_data")
+    return [1, 2, 3]
+
+# data = get_data()
+# if data:
+#     print(f"数据处理: {data}")
+
+# 海象：只调用一次
+if (data := get_data()):
+    print(f"数据处理: {data}")
+# 输出: 调用 get_data
+#       数据处理: [1, 2, 3]
+```
+
+:::warning 海象运算符的使用建议
+海象运算符虽然强大，但**不要滥用**。它的核心价值在于"避免重复计算"和"简化特定模式"。如果使用后代码可读性反而下降，应该坚持传统写法。PEP 8 建议在能显著简化代码时使用。
+:::
+
+## 运算符优先级
+
+当多个运算符同时出现时，Python 按优先级从高到低计算。下表列出常见运算符的优先级（从高到低）：
+
+| 优先级 | 运算符                              | 说明         |
+| ------ | ----------------------------------- | ------------ |
+| 1      | `**`                                | 幂           |
+| 2      | `~x`、`+x`、`-x`                    | 一元运算符   |
+| 3      | `*`、`/`、`//`、`%`                 | 乘除、取模   |
+| 4      | `+`、`-`                            | 加减         |
+| 5      | `<<`、`>>`                          | 位移         |
+| 6      | `&`                                 | 按位与       |
+| 7      | `^`                                 | 按位异或     |
+| 8      | `|`                                 | 按位或       |
+| 9      | `==`、`!=`、`>`、`<`、`>=`、`<=`    | 比较         |
+| 10     | `not x`                             | 逻辑非       |
+| 11     | `and`                               | 逻辑与       |
+| 12     | `or`                                | 逻辑或       |
+| 13     | `if-else`                           | 条件表达式   |
+| 14     | `lambda`                            | lambda       |
+| 15     | `:=`                                | 海象运算符   |
+
+```py
+# 1. ** 优先级高于 *
+print(2 * 3 ** 2)  # 18 (2 * 9)，不是 36
+print((2 * 3) ** 2)  # 36
+
+# 2. 一元负号 - 低于 **
+print(-2 ** 2)  # -4 (等价于 -(2**2))，不是 4
+print((-2) ** 2)  # 4
+
+# 3. 算术高于比较
+print(1 + 2 == 3)  # True (先算 1+2=3，再比较)
+
+# 4. 比较高于逻辑
+print(1 < 2 and 3 > 1)  # True (先比较，再 and)
+
+# 5. not 高于 and 高于 or
+print(True or True and False)  # True (and 先算)
+print((True or True) and False)  # False
+
+# 6. 海象运算符优先级最低
+if (n := 5) > 3:  # 先计算 n := 5，再比较
+    print(n)  # 5
+```
+
+:::tip 用括号提升可读性
+虽然运算符有优先级，但**不要让读者去记优先级表**。在复杂的表达式中，使用括号 `()` 明确计算顺序，可读性比"少打几个字符"更重要：
+
+```py
+# 难读
+result = a + b * c ** 2 > d and e
+
+# 易读
+result = (a + (b * (c ** 2)) > d) and e
+```
+:::
+
+## 条件表达式（三元运算符）
+
+虽然不是严格意义上的"运算符"，但 `x if condition else y` 是 Python 的条件表达式，类似其他语言的三元运算符 `?:`：
+
+```py
+age = 20
+status = "成年人" if age >= 18 else "未成年"
+print(status)  # 成年人
+
+# 等价的 if-else 写法
+if age >= 18:
+    status = "成年人"
+else:
+    status = "未成年"
+
+# 嵌套使用（不推荐过度嵌套）
+score = 85
+grade = "A" if score >= 90 else "B" if score >= 80 else "C"
+print(grade)  # B
+
+# 在 f-string 中使用
+print(f"{'及格' if score >= 60 else '不及格'}")  # 及格
+```
+
+## 实战：简易权限系统
+
+下面用一个综合示例演示位运算与各种运算符的实际应用：
+
+```py
+class Permission:
+    """权限常量"""
+    READ = 0b0001   # 1: 读
+    WRITE = 0b0010  # 2: 写
+    EXEC = 0b0100   # 4: 执行
+    ADMIN = 0b1000  # 8: 管理
+
+
+class User:
+    def __init__(self, name: str, perm: int = 0):
+        self.name = name
+        self.perm = perm
+
+    def has_perm(self, perm: int) -> bool:
+        """检查是否有某权限"""
+        return bool(self.perm & perm)
+
+    def grant(self, perm: int) -> None:
+        """授予权限"""
+        self.perm |= perm
+
+    def revoke(self, perm: int) -> None:
+        """撤销权限"""
+        self.perm &= ~perm
+
+    def __str__(self) -> str:
+        # 利用海象运算符收集权限名
+        names = [
+            n
+            for p, n in [
+                (Permission.READ, "读"),
+                (Permission.WRITE, "写"),
+                (Permission.EXEC, "执行"),
+                (Permission.ADMIN, "管理"),
+            ]
+            if self.has_perm(p)
+        ]
+        return f"{self.name} [权限: {', '.join(names) or '无'}]"
+
+
+# 创建用户并授予权限
+user = User("Alice", Permission.READ)
+user.grant(Permission.WRITE | Permission.EXEC)
+
+print(user)  # Alice [权限: 读, 写, 执行]
+print(f"是否有管理权限: {user.has_perm(Permission.ADMIN)}")  # False
+print(f"是否有读权限:   {user.has_perm(Permission.READ)}")    # True
+
+# 撤销权限
+user.revoke(Permission.WRITE)
+print(user)  # Alice [权限: 读, 执行]
+
+# 综合使用链式比较与海象运算符
+def check_access(user: User, min_level: int) -> str | None:
+    """根据权限等级返回访问结果"""
+    # 统计权限位数
+    if (count := bin(user.perm).count("1")) >= min_level:
+        return f"访问通过（共 {count} 项权限）"
+    return None
+
+
+result = check_access(user, 2)
+if result is not None:
+    print(result)
+else:
+    print("权限不足")
+
+# 利用链式比较判断等级
+level = 3
+if 1 <= level <= 4:
+    print(f"权限等级 {level} 在有效范围内")
+```
+
+运行结果：
+
+```text
+Alice [权限: 读, 写, 执行]
+是否有管理权限: False
+是否有读权限:   True
+Alice [权限: 读, 执行]
+访问通过（共 2 项权限）
+权限等级 3 在有效范围内
+```
+
+## 小结
+
+- **算术运算符**：`+`、`-`、`*`、`/`、`//`（整除）、`%`（取模）、`**`（幂），后三者是 Python 特色。
+- **比较运算符**：`==`、`!=`、`>`、`<`、`>=`、`<=`，返回布尔值，支持字符串、列表等的"字典序"比较。
+- **链式比较**：`1 < x < 10` 等价于 `1 < x and x < 10`，但 `x` 只计算一次，更接近数学表达。
+- **逻辑运算符**：`and`、`or`、`not`，使用短路求值，`and`/`or` 返回操作数本身（不一定是布尔值）。
+- **赋值与增强赋值**：`+=`、`-=`、`*=` 等让代码更简洁；注意可变对象的 `+=` 是原地修改。
+- **位运算符**：`&`、`|`、`^`、`~`、`<<`、`>>`，常用于标志位管理与底层优化。
+- **海象运算符 `:=`**（Python 3.8+）：在表达式内部赋值，常用于 while 循环读取、列表推导式复用计算结果、条件判断中避免重复调用。
+- **运算符优先级**：幂 `**` 最高，海象 `:=` 最低；复杂表达式建议用括号 `()` 明确顺序，提升可读性。
+- **条件表达式** `x if cond else y` 是 Python 的三元运算符，可在表达式中根据条件选择值。

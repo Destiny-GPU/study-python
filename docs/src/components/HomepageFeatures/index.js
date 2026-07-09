@@ -2,48 +2,64 @@ import clsx from 'clsx';
 import Heading from '@theme/Heading';
 import styles from './styles.module.css';
 
-const FeatureList = [
+type FeatureItem = {
+  emoji: string;
+  title: string;
+  description: string;
+};
+
+const FeatureList: FeatureItem[] = [
   {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
-    description: (
-      <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
-      </>
-    ),
+    emoji: '🐍',
+    title: '简洁优雅的语法',
+    description:
+      'Python 以可读性强、语法简洁著称，让你专注于解决问题本身，而非语言细节。代码如自然语言般流畅。',
   },
   {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
-    description: (
-      <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
-      </>
-    ),
+    emoji: '📚',
+    title: '系统化学习路径',
+    description:
+      '从环境搭建、基础语法到面向对象、进阶特性，循序渐进的知识体系，配套完整可运行示例。',
   },
   {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
-    description: (
-      <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
-      </>
-    ),
+    emoji: '⚡',
+    title: '现代 Python 特性',
+    description:
+      '紧跟 Python 3.12+ 最新特性，涵盖类型注解、模式匹配、海象运算符、数据类等现代写法。',
+  },
+  {
+    emoji: '🚀',
+    title: '强大的生态能力',
+    description:
+      '覆盖 Web 开发、数据科学、人工智能、自动化运维等领域，是当下最受欢迎的编程语言之一。',
+  },
+  {
+    emoji: '🔧',
+    title: '实战驱动教学',
+    description:
+      '每个知识点都配有完整代码示例与实战练习，边学边练，真正掌握 Python 编程能力。',
+  },
+  {
+    emoji: '🌐',
+    title: '活跃的社区支持',
+    description:
+      '庞大的开发者社区、丰富的第三方库、海量的学习资源，遇到问题总能找到答案。',
   },
 ];
 
-function Feature({Svg, title, description}) {
+function Feature({emoji, title, description}: FeatureItem) {
   return (
-    <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
-      </div>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
-        <p>{description}</p>
+    <div className={clsx('col col--4', 'margin-vert--md')}>
+      <div className={styles.featureCard}>
+        <div className="text--center">
+          <span className={styles.featureEmoji} role="img" aria-label={title}>
+            {emoji}
+          </span>
+        </div>
+        <div className="text--center padding-horiz--md">
+          <Heading as="h3">{title}</Heading>
+          <p>{description}</p>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,553 @@
+---
+sidebar_position: 1
+sidebar_label: '类型注解'
+title: 类型注解
+description: 学习 Python 类型注解体系，掌握变量、函数、类的标注方式，Optional/Union/泛型/TypeAlias 以及 Python 3.12 type 语句。
+---
+
+# 类型注解
+
+Python 是一门**动态类型**语言，变量的类型在运行时确定，可以随时改变。但动态类型也带来了代价：大型项目难以维护、IDE 自动补全不够智能、重构时容易出错。从 Python 3.5 引入类型注解（PEP 484）开始，Python 逐步建立了一套完整的"渐进式类型系统"——**注解是可选的、不强制运行时检查，但能被静态类型检查器（如 mypy、pyright）和 IDE 利用**，让 Python 也能享受静态类型的红利。
+
+:::info 类型注解不会影响运行
+类型注解默认**不强制运行时检查**。`x: int = "hello"` 不会报错，运行时注解只作为元信息存储在 `__annotations__` 中。注解的价值在于开发期，由 mypy/pyright 等工具在静态分析阶段发现问题。
+:::
+
+## 变量注解
+
+变量注解使用 `变量名: 类型 = 值` 的形式：
+
+```py
+# 基本变量注解
+name: str = "Alice"
+age: int = 30
+height: float = 1.75
+is_student: bool = False
+
+# 也可以只声明类型，不赋值（默认 None）
+count: int
+count = 0
+
+print(name, age, height, is_student, count)
+```
+
+:::tip 注解不会阻止重新赋值
+即使注解为 `int`，运行时仍可赋值为字符串。这是动态类型的本质，类型检查器会在静态阶段提醒你，但运行时不报错：
+
+```py
+x: int = 1
+x = "two"  # 运行时不报错，但 mypy 会警告：Incompatible types in assignment
+```
+:::
+
+## 内置类型
+
+Python 3.9+ 可以直接使用内置容器类型作为泛型，无需从 `typing` 导入：
+
+```py
+# 基本标量
+n: int = 42
+s: str = "hello"
+f: float = 3.14
+b: bool = True
+
+# 容器类型
+names: list[str] = ["Alice", "Bob"]
+scores: dict[str, int] = {"math": 90, "english": 85}
+point: tuple[int, int] = (3, 4)
+mixed: tuple[int, str, float] = (1, "two", 3.0)
+unique_ids: set[int] = {1, 2, 3}
+
+# 变长元组
+# tuple[int, ...] 表示元素全为 int，长度任意
+nums: tuple[int, ...] = (1, 2, 3, 4, 5)
+
+print(names, scores, point, unique_ids)
+```
+
+:::note Python 3.9 之前的写法
+在 Python 3.9 之前，必须从 `typing` 导入 `List`、`Dict`、`Tuple`、`Set` 等大写版本：
+
+```py
+from typing import List, Dict, Tuple, Set
+
+names: List[str] = ["Alice", "Bob"]        # 旧写法
+scores: Dict[str, int] = {"math": 90}      # 旧写法
+point: Tuple[int, int] = (3, 4)            # 旧写法
+```
+
+Python 3.9+（PEP 585）推荐直接使用小写内置类型 `list[str]`、`dict[str, int]` 等，`typing.List` 等已被废弃。本教程面向 Python 3.12+，统一使用新语法。
+:::
+
+## 函数注解
+
+函数注解标注参数和返回值的类型：
+
+```py
+def greet(name: str, times: int = 1) -> str:
+    return (f"Hello, {name}! " * times).strip()
+
+
+print(greet("Alice"))       # Hello, Alice!
+print(greet("Bob", 3))       # Hello, Bob! Hello, Bob! Hello, Bob!
+
+
+# 标注多个参数和复杂返回类型
+def build_profile(name: str, age: int, hobbies: list[str]) -> dict[str, object]:
+    return {"name": name, "age": age, "hobbies": hobbies}
+
+
+print(build_profile("Alice", 30, ["reading", "coding"]))
+```
+
+### 可选参数与默认值
+
+默认值为 `None` 的参数，类型应该是 `X | None`：
+
+```py
+def find_user(user_id: int, cache: dict[int, str] | None = None) -> str | None:
+    if cache and user_id in cache:
+        return cache[user_id]
+    # 模拟数据库查询
+    return None
+
+
+print(find_user(1))
+print(find_user(1, {1: "Alice"}))  # Alice
+```
+
+## Optional 与 Union
+
+`Optional[X]` 表示"X 或 None"，等价于 `X | None`：
+
+```py
+from typing import Optional
+
+# 下面两种写法等价
+def parse_int(s: str) -> Optional[int]:
+    try:
+        return int(s)
+    except ValueError:
+        return None
+
+
+def parse_int_new(s: str) -> int | None:
+    try:
+        return int(s)
+    except ValueError:
+        return None
+
+
+print(parse_int("42"))      # 42
+print(parse_int("abc"))     # None
+```
+
+`Union[X, Y]` 表示"X 或 Y"，Python 3.10+ 可以用 `X | Y` 替代：
+
+```py
+from typing import Union
+
+# 旧写法
+def double(x: Union[int, str]) -> Union[int, str]:
+    return x * 2
+
+
+# 新写法（Python 3.10+，推荐）
+def double_new(x: int | str) -> int | str:
+    return x * 2
+
+
+print(double(5))        # 10
+print(double("ha"))     # haha
+```
+
+:::tip 推荐 X | Y 写法
+Python 3.10+（PEP 604）引入了 `X | Y` 联合类型语法，比 `Union[X, Y]` 更简洁直观。在 Python 3.12+ 的项目中，应优先使用新语法。`Optional[X]` 也可写成 `X | None`。
+:::
+
+## 泛型容器
+
+类型注解支持嵌套的泛型容器，表达复杂的数据结构：
+
+```py
+# 嵌套列表
+matrix: list[list[int]] = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+]
+
+# 字典的值是列表
+students_by_grade: dict[str, list[str]] = {
+    "A": ["Alice", "Bob"],
+    "B": ["Charlie", "David"],
+}
+
+# 字典的键是元组，值是浮点数
+distance_map: dict[tuple[str, str], float] = {
+    ("Beijing", "Shanghai"): 1318.0,
+    ("Beijing", "Guangzhou"): 2129.0,
+}
+
+# 复杂的嵌套结构
+config: dict[str, list[dict[str, int | str]]] = {
+    "servers": [
+        {"host": "localhost", "port": 8080},
+        {"host": "example.com", "port": 443},
+    ],
+}
+
+print(matrix[1][2])              # 6
+print(students_by_grade["A"])    # ['Alice', 'Bob']
+print(config["servers"][0])      # {'host': 'localhost', 'port': 8080}
+```
+
+## 类与属性注解
+
+类的属性可以在 `__init__` 中或类体中标注：
+
+```py
+class Person:
+    # 类体中声明（需要赋值或用 dataclass）
+    name: str
+    age: int
+
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+    def greet(self) -> str:
+        return f"Hi, I'm {self.name}, {self.age} years old."
+
+
+p = Person("Alice", 30)
+print(p.greet())  # Hi, I'm Alice, 30 years old.
+```
+
+### 使用 dataclass 简化
+
+`@dataclass` 能自动生成 `__init__`、`__repr__` 等方法，且自带类型注解：
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass
+class Student:
+    name: str
+    age: int
+    scores: list[float] = None  # 不推荐，应该用 field
+
+    @property
+    def average(self) -> float:
+        return sum(self.scores) / len(self.scores) if self.scores else 0.0
+
+
+# 更规范的写法：用 field 提供默认工厂
+from dataclasses import field
+
+
+@dataclass
+class Student2:
+    name: str
+    age: int
+    scores: list[float] = field(default_factory=list)
+
+    @property
+    def average(self) -> float:
+        return sum(self.scores) / len(self.scores) if self.scores else 0.0
+
+
+s = Student2("Alice", 20, [90, 85, 88])
+print(s)            # Student2(name='Alice', age=20, scores=[90, 85, 88])
+print(s.average)    # 87.66666666666667
+```
+
+:::warning 可变默认值的陷阱
+类属性注解中，**不要**直接用可变对象作为默认值（如 `scores: list[float] = []`）。所有实例会共享同一个列表，导致意外行为。应使用 `field(default_factory=list)` 每次创建新列表。
+:::
+
+## TypeAlias 类型别名
+
+当类型注解变得复杂时，可以用 `TypeAlias` 给类型起别名，提高可读性：
+
+```py
+from typing import TypeAlias
+
+# 旧写法：TypeAlias
+UserID: TypeAlias = int
+UserName: TypeAlias = str
+UserMap: TypeAlias = dict[UserID, UserName]
+
+users: UserMap = {1: "Alice", 2: "Bob"}
+print(users[1])  # Alice
+
+
+# 更复杂的别名
+JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dict[str, "JSONValue"]
+# 注意：自引用类型需要用字符串引号包裹
+
+data: JSONValue = {"name": "Alice", "scores": [90, 85], "active": True}
+print(data)
+```
+
+:::note Python 3.10+ 的 type 别名
+Python 3.10+ 可以直接用 `X = SomeType` 的形式，不需要显式写 `TypeAlias`，但显式写法更清晰，能避免歧义：
+
+```py
+# Python 3.10+ 简化写法
+UserID = int  # 类型检查器可能不确定这是别名还是普通赋值
+
+from typing import TypeAlias
+UserID: TypeAlias = int  # 明确告诉检查器：这是类型别名
+```
+:::
+
+## Python 3.12 type 语句（PEP 695）
+
+Python 3.12 引入了 `type` 语句（PEP 695），提供了一种全新的、原生的类型别名声明语法，还支持泛型参数：
+
+```py
+# Python 3.12+ 新语法：type 语句
+type UserID = int
+type UserName = str
+type UserMap = dict[UserID, UserName]
+
+users: UserMap = {1: "Alice", 2: "Bob"}
+print(users[1])  # Alice
+
+
+# 递归类型别名不再需要字符串引号
+type JSON = None | bool | int | float | str | list[JSON] | dict[str, JSON]
+
+data: JSON = {"name": "Alice", "scores": [90, 85]}
+print(data)
+
+
+# type 语句支持泛型参数（TypeAlias 做不到）
+type Pair[T] = tuple[T, T]
+type Result[T, E] = tuple[T, E] | E
+
+p: Pair[int] = (1, 2)
+r: Result[int, str] = (42, "")
+print(p, r)
+```
+
+:::tip type 语句的优势
+相比 `TypeAlias`，Python 3.12 的 `type` 语句有三大优势：
+1. **支持泛型参数**：`type Pair[T] = tuple[T, T]`，无需 `TypeVar`
+2. **递归别名无需引号**：`type JSON = ... | list[JSON]` 直接自引用
+3. **语义更清晰**：`type` 语句明确表达"这是类型别名定义"
+
+如果项目使用 Python 3.12+，应优先使用 `type` 语句定义类型别名。
+:::
+
+## 运行时类型检查
+
+类型注解默认不参与运行时检查，但有时我们需要在运行时校验类型。
+
+### isinstance 检查
+
+`isinstance()` 是运行时类型检查的基础：
+
+```py
+def process(value: int | str) -> str:
+    if isinstance(value, int):
+        return f"数字：{value * 2}"
+    return f"字符串：{value.upper()}"
+
+
+print(process(21))       # 数字：42
+print(process("hello"))   # 字符串：HELLO
+```
+
+:::warning isinstance 与联合类型
+从 Python 3.10 开始，`isinstance` 支持直接使用 `X | Y` 形式的联合类型作为第二参数：
+
+```py
+x: int | str = 42
+print(isinstance(x, int | str))  # True（Python 3.10+）
+```
+
+但 `isinstance` 不能检查泛型参数，例如 `isinstance(x, list[int])` 会报错——运行时类型已擦除，只能检查 `isinstance(x, list)`：
+
+```py
+x: list[int] = [1, 2, 3]
+print(isinstance(x, list))        # True
+# print(isinstance(x, list[int]))  # TypeError: isinstance() argument 2 cannot be a parameterized generic
+```
+:::
+
+### TypeGuard 类型守卫
+
+`TypeGuard` 用于在类型检查器中**收窄类型**——告诉检查器"在某个函数返回 True 后，参数类型已确定为 T"：
+
+```py
+from typing import TypeGuard
+
+
+def is_str_list(values: list[object]) -> TypeGuard[list[str]]:
+    """判断是否为字符串列表。
+    
+    返回 TypeGuard[list[str]] 后，类型检查器会知道：
+    若此函数返回 True，则 values 的类型是 list[str]。
+    """
+    return all(isinstance(v, str) for v in values)
+
+
+def process_values(values: list[object]) -> None:
+    if is_str_list(values):
+        # 这里类型检查器知道 values 是 list[str]
+        # 可以安全地调用字符串方法
+        print([v.upper() for v in values])
+    else:
+        print("不是字符串列表")
+
+
+process_values(["hello", "world"])  # ['HELLO', 'WORLD']
+process_values([1, 2, 3])           # 不是字符串列表
+```
+
+:::note TypeGuard 的局限
+`TypeGuard` 只影响静态类型检查器的推断，运行时不做任何事。函数体里的判断逻辑需要你自己保证正确性——如果 `is_str_list` 实现有 bug，类型检查器仍会"相信"它的返回值。
+
+Python 3.13 引入了 `TypeIs`（PEP 742），比 `TypeGuard` 更严格、更智能的类型收窄，推荐在新代码中使用。
+:::
+
+## 查看注解信息
+
+注解存储在 `__annotations__` 属性中，可以在运行时访问：
+
+```py
+def greet(name: str, times: int = 1) -> str:
+    return f"Hello, {name}! " * times
+
+
+class Person:
+    name: str
+    age: int
+
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+
+print(greet.__annotations__)
+# {'name': <class 'str'>, 'times': <class 'int'>, 'return': <class 'str'>}
+
+print(Person.__annotations__)
+# {'name': <class 'str'>, 'age': <class 'int'>}
+
+# 局部变量注解不存储在 __annotations__
+x: int = 10
+```
+
+:::info 运行时访问注解的库
+需要运行时类型检查的场景，推荐使用专门的库而非手写 `isinstance` 检查：
+- **pydantic**：基于类型注解做数据校验和序列化，最流行
+- **typeguard**：运行时类型检查库
+- **cattrs**：结构化数据与类型注解的转换
+
+这些库能解析 `__annotations__` 并递归校验嵌套类型。
+:::
+
+## 实战：带类型注解的 API 模型
+
+下面实现一个简化的 API 请求/响应模型，综合运用变量、函数、类注解和类型别名：
+
+```py
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import TypeAlias, Literal, Optional
+
+
+# 类型别名
+StatusCode: TypeAlias = int
+Headers: TypeAlias = dict[str, str]
+HttpMethod: TypeAlias = Literal["GET", "POST", "PUT", "DELETE"]
+
+
+@dataclass
+class Request:
+    method: HttpMethod
+    url: str
+    headers: Headers = field(default_factory=dict)
+    body: dict[str, str] | None = None
+
+    @property
+    def is_safe(self) -> bool:
+        """GET/HEAD 等不修改资源的请求是安全的。"""
+        return self.method in ("GET",)
+
+
+@dataclass
+class Response:
+    status: StatusCode
+    body: dict[str, object] = field(default_factory=dict)
+    headers: Headers = field(default_factory=dict)
+
+    @property
+    def is_success(self) -> bool:
+        return 200 <= self.status < 300
+
+    @property
+    def is_error(self) -> bool:
+        return self.status >= 400
+
+
+# 模拟一个路由处理函数
+def handle_request(request: Request) -> Response:
+    """根据请求方法分发处理。"""
+    match request:
+        case Request(method="GET", url=url):
+            return Response(200, {"message": f"GET {url}", "data": []})
+        case Request(method="POST", url=url, body=body) if body is not None:
+            return Response(201, {"message": f"Created at {url}", "received": body})
+        case Request(method="DELETE", url=url):
+            return Response(204, {})
+        case _:
+            return Response(405, {"error": "Method Not Allowed"})
+
+
+# 测试
+requests = [
+    Request("GET", "/users"),
+    Request("POST", "/users", body={"name": "Alice"}),
+    Request("DELETE", "/users/1"),
+    Request("PUT", "/users/1"),
+]
+
+for req in requests:
+    resp = handle_request(req)
+    print(f"{req.method:6} {req.url:15} -> {resp.status} {resp.body}")
+```
+
+输出：
+
+```text
+GET    /users           -> 200 {'message': 'GET /users', 'data': []}
+POST   /users           -> 201 {'message': 'Created at /users', 'received': {'name': 'Alice'}}
+DELETE /users/1         -> 204 {}
+PUT    /users/1         -> 405 {'error': 'Method Not Allowed'}
+```
+
+:::tip from __future__ import annotations
+文件首行的 `from __future__ import annotations`（PEP 563）让所有注解变成字符串形式存储，不在定义时求值。好处是：
+- 可以使用尚未定义的类型（前向引用）
+- 性能更好（注解不立即求值）
+- Python 3.12 之前避免某些注解求值问题
+
+但运行时访问 `__annotations__` 时拿到的是字符串而非类型对象，需要用 `typing.get_type_hints()` 解析。
+:::
+
+## 小结
+
+- 类型注解是**可选的、不影响运行**的元信息，主要服务于静态类型检查器和 IDE。
+- Python 3.9+ 直接使用 `list[str]`、`dict[str, int]` 等内置容器作为泛型，无需 `typing.List`。
+- `Optional[X]` 等价于 `X | None`，`Union[X, Y]` 等价于 `X | Y`（Python 3.10+）。
+- `TypeAlias` 用于声明类型别名；Python 3.12 的 `type` 语句（PEP 695）是更现代的写法，还支持泛型参数。
+- `isinstance` 是运行时类型检查的基础，但不能检查泛型参数（如 `list[int]`）。
+- `TypeGuard` 用于在类型检查器中收窄类型，运行时不做任何事。
+- 推荐使用 `@dataclass` 自动生成带类型注解的数据类。
+
+下一节将深入 `typing` 模块，学习 `Callable`、`Protocol`、`TypedDict`、`TypeVar`、`Generic` 等更高级的类型工具。

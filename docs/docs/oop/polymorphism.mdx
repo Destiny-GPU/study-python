@@ -1,0 +1,606 @@
+---
+sidebar_position: 3
+sidebar_label: '多态'
+title: 多态
+description: 学习鸭子类型、typing.Protocol 协议、运行时多态、方法重写与运算符重载，理解 Python 灵活的多态机制。
+---
+
+# 多态
+
+多态（polymorphism）指**同一接口在不同对象上表现出不同行为**。在 Python 中，多态并非通过严格的类型继承实现，而是更轻量、更灵活的"鸭子类型"——只要对象提供了所需的方法，就可以被当作某类对象使用。这种动态特性是 Python 简洁优雅的关键，让我们能写出"对扩展开放、对修改关闭"的高复用代码。
+
+## 鸭子类型
+
+> "如果它走起来像鸭子，叫起来像鸭子，那么它就是鸭子。"
+
+Python 不关心对象**是什么类型**，只关心它**有什么方法**。只要实现了需要的方法，就能用：
+
+```py
+class Dog:
+    def speak(self) -> str:
+        return "汪汪"
+
+class Cat:
+    def speak(self) -> str:
+        return "喵喵"
+
+class Robot:
+    def speak(self) -> str:
+        return "嘀嘀"
+
+def make_speak(obj) -> str:
+    # 不关心 obj 是什么类型，只要有 speak 方法即可
+    return obj.speak()
+
+print(make_speak(Dog()))    # 输出：汪汪
+print(make_speak(Cat()))    # 输出：喵喵
+print(make_speak(Robot()))  # 输出：嘀嘀
+```
+
+`Dog`、`Cat`、`Robot` 没有共同父类，但它们都实现了 `speak()`，因此都能传给 `make_speak`。这就是鸭子类型——**多态不需要继承**。
+
+:::tip Pythonic 哲学
+相比 Java 等强类型语言，Python 的多态更关注**行为契约**而非**类型层级**。请求原谅比许可容易（EAFP：Easier to Ask Forgiveness than Permission），通常直接调用方法，再用 `try/except` 处理异常。
+:::
+
+### 鸭子类型示例：可迭代对象
+
+```py
+def show_all(items) -> None:
+    """任何实现了 __iter__ 的对象都能传入。"""
+    for item in items:
+        print(item, end=" ")
+    print()
+
+show_all([1, 2, 3])         # 列表
+show_all(("a", "b", "c"))   # 元组
+show_all(range(5))           # range 对象
+show_all({"x": 1, "y": 2})  # 字典（迭代键）
+show_all(n for n in range(3))  # 生成器
+# 输出：
+# 1 2 3
+# a b c
+# 0 1 2 3 4
+# x y
+# 0 1 2
+```
+
+`show_all` 不关心参数是 list、tuple、range 还是 dict，只要支持迭代就能用。
+
+## `typing.Protocol`：结构化类型
+
+Python 3.8+ 引入 `Protocol`，让我们能**用类型注解描述鸭子类型**。`Protocol` 是"结构化子类型"——类不需要显式继承协议，只要结构（方法/属性）匹配就算符合：
+
+```py
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable  # 让协议支持 isinstance 检查
+class Speaker(Protocol):
+    """任何具有 speak() 方法的对象都符合 Speaker 协议。"""
+    def speak(self) -> str: ...
+
+
+class Dog:
+    def speak(self) -> str:
+        return "汪汪"
+
+class Cat:
+    def speak(self) -> str:
+        return "喵喵"
+
+class Car:
+    def drive(self) -> str:
+        return "嗖嗖"
+
+
+def announce(speaker: Speaker) -> str:
+    return f"【播音】{speaker.speak()}"
+
+
+print(announce(Dog()))  # 输出：【播音】汪汪
+print(announce(Cat()))  # 输出：【播音】喵喵
+
+# 类型检查通过，但 Car 没有 speak 方法
+# announce(Car())  # 静态类型检查器会报错！
+
+# runtime_checkable 让 isinstance 可用（仅检查方法是否存在）
+print(isinstance(Dog(), Speaker))  # 输出：True
+print(isinstance(Car(), Speaker))  # 输出：False
+```
+
+:::note Protocol vs ABC
+- **ABC（抽象基类）**：名义子类型，子类必须**显式继承**。
+- **Protocol**：结构子类型，只要**结构匹配**就算符合，无需继承声明。
+
+Protocol 更接近 Python 的鸭子类型哲学，特别适合"我希望传入的对象有这些方法"的接口描述场景。
+:::
+
+### 协议的属性与方法
+
+```py
+from typing import Protocol
+
+
+class Comparable(Protocol):
+    """描述可比较的对象：有 value 属性和 compare 方法。"""
+    value: int
+
+    def compare(self, other: "Comparable") -> int: ...
+
+
+class Score:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def compare(self, other: "Score") -> int:
+        return self.value - other.value
+
+
+def higher(a: Comparable, b: Comparable) -> Comparable:
+    return a if a.compare(b) >= 0 else b
+
+
+print(higher(Score(90), Score(85)).value)  # 输出：90
+```
+
+## 运行时多态
+
+Python 是动态语言，方法调用在**运行时**根据对象的实际类型决定调用哪个实现。这种"动态分派"是多态的底层机制：
+
+```py
+import random
+
+
+class AudioFile:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def play(self) -> str:
+        return f"播放音频：{self.name}"
+
+class VideoFile:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def play(self) -> str:
+        return f"播放视频：{self.name}"
+
+class ImageFile:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def play(self) -> str:
+        return f"显示图片：{self.name}"
+
+
+# 运行时根据实际类型决定行为
+files = [AudioFile("歌.mp3"), VideoFile("影.mp4"), ImageFile("图.png")]
+for f in files:
+    # 同样的 f.play() 调用，不同对象不同行为
+    print(f.play())
+# 输出：
+# 播放音频：歌.mp3
+# 播放视频：影.mp4
+# 显示图片：图.png
+```
+
+### 多态 vs 类型判断
+
+新手容易写出"用 `if type ==` 分支"的反多态代码：
+
+```py
+# ❌ 反模式：硬编码类型判断，扩展性差
+def play_bad(file) -> str:
+    if type(file) is AudioFile:
+        return f"播放音频：{file.name}"
+    elif type(file) is VideoFile:
+        return f"播放视频：{file.name}"
+    # 新增类型时必须改这里
+
+# ✅ 正确：依赖多态，依赖接口而非实现
+def play_good(file) -> str:
+    return file.play()  # 只要对象实现了 play 方法即可
+```
+
+:::warning 别滥用 isinstance
+如果发现自己写了大量 `isinstance` 分支，可能违背了多态原则。更好的做法是让每个对象自己实现一个统一接口的方法，让多态帮你分派。
+:::
+
+## 方法重写实现多态
+
+子类重写父类方法是最经典的多态形式：
+
+```py
+class Shape:
+    def area(self) -> float:
+        raise NotImplementedError("子类必须实现 area")
+
+    def describe(self) -> str:
+        return f"{type(self).__name__} 的面积是 {self.area():.2f}"
+
+class Circle(Shape):
+    def __init__(self, radius: float) -> None:
+        self.radius = radius
+
+    def area(self) -> float:
+        return 3.14159 * self.radius ** 2
+
+class Rectangle(Shape):
+    def __init__(self, width: float, height: float) -> None:
+        self.width = width
+        self.height = height
+
+    def area(self) -> float:
+        return self.width * self.height
+
+class Triangle(Shape):
+    def __init__(self, base: float, height: float) -> None:
+        self.base = base
+        self.height = height
+
+    def area(self) -> float:
+        return 0.5 * self.base * self.height
+
+# 父类引用指向子类对象，调用时表现不同行为
+shapes: list[Shape] = [Circle(5), Rectangle(4, 6), Triangle(3, 8)]
+total = sum(s.area() for s in shapes)
+for s in shapes:
+    print(s.describe())  # describe 是父类方法，area 是子类重写的
+print(f"总面积：{total:.2f}")
+# 输出：
+# Circle 的面积是 78.54
+# Rectangle 的面积是 24.00
+# Triangle 的面积是 12.00
+# 总面积：114.54
+```
+
+注意 `describe` 定义在 `Shape` 中，但调用 `self.area()` 时实际执行的是子类的方法——这就是多态的精髓。
+
+## 运算符重载
+
+通过重写魔术方法，可以让自定义对象支持 `+`、`-`、`==`、`<` 等运算符。这也是一种多态：相同的运算符在不同对象上有不同含义。
+
+```py
+class Vector:
+    def __init__(self, x: float, y: float) -> None:
+        self.x = x
+        self.y = y
+
+    # + 运算符
+    def __add__(self, other: "Vector") -> "Vector":
+        return Vector(self.x + other.x, self.y + other.y)
+
+    # - 运算符
+    def __sub__(self, other: "Vector") -> "Vector":
+        return Vector(self.x - other.x, self.y - other.y)
+
+    # == 运算符
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Vector):
+            return NotImplemented
+        return self.x == other.x and self.y == other.y
+
+    # < 运算符（按模长比较）
+    def __lt__(self, other: "Vector") -> bool:
+        return (self.x ** 2 + self.y ** 2) < (other.x ** 2 + other.y ** 2)
+
+    # abs() 函数
+    def __abs__(self) -> float:
+        return (self.x ** 2 + self.y ** 2) ** 0.5
+
+    def __repr__(self) -> str:
+        return f"Vector({self.x}, {self.y})"
+
+v1 = Vector(3, 4)
+v2 = Vector(1, 2)
+
+print(v1 + v2)      # 输出：Vector(4, 6)
+print(v1 - v2)      # 输出：Vector(2, 2)
+print(v1 == Vector(3, 4))  # 输出：True
+print(v2 < v1)       # 输出：True
+print(abs(v1))       # 输出：5.0
+
+# 配合 max、sorted 等使用
+vecs = [Vector(3, 4), Vector(1, 1), Vector(2, 2)]
+print(max(vecs))      # 输出：Vector(3, 4)
+print(sorted(vecs))  # 输出：[Vector(1, 1), Vector(2, 2), Vector(3, 4)]
+```
+
+:::info 常用运算符方法
+| 运算符 | 方法        | 说明          |
+|--------|-------------|---------------|
+| `+`    | `__add__`   | 加法          |
+| `-`    | `__sub__`   | 减法          |
+| `*`    | `__mul__`   | 乘法          |
+| `/`    | `__truediv__`| 真除法        |
+| `//`   | `__floordiv__`| 整除        |
+| `**`   | `__pow__`   | 幂            |
+| `==`   | `__eq__`    | 相等          |
+| `<`    | `__lt__`    | 小于          |
+| `<=`   | `__le__`    | 小于等于      |
+| `>`    | `__gt__`    | 大于          |
+| `in`   | `__contains__`| 包含         |
+| `len()`| `__len__`   | 长度          |
+
+完整的魔术方法清单详见[魔术方法](./magic-methods.mdx)一节。
+:::
+
+### 反向运算符：`__radd__` 等
+
+当左操作数不支持运算时，Python 会尝试右操作数的反向方法：
+
+```py
+class Money:
+    def __init__(self, amount: float) -> None:
+        self.amount = amount
+
+    def __add__(self, other: "Money") -> "Money":
+        return Money(self.amount + other.amount)
+
+    # 当 int + Money 时，int 不支持 + Money，会调用 Money.__radd__
+    def __radd__(self, other: float) -> "Money":
+        return Money(other + self.amount)
+
+    def __repr__(self) -> str:
+        return f"Money({self.amount})"
+
+m = Money(100)
+print(m + Money(50))  # 输出：Money(150)  ← __add__
+print(20 + m)         # 输出：Money(120)  ← __radd__
+```
+
+## 多态实战场景
+
+### 策略模式
+
+多态天然实现了策略模式——把算法封装到不同的类中，通过替换对象来切换策略：
+
+```py
+from typing import Protocol
+
+
+class DiscountStrategy(Protocol):
+    def apply(self, price: float) -> float: ...
+
+
+class NoDiscount:
+    def apply(self, price: float) -> float:
+        return price
+
+
+class PercentageDiscount:
+    def __init__(self, percent: float) -> None:
+        self.percent = percent
+
+    def apply(self, price: float) -> float:
+        return price * (1 - self.percent / 100)
+
+
+class FixedDiscount:
+    def __init__(self, amount: float) -> None:
+        self.amount = amount
+
+    def apply(self, price: float) -> float:
+        return max(0, price - self.amount)
+
+
+class ShoppingCart:
+    def __init__(self, discount: DiscountStrategy | None = None) -> None:
+        self.items: list[tuple[str, float]] = []
+        self.discount = discount or NoDiscount()
+
+    def add(self, name: str, price: float) -> None:
+        self.items.append((name, price))
+
+    def total(self) -> float:
+        subtotal = sum(price for _, price in self.items)
+        return self.discount.apply(subtotal)
+
+
+# 不打折
+cart1 = ShoppingCart()
+cart1.add("书", 50)
+cart1.add("笔", 20)
+print(f"不打折：{cart1.total()}")  # 输出：不打折：70
+
+# 八折
+cart2 = ShoppingCart(PercentageDiscount(20))
+cart2.add("书", 50)
+cart2.add("笔", 20)
+print(f"八折：{cart2.total()}")    # 输出：八折：56.0
+
+# 减 10 元
+cart3 = ShoppingCart(FixedDiscount(10))
+cart3.add("书", 50)
+cart3.add("笔", 20)
+print(f"减 10：{cart3.total()}")   # 输出：减 10：60
+```
+
+只要新的折扣类实现了 `apply(price)` 方法，就能直接接入，无需修改 `ShoppingCart`——这就是"对扩展开放、对修改关闭"。
+
+### 内置多态：`len`、`print`、`for`
+
+Python 内置函数的多态性源于魔术方法：
+
+```py
+class LinkedList:
+    """简易链表：演示内置协议的多态。"""
+    def __init__(self, *values) -> None:
+        self._values = list(values)
+
+    def __len__(self) -> int:           # 支持 len()
+        return len(self._values)
+
+    def __getitem__(self, i):           # 支持下标访问、切片、for 循环
+        return self._values[i]
+
+    def __contains__(self, item):       # 支持 in
+        return item in self._values
+
+    def __iter__(self):                 # 支持 iter()、for
+        return iter(self._values)
+
+    def __str__(self) -> str:           # 支持 print
+        return f"LL{self._values}"
+
+ll = LinkedList(1, 2, 3, 4, 5)
+
+print(len(ll))      # 输出：5  ← 多态：list、str、dict、LinkedList 都能用 len
+print(ll[2])         # 输出：3  ← 多态：list、tuple、str 都支持 [i]
+print(3 in ll)       # 输出：True
+print(ll[1:3])       # 输出：[2, 3]  ← 切片
+print(ll)            # 输出：LL[1, 2, 3, 4, 5]
+for x in ll:
+    print(x, end=" ")  # 输出：1 2 3 4 5
+print()
+```
+
+## 实战：可绘制的图形系统
+
+综合运用协议、方法重写、运算符重载，实现一个图形渲染系统：
+
+```py
+from typing import Protocol
+
+
+class Drawable(Protocol):
+    """可绘制协议：任何实现了 draw 方法的对象都可以渲染。"""
+    def draw(self) -> str: ...
+
+
+class Shape:
+    """所有图形的基类。"""
+    def __init__(self, color: str = "黑色") -> None:
+        self.color = color
+
+    def area(self) -> float:
+        raise NotImplementedError
+
+    def draw(self) -> str:
+        return f"用{self.color}画了一个{type(self).__name__}"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(color={self.color!r}, area={self.area():.2f})"
+
+    # 运算符重载：图形 + 图形 = 组合
+    def __add__(self, other: "Shape") -> "Composite":
+        return Composite(self, other)
+
+
+class Circle(Shape):
+    def __init__(self, radius: float, color: str = "黑色") -> None:
+        super().__init__(color)
+        self.radius = radius
+
+    def area(self) -> float:
+        return 3.14159 * self.radius ** 2
+
+    def draw(self) -> str:
+        return f"用{self.color}画了一个半径 {self.radius} 的圆"
+
+
+class Rectangle(Shape):
+    def __init__(self, width: float, height: float, color: str = "黑色") -> None:
+        super().__init__(color)
+        self.width = width
+        self.height = height
+
+    def area(self) -> float:
+        return self.width * self.height
+
+    def draw(self) -> str:
+        return f"用{self.color}画了一个 {self.width}x{self.height} 的矩形"
+
+
+class Triangle(Shape):
+    def __init__(self, base: float, height: float, color: str = "黑色") -> None:
+        super().__init__(color)
+        self.base = base
+        self.height = height
+
+    def area(self) -> float:
+        return 0.5 * self.base * self.height
+
+    def draw(self) -> str:
+        return f"用{self.color}画了一个底{self.base}高{self.height}的三角形"
+
+
+class Composite:
+    """组合图形：由多个图形组成，本身也可绘制。"""
+    def __init__(self, *shapes: Shape) -> None:
+        self.shapes: list[Shape] = list(shapes)
+
+    def area(self) -> float:
+        return sum(s.area() for s in self.shapes)
+
+    def draw(self) -> str:
+        parts = [s.draw() for s in self.shapes]
+        return " + ".join(parts) + f"（合计面积 {self.area():.2f}）"
+
+    def __repr__(self) -> str:
+        return f"Composite({self.shapes})"
+
+    # 让 Composite 也支持 + 运算
+    def __add__(self, other: Shape) -> "Composite":
+        return Composite(*self.shapes, other)
+
+
+# 渲染函数：依赖 Drawable 协议，不关心具体类型
+def render(items: list[Drawable]) -> None:
+    print("=== 画布 ===")
+    for item in items:
+        print(item.draw())
+
+
+# 创建图形
+circle = Circle(5, "红色")
+rect = Rectangle(4, 6, "蓝色")
+tri = Triangle(3, 8, "绿色")
+
+# 单个图形渲染
+render([circle, rect, tri])
+# 输出：
+# === 画布 ===
+# 用红色画了一个半径 5 的圆
+# 用蓝色画了一个 4x6 的矩形
+# 用绿色画了一个底3高8的三角形
+
+# 用 + 运算符组合图形（多态 + 运算符重载）
+combo = circle + rect + tri  # 实际是 Composite(circle, rect, tri)
+print("\n--- 组合图形 ---")
+print(combo.draw())
+# 输出：用红色画了一个半径 5 的圆 + 用蓝色画了一个 4x6 的矩形 + 用绿色画了一个底3高8的三角形（合计面积 114.54）
+
+# 组合图形也可以当作 Drawable 渲染
+render([circle, combo])
+# 输出：
+# === 画布 ===
+# 用红色画了一个半径 5 的圆
+# 用红色画了一个半径 5 的圆 + 用蓝色画了一个 4x6 的矩形 + ...
+
+# 面积计算也表现出多态
+all_shapes: list[Shape] = [circle, rect, tri, combo]
+print("\n--- 面积统计 ---")
+total = 0.0
+for s in all_shapes:
+    print(f"{type(s).__name__:10} 面积 = {s.area():.2f}")
+    total += s.area()  # 不同类型，同一个 area() 调用
+print(f"图形总面积（含组合重复）：{total:.2f}")
+```
+
+:::tip 组合优于继承
+注意 `Composite` 并没有继承 `Shape`，而是通过实现相同的 `area()` 和 `draw()` 方法满足 `Drawable` 协议——这是"组合优于继承"原则的体现。这样既能让 `Composite` 装下任意 `Shape`，又避免了为它强行捏造一个父类层级。
+:::
+
+## 小结
+
+- **鸭子类型**是 Python 多态的核心：对象只要有需要的方法就能用，不要求继承关系。
+- `typing.Protocol` 用类型注解描述鸭子类型，让静态类型检查器也能理解"结构化子类型"。
+- **运行时多态**：方法调用在运行时根据对象实际类型决定，是动态分派机制。
+- **方法重写**是经典多态形式，子类重写父类方法以提供特定实现。
+- **运算符重载**通过魔术方法让自定义对象支持 `+`、`==`、`<` 等运算，是另一种多态表现。
+- 多态让代码"对扩展开放、对修改关闭"：新增类型时无需修改调用方代码。
+- 实战中优先用**协议/鸭子类型**而非 `isinstance` 分支判断，让代码更 Pythonic。
+
+下一节将介绍**封装**——如何控制属性的访问与修改，保护对象内部状态。

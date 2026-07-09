@@ -1,0 +1,439 @@
+---
+sidebar_position: 2
+sidebar_label: '路径处理'
+title: 路径处理
+description: 使用 pathlib 进行现代路径操作，掌握 Path 对象、属性访问、目录遍历与 Python 3.12 新特性。
+---
+
+# 路径处理
+
+在 Python 早期，路径操作主要依赖 `os.path` 模块和字符串拼接，既繁琐又容易出错。从 Python 3.4 开始，标准库引入了 `pathlib` 模块，提供了一套面向对象、跨平台的路径处理 API。本章将带你全面掌握 `pathlib`，并介绍 Python 3.12 带来的新特性。
+
+## os.path vs pathlib
+
+传统的 `os.path` 把路径当作字符串，所有操作都是函数调用：
+
+```py
+import os
+
+# 传统写法：字符串拼接，平台相关
+base = '/home/user'
+full = os.path.join(base, 'docs', 'readme.txt')
+name = os.path.basename(full)
+parent = os.path.dirname(full)
+exists = os.path.exists(full)
+```
+
+而 `pathlib` 把路径封装成 `Path` 对象，操作更直观、更链式：
+
+```py
+from pathlib import Path
+
+# 现代写法：面向对象，跨平台
+base = Path('/home/user')
+full = base / 'docs' / 'readme.txt'
+name = full.name
+parent = full.parent
+exists = full.exists()
+```
+
+:::tip 推荐使用 pathlib
+对于新项目，**强烈推荐使用 `pathlib`**：代码更短、可读性更好、自动处理平台差异（Windows 用 `\`，Linux/macOS 用 `/`）。`os.path` 仅在维护老代码时才需要。
+:::
+
+## Path 对象基础
+
+### 创建 Path
+
+```py
+from pathlib import Path
+
+p1 = Path('hello.txt')              # 相对路径
+p2 = Path('/home/user/docs')        # 绝对路径
+p3 = Path()                         # 当前目录
+p4 = Path.home()                    # 用户主目录，如 /home/tom
+p5 = Path.cwd()                     # 当前工作目录
+
+# Windows 上也能正常工作
+win_path = Path('C:/Users/Tom/Documents')
+print(win_path)  # C:\Users\Tom\Documents
+```
+
+### / 运算符拼接路径
+
+`Path` 重载了 `/` 运算符，可以像拼接字符串一样拼接路径，但语义更清晰：
+
+```py
+base = Path('/home/user')
+docs = base / 'docs'
+readme = docs / 'readme.txt'
+
+# 等价于
+readme = Path('/home/user') / 'docs' / 'readme.txt'
+```
+
+### 常用属性
+
+```py
+p = Path('/home/user/docs/readme.txt')
+
+print(p.name)        # 'readme.txt'    文件名（含扩展名）
+print(p.stem)        # 'readme'        文件名（不含扩展名）
+print(p.suffix)      # '.txt'          扩展名
+print(p.suffixes)    # ['.txt']        所有扩展名（如 '.tar.gz' → ['.tar', '.gz']）
+print(p.parent)      # '/home/user/docs'   父目录
+print(p.parents)     # 父目录链
+print(list(p.parents))
+# [PosixPath('/home/user/docs'), PosixPath('/home/user'),
+#  PosixPath('/home'), PosixPath('/')]
+print(p.anchor)      # '/'  根目录或盘符
+print(p.parts)        # ('/', 'home', 'user', 'docs', 'readme.txt')
+```
+
+### 修改路径
+
+```py
+p = Path('/home/user/docs/readme.txt')
+
+# 修改文件名
+print(p.with_name('intro.md'))         # /home/user/docs/intro.md
+print(p.with_stem('intro'))            # /home/user/docs/intro.txt (3.12+)
+print(p.with_suffix('.md'))            # /home/user/docs/readme.md
+
+# 修改父目录
+print(p.with_parent('/tmp'))           # /tmp/readme.txt (3.12+)
+```
+
+:::info Python 3.12 新增方法
+`with_stem()` 和 `with_parent()` 是 Python 3.12 才加入的，之前只能用 `with_name(f'{new_stem}{p.suffix}')` 这种绕弯的写法。
+:::
+
+## 读写文件：read_text / read_bytes / write_text
+
+`Path` 对象直接提供了便捷的读写方法，无需再用 `open()`：
+
+```py
+from pathlib import Path
+
+p = Path('note.txt')
+
+# 一次写入（覆盖）
+p.write_text('你好，世界\n', encoding='utf-8')
+
+# 一次读取
+content = p.read_text(encoding='utf-8')
+print(content)  # 你好，世界
+
+# 二进制读写
+p.write_bytes(b'\x89PNG\r\n\x1a\n')
+data = p.read_bytes()
+print(data)  # b'\x89PNG\r\n\x1a\n'
+```
+
+:::warning 注意一次性读写
+`read_text()` 和 `write_text()` 是一次性操作，会把整个文件读入/写入内存。**只适合中小文件**，大文件还是要用 `open()` 迭代。
+:::
+
+如果需要追加内容，可以这样：
+
+```py
+p = Path('log.txt')
+
+# 追加模式（用 open 更直观）
+with p.open('a', encoding='utf-8') as f:
+    f.write('新的一行\n')
+```
+
+## 判断文件类型：exists / is_file / is_dir
+
+```py
+from pathlib import Path
+
+p = Path('/home/user/docs/readme.txt')
+
+p.exists()              # 是否存在
+p.is_file()             # 是否是文件
+p.is_dir()              # 是否是目录
+p.is_symlink()          # 是否是符号链接
+p.is_socket()           # 是否是 socket
+p.is_fifo()             # 是否是管道
+p.is_block_device()     # 是否是块设备
+p.is_char_device()      # 是否是字符设备
+```
+
+### 获取文件信息
+
+```py
+p = Path('readme.txt')
+
+print(p.stat().st_size)         # 文件大小（字节）
+print(p.stat().st_mtime)       # 修改时间（时间戳）
+print(p.stat().st_ctime)       # 创建时间（Windows）/ 元数据变更时间（Linux）
+print(p.stat().st_mode)        # 权限模式
+
+# 解析符号链接指向的真实文件信息
+print(p.resolve().stat().st_size)
+```
+
+## 创建与删除：mkdir / rmdir / unlink
+
+### 创建目录
+
+```py
+from pathlib import Path
+
+p = Path('data/cache/logs')
+
+# 创建单层目录
+Path('new_folder').mkdir()
+
+# 递归创建多层（类似 mkdir -p）
+p.mkdir(parents=True, exist_ok=True)
+# parents=True：允许创建多层
+# exist_ok=True：目录已存在时不报错
+```
+
+:::warning 默认参数会报错
+`mkdir()` 默认 `parents=False, exist_ok=False`。如果目录已存在或父目录不存在，会抛出 `FileExistsError` / `FileNotFoundError`。**实际开发中通常都加 `parents=True, exist_ok=True`**。
+:::
+
+### 删除文件和目录
+
+```py
+# 删除文件
+Path('temp.txt').unlink(missing_ok=True)
+# missing_ok=True 是 3.8 新增：文件不存在时不报错
+
+# 删除空目录
+Path('empty_folder').rmdir()
+
+# 删除非空目录：需要用 shutil
+import shutil
+shutil.rmtree('folder_with_files')
+```
+
+:::note unlink 和 remove 的关系
+`unlink()` 这个名字来自 Unix 的 `unlink` 系统调用，意思是「取消文件名与 inode 的链接」。在标准库中，`os.remove()` 是 `os.unlink()` 的别名，二者完全等价。`Path.unlink()` 也一样。
+:::
+
+## glob 与 rglob：查找文件
+
+### glob：当前层匹配
+
+```py
+from pathlib import Path
+
+# 当前目录下的所有 .txt 文件
+for f in Path('.').glob('*.txt'):
+    print(f)
+
+# docs 目录下所有 .md 文件
+for f in Path('docs').glob('*.md'):
+    print(f)
+```
+
+### rglob：递归匹配
+
+`rglob()` 会递归进入所有子目录：
+
+```py
+# 递归查找所有 .py 文件
+for f in Path('.').rglob('*.py'):
+    print(f)
+
+# 等价于 glob('**/*.py')
+for f in Path('.').glob('**/*.py'):
+    print(f)
+```
+
+### Python 3.13 新增：递归参数
+
+```py
+# Python 3.13 起，glob 和 rglob 支持 case_sensitive 和 recurse_symlinks 参数
+# 此前的版本 glob 默认大小写敏感（Linux）或不敏感（Windows）
+```
+
+:::tip 通配符规则
+- `*`：匹配任意数量字符（不跨目录）
+- `?`：匹配单个字符
+- `[abc]`：匹配字符集中任意一个
+- `**`：跨目录匹配（必须用 `rglob` 或 `glob('**/...')`）
+:::
+
+### 一次获取所有结果
+
+```py
+# glob 和 rglob 返回生成器，可以转成列表
+all_logs = list(Path('/var/log').rglob('*.log'))
+print(f'共找到 {len(all_logs)} 个日志文件')
+```
+
+:::warning glob 结果未排序
+`Path.glob()` 返回的结果**顺序是不确定的**（取决于文件系统）。如果需要稳定顺序，请用 `sorted(Path('.').glob('*.txt'))`。
+:::
+
+## Python 3.12 新特性
+
+### Path.walk()
+
+Python 3.12 给 `Path` 增加了 `walk()` 方法，类似 `os.walk()` 但更现代：
+
+```py
+from pathlib import Path
+
+# 自上而下遍历目录树
+for top, dirs, files in Path('project').walk():
+    print(f'当前目录：{top}')
+    for d in dirs:
+        print(f'  子目录：{d}')
+    for f in files:
+        print(f'  文件：{f}')
+```
+
+与 `os.walk()` 不同的是，`Path.walk()` 返回的 `top` 是 `Path` 对象而不是字符串：
+
+```py
+for top, dirs, files in Path('project').walk():
+    # top 是 Path 对象，可以直接用 / 拼接
+    for f in files:
+        full = top / f
+        print(full.stat().st_size, full)
+```
+
+### 自下而上遍历
+
+```py
+# 自下而上（先处理子目录，再处理父目录，适合删除操作）
+for top, dirs, files in Path('project').walk(top_down=False):
+    for f in files:
+        (top / f).unlink()
+    top.rmdir()
+```
+
+### with_stem 和 with_parent
+
+```py
+p = Path('photos/DSC_0012.jpg')
+
+# 3.12 之前要这样改文件名（保留扩展名）
+new_p = p.with_name(f'vacation_{p.stem}{p.suffix}')
+
+# 3.12 之后直接用 with_stem
+new_p = p.with_stem('vacation_DSC_0012')
+
+# 3.12 之前改父目录要这样
+new_p = Path('/backup') / p.name
+
+# 3.12 之后用 with_parent
+new_p = p.with_parent('/backup')
+```
+
+## 实战：批量重命名
+
+假设有一批照片，文件名形如 `IMG_0001.jpg`、`IMG_0002.jpg`，我们想把它们改成更有意义的名字，比如 `vacation_001.jpg`、`vacation_002.jpg`：
+
+```py
+from pathlib import Path
+
+
+def batch_rename(
+    folder: str | Path,
+    prefix: str,
+    pattern: str = 'IMG_*.jpg',
+    start: int = 1,
+    dry_run: bool = False,
+) -> list[tuple[Path, Path]]:
+    """
+    批量重命名文件夹中匹配 pattern 的文件。
+
+    :param folder: 目标文件夹
+    :param prefix: 新文件名前缀
+    :param pattern: 匹配模式
+    :param start: 序号起始值
+    :param dry_run: 试运行模式，只打印不真正重命名
+    :return: [(旧路径, 新路径), ...]
+    """
+    folder = Path(folder)
+    if not folder.is_dir():
+        raise NotADirectoryError(f'{folder} 不是目录')
+
+    files = sorted(folder.glob(pattern))
+    renames: list[tuple[Path, Path]] = []
+
+    for idx, old_path in enumerate(files, start=start):
+        # 提取原扩展名，生成新文件名
+        new_name = f'{prefix}_{idx:03d}{old_path.suffix}'
+        new_path = old_path.with_name(new_name)
+
+        if old_path == new_path:
+            continue
+
+        renames.append((old_path, new_path))
+        print(f'{old_path.name}  ->  {new_name}')
+
+        if not dry_run:
+            old_path.rename(new_path)
+
+    return renames
+
+
+if __name__ == '__main__':
+    # 准备测试数据
+    test_dir = Path('photos')
+    test_dir.mkdir(exist_ok=True)
+    for i in range(1, 6):
+        (test_dir / f'IMG_{i:04d}.jpg').write_bytes(b'')
+
+    # 先试运行看看效果
+    print('=== 试运行 ===')
+    batch_rename(test_dir, 'vacation', dry_run=True)
+
+    # 确认无误后真正执行
+    print('\n=== 正式执行 ===')
+    batch_rename(test_dir, 'vacation', dry_run=False)
+
+    print('\n重命名后的文件：')
+    for f in sorted(test_dir.glob('*.jpg')):
+        print(f'  {f.name}')
+```
+
+输出：
+
+```text
+=== 试运行 ===
+IMG_0001.jpg  ->  vacation_001.jpg
+IMG_0002.jpg  ->  vacation_002.jpg
+IMG_0003.jpg  ->  vacation_003.jpg
+IMG_0004.jpg  ->  vacation_004.jpg
+IMG_0005.jpg  ->  vacation_005.jpg
+
+=== 正式执行 ===
+IMG_0001.jpg  ->  vacation_001.jpg
+IMG_0002.jpg  ->  vacation_002.jpg
+IMG_0003.jpg  ->  vacation_003.jpg
+IMG_0004.jpg  ->  vacation_004.jpg
+IMG_0005.jpg  ->  vacation_005.jpg
+
+重命名后的文件：
+  vacation_001.jpg
+  vacation_002.jpg
+  vacation_003.jpg
+  vacation_004.jpg
+  vacation_005.jpg
+```
+
+:::tip dry_run 是好习惯
+涉及文件重命名、删除等不可逆操作时，先加一个 `dry_run` 参数让用户预览将要发生什么，可以避免很多「按错键毁一生」的悲剧。
+:::
+
+## 小结
+
+- **优先使用 `pathlib.Path`** 而非 `os.path`，代码更短、跨平台、面向对象。
+- 路径拼接用 `/` 运算符，访问属性用 `.name` / `.stem` / `.suffix` / `.parent`。
+- 小文件读写用 `read_text()` / `write_text()`，大文件用 `open()` + 迭代。
+- 判断存在用 `exists()`，判断类型用 `is_file()` / `is_dir()`。
+- 创建目录用 `mkdir(parents=True, exist_ok=True)`，删除文件用 `unlink(missing_ok=True)`。
+- 查找文件用 `glob()` 当前层，`rglob()` 递归，结果**未排序**，需要排序用 `sorted()`。
+- Python 3.12 新增 `Path.walk()`、`with_stem()`、`with_parent()`，让路径操作更顺手。
+
+下一章我们将学习如何在 Python 中读写 JSON——一种最流行的数据交换格式。

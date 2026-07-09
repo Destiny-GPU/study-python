@@ -1,0 +1,467 @@
+---
+sidebar_position: 5
+sidebar_label: '结构化模式匹配'
+title: 结构化模式匹配
+description: 学习 Python 3.10+ 的 match-case 语句，掌握字面量、解构、守卫、as 绑定等模式匹配技巧。
+---
+
+# 结构化模式匹配
+
+Python 3.10 引入的 `match-case` 语句（PEP 634）借鉴自函数式语言，提供了远比 `if-elif-else` 强大的模式匹配能力。它不仅能匹配字面量，还能对序列、字典、类实例进行 **解构（destructuring）**，是处理结构化数据的利器。
+
+## 基本语法
+
+`match-case` 由 `match` 后跟一个表达式，以及若干 `case 模式:` 分支组成。Python 自上而下匹配，命中第一个分支即执行并结束：
+
+```py
+def describe_http_status(code: int) -> str:
+    match code:
+        case 200:
+            return "OK"
+        case 404:
+            return "Not Found"
+        case 500:
+            return "Internal Server Error"
+        case _:
+            return "Unknown Status"
+
+
+print(describe_http_status(200))  # OK
+print(describe_http_status(404))  # Not Found
+print(describe_http_status(999))  # Unknown Status
+```
+
+:::note 区分 match 与 switch
+C/Java 的 `switch` 只匹配字面量，而 Python 的 `match` 能匹配复杂结构、绑定变量、应用守卫条件，是真正的"模式匹配"而非简单的多分支。
+:::
+
+## 字面量模式
+
+最简单的模式是字面量匹配，支持数字、字符串、布尔值、`None`：
+
+```py
+def day_type(day: str) -> str:
+    match day.lower():
+        case "monday" | "tuesday" | "wednesday" | "thursday" | "friday":
+            return "工作日"
+        case "saturday" | "sunday":
+            return "周末"
+        case _:
+            return "无效日期"
+
+
+print(day_type("Monday"))    # 工作日
+print(day_type("SUNDAY"))    # 周末
+```
+
+:::tip 用 | 合并模式
+`|` 操作符可以合并多个模式，相当于"或"逻辑，比写多个 `case` 简洁。注意这是"管道"语法，不是按位或。
+:::
+
+## 通配符 _
+
+`_` 是通配符模式，匹配任意值，且 **不绑定变量**。它通常放在最后作为兜底分支：
+
+```py
+def handle_command(cmd: str) -> None:
+    match cmd:
+        case "start":
+            print("启动")
+        case "stop":
+            print("停止")
+        case _:
+            print(f"未知命令：{cmd}")
+```
+
+:::warning _ 不绑定变量
+`_` 是特殊的"软关键字"，在 `match` 中作为通配符使用，不会创建名为 `_` 的变量。如果在其他位置使用 `_`，它仍是一个普通变量名。
+:::
+
+## 变量绑定模式
+
+`case` 中以小写字母开头的标识符是 **捕获模式**，会把匹配的值绑定到该变量：
+
+```py
+def greet(name: str) -> None:
+    match name:
+        case "admin":
+            print("管理员你好！")
+        case other:  # 捕获到 other 变量
+            print(f"你好，{other}！")
+
+
+greet("admin")  # 管理员你好！
+greet("Alice")  # 你好，Alice！
+```
+
+:::warning 变量名大小写敏感
+模式匹配中，**小写** 开头的名称会被视为变量绑定（捕获模式），而 **大写** 开头的名称会被当作字面量（通过 `Enum` 或常量）。这是常见陷阱：
+
+```py
+RED = "red"
+
+def check(color: str) -> None:
+    match color:
+        case RED:    # 被当作变量绑定，匹配任意值！
+            print("红色")
+        case other:
+            print("其他")
+
+check("blue")  # 输出：红色（错误！）
+```
+
+要匹配字面量，应使用带点号的常量访问（如 `Color.RED`），或将字面量直接写在 `case` 后。
+:::
+
+## 序列解构模式
+
+`match-case` 可以对列表、元组等序列进行解构，按位置取出元素：
+
+```py
+def describe_point(point: tuple[int, ...]) -> str:
+    match point:
+        case (0, 0):
+            return "原点"
+        case (0, y):
+            return f"y 轴上，y={y}"
+        case (x, 0):
+            return f"x 轴上，x={x}"
+        case (x, y):
+            return f"普通点：({x}, {y})"
+        case _:
+            return "未知点"
+
+
+print(describe_point((0, 0)))    # 原点
+print(describe_point((0, 5)))    # y 轴上，y=5
+print(describe_point((3, 0)))    # x 轴上，x=3
+print(describe_point((3, 4)))    # 普通点：(3, 4)
+```
+
+:::tip 解构长度匹配
+序列模式默认匹配长度相同的序列。要匹配"开头是某值，剩余任意"，可以用 `*rest` 收集剩余元素：
+
+```py
+match [1, 2, 3, 4]:
+    case [first, *rest]:
+        print(f"首元素 {first}，其余 {rest}")
+# 输出：首元素 1，其余 [2, 3, 4]
+```
+:::
+
+## 字典解构模式
+
+`match-case` 可以匹配字典的子集键，无需所有键都对齐：
+
+```py
+def handle_user(user: dict) -> str:
+    match user:
+        case {"name": name, "age": age}:
+            return f"用户 {name}，{age} 岁"
+        case {"name": name}:
+            return f"用户 {name}，年龄未知"
+        case {"id": user_id}:
+            return f"匿名用户 ID={user_id}"
+        case _:
+            return "无法识别"
+
+
+print(handle_user({"name": "小明", "age": 20}))  # 用户 小明，20 岁
+print(handle_user({"name": "小红"}))              # 用户 小红，年龄未知
+print(handle_user({"id": 42}))                    # 匿名用户 ID=42
+```
+
+:::note 字典模式是子集匹配
+字典模式只需指定的键存在即可，**额外的键会被忽略**。例如 `{"name": "小明", "age": 20, "city": "北京"}` 仍能被 `case {"name": name, "age": age}:` 命中。
+:::
+
+## 类解构模式
+
+可以匹配类实例，并对其属性进行解构。有两种写法：
+
+### 属性关键字形式
+
+```py
+class Point:
+    def __init__(self, x: int, y: int) -> None:
+        self.x = x
+        self.y = y
+
+
+def classify(point: Point) -> str:
+    match point:
+        case Point(x=0, y=0):
+            return "原点"
+        case Point(x=0):
+            return "在 y 轴"
+        case Point(y=0):
+            return "在 x 轴"
+        case Point(x=x, y=y):
+            return f"普通点 ({x}, {y})"
+
+
+print(classify(Point(0, 0)))  # 原点
+print(classify(Point(0, 5)))  # 在 y 轴
+print(classify(Point(3, 4)))  # 普通点 (3, 4)
+```
+
+### 位置参数形式
+
+如果类定义了 `__match_args__`，可以用位置解构，写法更简洁：
+
+```py
+class Point:
+    __match_args__ = ("x", "y")  # 声明位置解构顺序
+
+    def __init__(self, x: int, y: int) -> None:
+        self.x = x
+        self.y = y
+
+
+def classify(point: Point) -> str:
+    match point:
+        case Point(0, 0):
+            return "原点"
+        case Point(0, y):
+            return f"在 y 轴，y={y}"
+        case Point(x, 0):
+            return f"在 x 轴，x={x}"
+        case Point(x, y):
+            return f"普通点 ({x}, {y})"
+
+
+print(classify(Point(3, 4)))  # 普通点 (3, 4)
+```
+
+:::info dataclass 自动支持
+Python 3.7+ 的 `@dataclass` 装饰器会自动生成 `__match_args__`，因此 dataclass 默认就支持位置解构，非常方便：
+
+```py
+from dataclasses import dataclass
+
+@dataclass
+class Point:
+    x: int
+    y: int
+
+match Point(1, 2):
+    case Point(x, y):
+        print(f"x={x}, y={y}")
+```
+:::
+
+## 守卫条件（if）
+
+`case` 可以用 `if` 添加守卫条件，进一步过滤匹配：
+
+```py
+def categorize_number(n: int) -> str:
+    match n:
+        case x if x < 0:
+            return "负数"
+        case 0:
+            return "零"
+        case x if x < 10:
+            return "小正数"
+        case x if x < 100:
+            return "中正数"
+        case _:
+            return "大正数"
+
+
+print(categorize_number(-5))   # 负数
+print(categorize_number(0))    # 零
+print(categorize_number(7))    # 小正数
+print(categorize_number(50))   # 中正数
+print(categorize_number(1000)) # 大正数
+```
+
+:::note 守卫失败后的行为
+当模式匹配成功但守卫条件为 `False` 时，**不会执行该分支**，而是继续尝试下一个 `case`。这与普通 `if-elif-else` 的"匹配即停"不同，需要特别注意。
+:::
+
+## as 绑定
+
+`as` 可以将匹配到的整体值绑定到一个变量，方便后续使用：
+
+```py
+def handle_response(response: tuple[int, str]) -> str:
+    match response:
+        case (200, body) as r:
+            return f"成功：{body}（完整响应 {r}）"
+        case (code, body) as r if code >= 400:
+            return f"错误 {code}：{body}"
+        case _:
+            return "未知响应"
+
+
+print(handle_response((200, "OK")))
+# 成功：OK（完整响应 (200, 'OK')）
+print(handle_response((404, "Not Found")))
+# 错误 404：Not Found
+```
+
+`as` 在嵌套结构中尤其有用：
+
+```py
+def analyze_config(config: dict) -> str:
+    match config:
+        case {"database": {"host": host, "port": port}} as full:
+            return f"数据库 {host}:{port}（配置：{full}）"
+        case _:
+            return "无数据库配置"
+
+
+print(analyze_config({"database": {"host": "localhost", "port": 5432}}))
+# 数据库 localhost:5432（配置：{'database': {'host': 'localhost', 'port': 5432}}）
+```
+
+## 与 if-elif-else 的对比
+
+同样一个任务，对比两种写法的优劣：
+
+```py
+# 用 if-elif-else 处理命令
+def handle_command_if(cmd: str) -> str:
+    parts = cmd.split()
+    if not parts:
+        return "空命令"
+    elif parts[0] == "get" and len(parts) == 2:
+        return f"获取 {parts[1]}"
+    elif parts[0] == "set" and len(parts) == 3:
+        return f"设置 {parts[1]}={parts[2]}"
+    elif parts[0] == "delete" and len(parts) == 2:
+        return f"删除 {parts[1]}"
+    else:
+        return f"未知命令：{cmd}"
+
+
+# 用 match-case 处理同一命令
+def handle_command_match(cmd: str) -> str:
+    match cmd.split():
+        case []:
+            return "空命令"
+        case ["get", key]:
+            return f"获取 {key}"
+        case ["set", key, value]:
+            return f"设置 {key}={value}"
+        case ["delete", key]:
+            return f"删除 {key}"
+        case _:
+            return f"未知命令：{cmd}"
+
+
+print(handle_command_match("set name Alice"))  # 设置 name=Alice
+print(handle_command_match("delete cache"))    # 删除 cache
+```
+
+`match-case` 版本的优势：
+
+- **结构清晰**：每个分支的"形状"一目了然
+- **自动解构**：不用手动 `split()` 后用索引取值
+- **可扩展**：增加分支不影响已有逻辑
+- **更声明式**：描述"匹配什么"而非"如何判断"
+
+:::tip 何时选择 match-case
+- 处理结构化数据（JSON、配置字典）
+- 命令解析、状态机
+- 多分支且每分支条件复杂
+- 需要解构嵌套数据
+
+简单两三个字面量分支，`if-elif-else` 依然简洁够用。
+:::
+
+## 实战：命令解析器
+
+实现一个支持多种命令的命令解析器，综合运用序列解构、字典解构、守卫条件：
+
+```py
+def execute_command(command: str) -> str:
+    """解析并执行命令。
+
+    支持的命令：
+        get <key>
+        set <key> <value>
+        list [--limit N]
+        find <name> [--exact]
+        quit
+    """
+    tokens = command.split()
+
+    match tokens:
+        case ["quit"]:
+            return "退出程序。"
+
+        case ["get", key]:
+            return f"获取键 {key} 的值。"
+
+        case ["set", key, value]:
+            return f"设置 {key} = {value}。"
+
+        case ["list", *rest] if all(r.startswith("--") for r in rest):
+            # 解析可选参数
+            opts = dict(r.split("=", 1) if "=" in r else (r, True) for r in rest)
+            limit = opts.get("--limit")
+            if limit and str(limit).isdigit():
+                return f"列出最多 {limit} 项。"
+            return "列出全部项。"
+
+        case ["find", name] | ["find", name, "--exact"]:
+            exact = len(tokens) == 3
+            mode = "精确" if exact else "模糊"
+            return f"{mode}查找 {name}。"
+
+        case []:
+            return "未输入命令。"
+
+        case _:
+            return f"未知命令：{command!r}"
+
+
+# 测试
+tests = [
+    "",
+    "quit",
+    "get username",
+    "set color red",
+    "list",
+    "list --limit=10",
+    "find Alice",
+    "find Alice --exact",
+    "delete all",
+]
+
+for t in tests:
+    print(f"{t!r:30} -> {execute_command(t)}")
+```
+
+输出：
+
+```text
+''                             -> 未输入命令。
+'quit'                         -> 退出程序。
+'get username'                 -> 获取键 username 的值。
+'set color red'                -> 设置 color = red。
+'list'                         -> 列出全部项。
+'list --limit=10'              -> 列出最多 10 项。
+'find Alice'                   -> 模糊查找 Alice。
+'find Alice --exact'           -> 精确查找 Alice。
+'delete all'                   -> 未知命令：'delete all'
+```
+
+:::info 模式组合与守卫的威力
+上面的 `case ["find", name] | ["find", name, "--exact"]:` 用 `|` 合并了两种形式，并通过 `len(tokens) == 3` 判断是否带 `--exact`。这种"匹配形状后再细化"的能力是 `match-case` 的核心优势。
+:::
+
+:::tip 进一步扩展
+这个命令解析器还可以扩展为支持带引号的参数（如 `set name "Alice Bob"`），通过先做 `shlex.split()` 处理引号即可。结构化模式匹配让添加新命令变得非常简单——只需新增一个 `case` 分支。
+:::
+
+## 小结
+
+- `match-case`（Python 3.10+）是远比 `if-elif-else` 强大的模式匹配机制。
+- 支持字面量模式、变量绑定、通配符 `_`、序列/字典/类解构。
+- `|` 可合并多个模式；`if` 可添加守卫条件；`as` 可绑定整体匹配值。
+- 守卫失败会继续尝试下一个 `case`，注意与 `if-elif` 的"匹配即停"区别。
+- 模式匹配中大小写敏感：小写开头视为变量绑定，大写视为字面量。
+- 处理结构化数据、命令解析、状态机时，`match-case` 比 `if-elif-else` 更清晰、更声明式。

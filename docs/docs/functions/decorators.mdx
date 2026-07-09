@@ -1,0 +1,643 @@
+---
+sidebar_position: 6
+sidebar_label: '装饰器'
+title: 装饰器
+description: 学习装饰器本质、@ 语法糖、带参数装饰器、functools.wraps、类装饰器、内置装饰器以及 @cache 等常用第三方装饰器
+---
+
+# 装饰器
+
+装饰器（decorator）是 Python 中一种优雅的语法机制，它能在不修改函数源代码的前提下，给函数增加额外的功能。装饰器本质上是一个接收函数作为参数并返回新函数的高阶函数。它是闭包最经典的应用之一，广泛用于日志、性能监控、权限校验、缓存、重试等场景。
+
+## 函数是对象
+
+要理解装饰器，首先要彻底理解"函数是一等对象"。函数可以：
+- 赋值给变量
+- 作为参数传递
+- 作为返回值
+- 拥有属性
+
+```py
+def shout(text):
+    return text.upper()
+
+# 1. 赋值给变量
+yell = shout
+print(yell("hello"))  # 输出：HELLO
+
+# 2. 函数有属性
+print(shout.__name__)  # 输出：shout
+print(shout.__doc__)   # None（未定义时）
+
+# 3. 动态修改函数属性
+shout.author = "Alice"
+print(shout.author)  # 输出：Alice
+```
+
+## 装饰器本质
+
+装饰器本质是一个函数：它接收一个函数作为参数，返回一个**新的函数**（通常是包装过的版本）。
+
+```py
+def my_decorator(func):
+    def wrapper():
+        print("函数执行前")
+        func()
+        print("函数执行后")
+    return wrapper
+
+def say_hello():
+    print("Hello!")
+
+# 手动装饰
+say_hello = my_decorator(say_hello)
+say_hello()
+```
+
+输出：
+
+```text
+函数执行前
+Hello!
+函数执行后
+```
+
+## @ 语法糖
+
+`@decorator` 是装饰器的语法糖，等价于 `func = decorator(func)`：
+
+```py
+def my_decorator(func):
+    def wrapper():
+        print("函数执行前")
+        func()
+        print("函数执行后")
+    return wrapper
+
+@my_decorator  # 等价于 say_hello = my_decorator(say_hello)
+def say_hello():
+    print("Hello!")
+
+say_hello()
+```
+
+### 处理参数和返回值
+
+实用的装饰器需要能处理任意参数和返回值。使用 `*args, **kwargs` 配合返回原函数结果：
+
+```py
+def log_call(func):
+    def wrapper(*args, **kwargs):
+        print(f"调用 {func.__name__}({args}, {kwargs})")
+        result = func(*args, **kwargs)
+        print(f"{func.__name__} 返回 {result!r}")
+        return result
+    return wrapper
+
+@log_call
+def add(a, b):
+    return a + b
+
+@log_call
+def greet(name, greeting="你好"):
+    return f"{greeting}，{name}"
+
+print(add(3, 5))
+# 输出：
+# 调用 add((3, 5), {})
+# add 返回 8
+# 8
+
+print(greet("Alice", greeting="Hi"))
+# 输出：
+# 调用 greet(('Alice',), {'greeting': 'Hi'})
+# greet 返回 'Hi，Alice'
+# Hi，Alice
+```
+
+:::tip 通用 wrapper 模板
+通用的装饰器 wrapper 模板：
+```py
+def decorator(func):
+    def wrapper(*args, **kwargs):
+        # 装饰前的逻辑
+        result = func(*args, **kwargs)
+        # 装饰后的逻辑
+        return result
+    return wrapper
+```
+:::
+
+## 带参数装饰器
+
+如果装饰器本身需要接收参数，需要再嵌套一层：外层函数接收参数，返回真正的装饰器。
+
+```py
+def repeat(times):
+    """让被装饰函数重复执行 times 次"""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            result = None
+            for _ in range(times):
+                result = func(*args, **kwargs)
+            return result
+        return wrapper
+    return decorator
+
+@repeat(3)
+def say_hi(name):
+    print(f"Hi, {name}!")
+    return name
+
+say_hi("Alice")
+# 输出：
+# Hi, Alice!
+# Hi, Alice!
+# Hi, Alice!
+```
+
+执行流程：
+1. `repeat(3)` 返回 `decorator`
+2. `decorator(say_hi)` 返回 `wrapper`
+3. 调用 `say_hi("Alice")` 实际是调用 `wrapper("Alice")`
+
+### 带参数装饰器模板
+
+```py
+def decorator_with_args(arg1, arg2):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # 这里可以使用 arg1, arg2
+            result = func(*args, **kwargs)
+            return result
+        return wrapper
+    return decorator
+```
+
+## functools.wraps
+
+装饰器会替换原函数，导致原函数的元信息（`__name__`、`__doc__` 等）丢失：
+
+```py
+def log_call(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+@log_call
+def add(a, b):
+    """两个数相加"""
+    return a + b
+
+print(add.__name__)  # 输出：wrapper  ← 不是 add！
+print(add.__doc__)   # 输出：None
+```
+
+使用 `functools.wraps` 保留原函数元信息：
+
+```py
+from functools import wraps
+
+def log_call(func):
+    @wraps(func)  # 复制原函数的元信息到 wrapper
+    def wrapper(*args, **kwargs):
+        print(f"调用 {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
+
+@log_call
+def add(a, b):
+    """两个数相加"""
+    return a + b
+
+print(add.__name__)  # 输出：add  ← 正确
+print(add.__doc__)   # 输出：两个数相加  ← 正确
+print(add.__wrapped__)  # Python 3.2+ 可访问原函数
+```
+
+:::warning 永远使用 @wraps
+编写装饰器时**永远**记得在 wrapper 上加 `@wraps(func)`，否则：
+- 调试时堆栈跟踪中显示的是 `wrapper`，难以定位
+- 文档工具（如 Sphinx、help）失效
+- 一些依赖函数元信息的库会出错
+:::
+
+## 类装饰器
+
+装饰器也可以是类，利用 `__call__` 方法让实例可调用：
+
+```py
+class CountCalls:
+    """统计函数调用次数"""
+    def __init__(self, func):
+        self.func = func
+        self.count = 0
+        wraps(func)(self)  # 复制元信息
+
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"第 {self.count} 次调用 {self.func.__name__}")
+        return self.func(*args, **kwargs)
+
+@CountCalls
+def say_hi(name):
+    print(f"Hi, {name}!")
+
+say_hi("Alice")  # 第 1 次调用 say_hi / Hi, Alice!
+say_hi("Bob")    # 第 2 次调用 say_hi / Hi, Bob!
+say_hi("Charlie")  # 第 3 次调用 say_hi / Hi, Charlie!
+print(f"总调用次数：{say_hi.count}")  # 输出：总调用次数：3
+```
+
+### 带参数的类装饰器
+
+```py
+class Retry:
+    """失败时自动重试"""
+    def __init__(self, max_retries=3, delay=0):
+        self.max_retries = max_retries
+        self.delay = delay
+
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            import time
+            last_error = None
+            for attempt in range(1, self.max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_error = e
+                    print(f"第 {attempt} 次失败：{e}")
+                    if attempt < self.max_retries and self.delay:
+                        time.sleep(self.delay)
+            raise last_error
+        return wrapper
+
+@Retry(max_retries=3, delay=0.1)
+def fetch_data(url):
+    import random
+    if random.random() < 0.7:
+        raise ConnectionError(f"无法连接 {url}")
+    return f"来自 {url} 的数据"
+
+# 可能多次重试后成功
+# print(fetch_data("http://example.com"))
+```
+
+## 内置装饰器
+
+Python 内置了几个常用装饰器：
+
+### @staticmethod
+
+将方法标记为静态方法，不需要 `self` 或 `cls` 参数：
+
+```py
+class MathUtils:
+    @staticmethod
+    def square(x):
+        return x ** 2
+
+    @staticmethod
+    def is_even(n):
+        return n % 2 == 0
+
+# 既可以通过类调用，也可以通过实例调用
+print(MathUtils.square(5))         # 输出：25
+print(MathUtils.is_even(4))        # 输出：True
+
+m = MathUtils()
+print(m.square(3))  # 输出：9
+```
+
+### @classmethod
+
+将方法标记为类方法，第一个参数是类本身（约定为 `cls`）：
+
+```py
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    @classmethod
+    def from_birth_year(cls, name, birth_year):
+        """工厂方法：通过出生年份创建实例"""
+        import datetime
+        current_year = datetime.date.today().year
+        age = current_year - birth_year
+        return cls(name, age)  # 等价于 Person(name, age)
+
+    @classmethod
+    def from_dict(cls, data):
+        """工厂方法：从字典创建实例"""
+        return cls(data["name"], data["age"])
+
+p1 = Person("Alice", 30)
+p2 = Person.from_birth_year("Bob", 1995)
+p3 = Person.from_dict({"name": "Charlie", "age": 25})
+
+print(p1.name, p1.age)  # 输出：Alice 30
+print(p2.name, p2.age)  # 输出：Bob 31（取决于当前年份）
+print(p3.name, p3.age)  # 输出：Charlie 25
+```
+
+:::tip 工厂方法的用途
+`@classmethod` 经常用于定义**多个构造器**。Python 类只能有一个 `__init__`，需要不同的初始化方式时，用类方法封装为 `from_xxx` 形式。
+:::
+
+### @property
+
+将方法转换为只读属性，访问时无需加括号：
+
+```py
+class Circle:
+    def __init__(self, radius):
+        self._radius = radius  # 用下划线表示"受保护"
+
+    @property
+    def radius(self):
+        """获取半径"""
+        return self._radius
+
+    @radius.setter
+    def radius(self, value):
+        if value <= 0:
+            raise ValueError("半径必须为正数")
+        self._radius = value
+
+    @property
+    def area(self):
+        """面积（只读）"""
+        return 3.14159 * self._radius ** 2
+
+    @property
+    def perimeter(self):
+        """周长（只读）"""
+        return 2 * 3.14159 * self._radius
+
+c = Circle(5)
+print(c.radius)        # 输出：5  ← 像属性一样访问
+print(c.area)          # 输出：78.53975
+print(c.perimeter)     # 输出：31.4159
+
+c.radius = 10  # 调用 setter
+print(c.area)  # 输出：314.159
+
+# c.area = 100  # AttributeError: can't set attribute
+# c.radius = -1  # ValueError: 半径必须为正数
+```
+
+## 常用第三方 / 标准库装饰器
+
+### @functools.cache
+
+Python 3.9+ 引入的无界缓存装饰器，用于记忆化：
+
+```py
+from functools import cache
+
+@cache
+def fibonacci(n):
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+print(fibonacci(100))  # 瞬间输出：354224848179261915075
+print(fibonacci.cache_info())
+# 输出示例：CacheInfo(hits=98, misses=101, maxsize=None, currsize=101)
+```
+
+### @functools.lru_cache
+
+带 LRU（最近最少使用）淘汰策略的缓存：
+
+```py
+from functools import lru_cache
+
+@lru_cache(maxsize=128)  # 最多缓存 128 个结果
+def expensive_computation(n):
+    print(f"  计算 {n}")
+    return n * n
+
+print(expensive_computation(4))  # 输出：  计算 4 / 16
+print(expensive_computation(4))  # 输出：16（命中缓存，不打印）
+print(expensive_computation(5))  # 输出：  计算 5 / 25
+
+print(expensive_computation.cache_info())
+# 输出：CacheInfo(hits=1, misses=2, maxsize=128, currsize=2)
+```
+
+:::warning 缓存的参数必须可哈希
+`@cache`/`@lru_cache` 使用字典存储结果，因此参数必须可哈希。列表、字典等不可哈希类型会报错：
+```py
+@cache
+def sum_list(lst):
+    return sum(lst)
+
+# sum_list([1, 2, 3])  # TypeError: unhashable type: 'list'
+```
+解决方法：传入元组而非列表，或使用 `functools.cached_property` 缓存方法结果。
+:::
+
+### @dataclasses.dataclass
+
+Python 3.7+ 自动生成 `__init__`/`__repr__`/`__eq__` 等：
+
+```py
+from dataclasses import dataclass, field
+
+@dataclass
+class Student:
+    name: str
+    age: int
+    scores: list[float] = field(default_factory=list)
+
+    @property
+    def average(self) -> float:
+        return sum(self.scores) / len(self.scores) if self.scores else 0
+
+s = Student("Alice", 20, [90, 85, 88])
+print(s)              # 输出：Student(name='Alice', age=20, scores=[90, 85, 88])
+print(s.average)      # 输出：87.66666666666667
+```
+
+### @contextlib.contextmanager
+
+把生成器函数变成上下文管理器：
+
+```py
+from contextlib import contextmanager
+
+@contextmanager
+def timer(name: str):
+    import time
+    start = time.perf_counter()
+    try:
+        yield  # with 块中的代码在此执行
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"[{name}] 耗时 {elapsed:.4f}s")
+
+with timer("数据处理"):
+    total = sum(i * i for i in range(1_000_000))
+    print(f"结果：{total}")
+# 输出示例：
+# 结果：333332833333500000
+# [数据处理] 耗时 0.1234s
+```
+
+## 装饰器叠加
+
+多个装饰器可以叠加使用，**执行顺序是从下往上装饰，从上往下执行**：
+
+```py
+def make_bold(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return f"<b>{func(*args, **kwargs)}</b>"
+    return wrapper
+
+def make_italic(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return f"<i>{func(*args, **kwargs)}</i>"
+    return wrapper
+
+@make_bold
+@make_italic
+def hello(name):
+    return f"Hello, {name}"
+
+# 等价于 hello = make_bold(make_italic(hello))
+print(hello("Alice"))
+# 输出：<b><i>Hello, Alice</i></b>
+```
+
+:::info 装饰器顺序理解
+- 装饰阶段：从离函数最近的装饰器开始，逐层向外包装
+  `hello = make_bold(make_italic(hello))`
+- 调用阶段：从最外层装饰器开始执行
+  调用 `hello()` → 进入 `make_bold.wrapper` → 调用 `func()` → 进入 `make_italic.wrapper` → 调用真实 `hello()`
+:::
+
+## 实战：计时器与缓存装饰器
+
+下面综合运用装饰器，实现一个可配置的计时器和缓存装饰器：
+
+```py
+from functools import wraps, cache, lru_cache
+import time
+import math
+
+
+def timer(label: str = "[耗时]"):
+    """带参数的计时装饰器。
+
+    Args:
+        label: 输出标签。
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            elapsed = time.perf_counter() - start
+            print(f"{label} {func.__name__}: {elapsed:.6f}s")
+            return result
+        return wrapper
+    return decorator
+
+
+def validate_types(func):
+    """类型校验装饰器（运行时检查注解类型）。"""
+    import inspect
+    sig = inspect.signature(func)
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        bound = sig.bind(*args, **kwargs)
+        for name, value in bound.arguments.items():
+            param = sig.parameters[name]
+            annotation = param.annotation
+            if annotation is inspect.Parameter.empty:
+                continue
+            # 处理 X | Y 形式的联合类型
+            if hasattr(annotation, "__args__"):
+                allowed = annotation.__args__
+            else:
+                allowed = (annotation,)
+            if not isinstance(value, allowed) and type(None) not in allowed:
+                raise TypeError(
+                    f"参数 {name} 期望 {annotation}, 实际 {type(value).__name__}"
+                )
+        return func(*args, **kwargs)
+    return wrapper
+
+
+# 1. 计时 + 缓存组合使用
+@timer("[统计]")
+@cache
+def sum_of_squares(n: int) -> int:
+    """计算 1²+2²+...+n²"""
+    return sum(i * i for i in range(1, n + 1))
+
+
+print("--- 计时+缓存 ---")
+print(sum_of_squares(1_000_000))
+# 第一次调用：实际计算并打印耗时
+print(sum_of_squares(1_000_000))
+# 第二次调用：缓存命中，几乎不耗时
+
+
+# 2. 类型校验装饰器
+@validate_types
+def divide(a: int | float, b: int | float) -> float:
+    return a / b
+
+
+print("\n--- 类型校验 ---")
+print(divide(10, 4))  # 输出：2.5
+try:
+    divide("10", 4)  # 抛出 TypeError
+except TypeError as e:
+    print(f"错误：{e}")
+
+
+# 3. 缓存斐波那契（带统计）
+@lru_cache(maxsize=100)
+@timer("[fib]")
+def fib(n: int) -> int:
+    if n < 2:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+
+print("\n--- 缓存斐波那契 ---")
+print(fib(20))
+# 第一次调用会打印每次进入 fib 的耗时
+print(fib(20))  # 第二次全部命中缓存，几乎瞬间完成
+print(fib.cache_info())
+```
+
+:::tip 装饰器组合的执行顺序
+`@A @B @C def f` 等价于 `f = A(B(C(f)))`。
+- 调用 `f()` 时最先执行 `A` 的 wrapper
+- 真正的 `f()` 在最内层被调用
+- 缓存装饰器应该放在**最靠近函数**的位置，这样它缓存的才是真实结果
+:::
+
+## 小结
+
+- 装饰器本质是接收函数、返回函数的高阶函数，是闭包的经典应用
+- `@decorator` 是 `func = decorator(func)` 的语法糖
+- 通用 wrapper 模板：`def wrapper(*args, **kwargs): ...`
+- **永远**使用 `@functools.wraps(func)` 保留原函数元信息
+- 带参数的装饰器需要再嵌套一层：外层接收参数，返回真正的装饰器
+- 类装饰器利用 `__call__` 实现，适合需要保存状态的场景
+- 内置装饰器：`@staticmethod`、`@classmethod`、`@property`
+- 标准库装饰器：`@functools.cache`、`@lru_cache`、`@dataclass`、`@contextmanager`
+- 多个装饰器叠加：**从下往上装饰，从上往下执行**
+
+下一节将介绍生成器与 `yield` 关键字——一种用函数形式创建迭代器的优雅机制。

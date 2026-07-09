@@ -1,0 +1,546 @@
+---
+sidebar_position: 2
+sidebar_label: '继承'
+title: 继承
+description: 学习单继承、多继承、super()、MRO、方法重写、isinstance/issubclass、object 基类与抽象基类，构建层级化的类型体系。
+---
+
+# 继承
+
+继承（inheritance）是面向对象的核心机制之一：子类可以复用父类的属性和方法，并在此基础上扩展或修改行为。通过继承，我们能建立"是一个（is-a）"的关系层次，例如"猫是动物"、"汽车是交通工具"，从而减少重复代码、提升复用性，并为多态奠定基础。
+
+## 单继承
+
+语法：`class 子类(父类):`。子类自动获得父类所有属性和方法。
+
+```py
+class Animal:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def eat(self) -> str:
+        return f"{self.name} 正在进食"
+
+    def breathe(self) -> str:
+        return f"{self.name} 在呼吸"
+
+class Dog(Animal):  # Dog 继承自 Animal
+    def bark(self) -> str:
+        return f"{self.name} 汪汪叫！"
+
+dog = Dog("旺财")
+print(dog.eat())     # 输出：旺财 正在进食   ← 继承自 Animal
+print(dog.breathe()) # 输出：旺财 在呼吸    ← 继承自 Animal
+print(dog.bark())    # 输出：旺财 汪汪叫！   ← 自己定义的
+```
+
+:::tip 没有 `()` 的类
+写 `class Dog:` 等价于 `class Dog(object):`，所有类最终都继承自 `object`。
+:::
+
+## `object` 基类
+
+在 Python 3 中，所有类都隐式继承自 `object`，自动获得一组默认方法：
+
+```py
+print(dir(object))
+# 常见的有：__init__, __new__, __repr__, __str__, __eq__, __hash__,
+#           __class__, __dict__, __doc__ 等
+
+class Anything:
+    pass
+
+a = Anything()
+# 这些方法都来自 object
+print(a.__repr__())   # 输出：<__main__.Anything object at 0x...>
+print(a.__class__)    # 输出：<class '__main__.Anything'>
+print(a == a)          # 输出：True（默认按对象身份比较）
+```
+
+:::note 默认的 __eq__
+`object.__eq__` 默认按 `is`（同一对象）比较。如果想按值比较，需要自己重写 `__eq__`（同时建议重写 `__hash__`，详见[魔术方法](./magic-methods.mdx)一节）。
+:::
+
+## 方法重写
+
+子类可以重新定义父类的方法，以改变行为：
+
+```py
+class Animal:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def speak(self) -> str:
+        return f"{self.name} 发出某种声音"
+
+class Cat(Animal):
+    def speak(self) -> str:  # 重写父类方法
+        return f"{self.name} 喵喵叫"
+
+a: Animal = Animal("动物")
+c: Cat = Cat("咪咪")
+print(a.speak())  # 输出：动物 发出某种声音
+print(c.speak())  # 输出：咪咪 喵喵叫
+```
+
+## `super()` 调用父类方法
+
+`super()` 返回一个代理对象，能调用父类（更准确说是 MRO 中的下一个类）的方法。常用于在子类 `__init__` 中复用父类的初始化逻辑：
+
+```py
+class Animal:
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+    def describe(self) -> str:
+        return f"{self.name}，{self.age} 岁"
+
+class Dog(Animal):
+    def __init__(self, name: str, age: int, breed: str) -> None:
+        super().__init__(name, age)  # 调用父类 __init__，避免重复
+        self.breed = breed           # 子类自己的属性
+
+    def describe(self) -> str:
+        # 在父类描述基础上追加信息
+        return f"{super().describe()}，品种：{self.breed}"
+
+dog = Dog("旺财", 3, "柴犬")
+print(dog.describe())  # 输出：旺财，3 岁，品种：柴犬
+```
+
+:::tip 无参数 super()
+Python 3 中可以直接写 `super()`（无需 `super(子类, self)`），它会自动获取当前类和实例。
+:::
+
+### `super()` 的底层：MRO 链
+
+`super()` 并不严格等于"父类"，而是返回**MRO（方法解析顺序）中的下一个类**。可以用 `类.__mro__` 或 `类.mro()` 查看：
+
+```py
+class A:
+    def hi(self) -> str:
+        return "A"
+
+class B(A):
+    def hi(self) -> str:
+        return "B -> " + super().hi()
+
+class C(A):
+    def hi(self) -> str:
+        return "C -> " + super().hi()
+
+class D(B, C):  # 多继承
+    def hi(self) -> str:
+        return "D -> " + super().hi()
+
+print(D.__mro__)
+# 输出：(<class 'D'>, <class 'B'>, <class 'C'>, <class 'A'>, <class 'object'>)
+
+print(D().hi())
+# 输出：D -> B -> C -> A
+```
+
+:::info C3 线性化
+Python 使用 **C3 线性化**算法计算 MRO，保证：
+1. 子类在父类之前。
+2. 多个父类按声明顺序。
+3. 同一类只出现一次。
+
+如果继承结构无法线性化，会抛出 `TypeError: Cannot create a consistent method resolution`。
+:::
+
+## 多继承
+
+Python 支持多继承：一个子类可以同时继承多个父类。
+
+```py
+class Walker:
+    def walk(self) -> str:
+        return f"{self.name} 在走路"
+
+class Swimmer:
+    def swim(self) -> str:
+        return f"{self.name} 在游泳"
+
+class Frog(Walker, Swimmer):  # 同时继承两个类
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+f = Frog("呱呱")
+print(f.walk())  # 输出：呱呱 在走路
+print(f.swim())  # 输出：呱呱 在游泳
+```
+
+### 多继承的同名方法冲突
+
+当多个父类有同名方法时，按 **MRO 顺序**决定调用哪个：
+
+```py
+class A:
+    def greet(self) -> str:
+        return "A 的问候"
+
+class B:
+    def greet(self) -> str:
+        return "B 的问候"
+
+class C(A, B):  # A 在前，所以 A 优先
+    pass
+
+class D(B, A):  # B 在前，所以 B 优先
+    pass
+
+print(C().greet())  # 输出：A 的问候
+print(D().greet())  # 输出：B 的问候
+print(C.__mro__)
+# 输出：(<class 'C'>, <class 'A'>, <class 'B'>, <class 'object'>)
+```
+
+:::warning 多继承的"菱形继承"
+当一个类同时继承自两个有共同祖先的类时，会出现"菱形继承"：
+
+```
+    A
+   / \
+  B   C
+   \ /
+    D
+```
+
+此时如果直接调用父类方法可能造成 `A.__init__` 被执行两次。**正确做法是配合 `super()`**，`super()` 会按 MRO 顺序遍历，每个类只被初始化一次：
+
+```py
+class A:
+    def __init__(self, **kwargs) -> None:
+        print("A.__init__")
+        super().__init__(**kwargs)
+
+class B(A):
+    def __init__(self, **kwargs) -> None:
+        print("B.__init__")
+        super().__init__(**kwargs)
+
+class C(A):
+    def __init__(self, **kwargs) -> None:
+        print("C.__init__")
+        super().__init__(**kwargs)
+
+class D(B, C):
+    def __init__(self) -> None:
+        print("D.__init__")
+        super().__init__()  # 一行搞定，B 和 C 的 __init__ 都会被调用
+
+D()
+# 输出：
+# D.__init__
+# B.__init__
+# C.__init__
+# A.__init__
+```
+
+这种"参数向上传、方法向下调"的模式称为**协作式多继承**，是多继承的推荐写法。
+:::
+
+:::tip Mixin 模式
+多继承最实用的场景是 **Mixin**：一种小巧的、为类增加单一功能的类。命名通常以 `Mixin` 结尾：
+
+```py
+class JsonMixin:
+    def to_json(self) -> str:
+        import json
+        return json.dumps(self.__dict__, ensure_ascii=False)
+
+class Serializable(JsonMixin):  # 想要 JSON 能力就混入
+    pass
+
+class User(Serializable):
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+print(User("小明", 18).to_json())  # 输出：{"name": "小明", "age": 18}
+```
+
+避免用多继承表达"是什么"的强语义层级，应该用组合（has-a）代替。
+:::
+
+## `isinstance` 与 `issubclass`
+
+- `isinstance(obj, cls)`：判断对象是否为某类（或其子类）的实例。
+- `issubclass(sub, sup)`：判断类是否为另一类的子类。
+
+```py
+class Animal: ...
+class Dog(Animal): ...
+class Cat(Animal): ...
+
+dog = Dog()
+print(isinstance(dog, Dog))      # 输出：True
+print(isinstance(dog, Animal))   # 输出：True（子类实例也是父类）
+print(isinstance(dog, Cat))       # 输出：False
+
+print(issubclass(Dog, Animal))   # 输出：True
+print(issubclass(Dog, Cat))       # 输出：False
+print(issubclass(bool, int))      # 输出：True（bool 是 int 的子类）
+
+# 支持传入元组
+print(isinstance(dog, (Cat, Dog)))  # 输出：True
+print(isinstance(42, (int, float))) # 输出：True
+```
+
+:::warning isinstance vs type
+- `type(obj) is Dog` 只匹配**精确类型**，不认子类。
+- `isinstance(obj, Dog)` 还匹配子类实例。
+
+绝大多数场景下应该用 `isinstance`，更符合面向对象的"里氏替换"原则。
+:::
+
+## 抽象基类（`abc.ABC`）
+
+抽象基类（Abstract Base Class，ABC）用于**定义接口契约**：声明一些方法必须由子类实现，否则实例化时报错。用 `abc.ABC` 作为基类，并用 `@abstractmethod` 装饰抽象方法。
+
+```py
+from abc import ABC, abstractmethod
+
+class Shape(ABC):
+    """图形基类：强制子类实现 area 和 perimeter。"""
+
+    @abstractmethod
+    def area(self) -> float:
+        ...
+
+    @abstractmethod
+    def perimeter(self) -> float:
+        ...
+
+    def describe(self) -> str:
+        """普通方法：子类可直接复用。"""
+        return f"面积={self.area():.2f}，周长={self.perimeter():.2f}"
+
+# shape = Shape()  # TypeError: 抽象方法未实现，无法实例化
+
+class Circle(Shape):
+    def __init__(self, radius: float) -> None:
+        self.radius = radius
+
+    def area(self) -> float:
+        return 3.14159 * self.radius ** 2
+
+    def perimeter(self) -> float:
+        return 2 * 3.14159 * self.radius
+
+class Square(Shape):
+    def __init__(self, side: float) -> None:
+        self.side = side
+
+    def area(self) -> float:
+        return self.side ** 2
+
+    def perimeter(self) -> float:
+        return 4 * self.side
+
+print(Circle(5).describe())  # 输出：面积=78.54，周长=31.42
+print(Square(4).describe()) # 输出：面积=16.00，周长=16.00
+```
+
+### 抽象属性与抽象类方法
+
+除了 `@abstractmethod`，还有 `@abstractclassmethod`、`@abstractstaticmethod`、`@abstractproperty`（3.12+ 推荐用 `@property` 配合 `@abstractmethod`）：
+
+```py
+from abc import ABC, abstractmethod
+
+class Storage(ABC):
+    @property
+    @abstractmethod
+    def capacity(self) -> int:
+        """返回存储容量。"""
+
+    @classmethod
+    @abstractmethod
+    def from_config(cls, config: dict) -> "Storage":
+        """工厂方法：子类必须实现。"""
+
+class MemoryStorage(Storage):
+    def __init__(self, capacity: int) -> None:
+        self._capacity = capacity
+
+    @property
+    def capacity(self) -> int:
+        return self._capacity
+
+    @classmethod
+    def from_config(cls, config: dict) -> "MemoryStorage":
+        return cls(config.get("capacity", 1024))
+
+s = MemoryStorage(2048)
+print(s.capacity)  # 输出：2048
+```
+
+:::note 装饰器顺序
+`@property` 和 `@abstractmethod` 一起用时，`@property` 在外、`@abstractmethod` 在内。`@classmethod` 同理。
+:::
+
+### 标准库中的抽象基类
+
+`collections.abc` 提供了一组常用 ABC，可作为基类来快速实现容器协议：
+
+```py
+from collections.abc import Sequence, Mapping
+
+class MyList(Sequence):
+    def __init__(self, data: list) -> None:
+        self._data = data
+
+    def __getitem__(self, index):  # Sequence 要求实现
+        return self._data[index]
+
+    def __len__(self):             # Sequence 要求实现
+        return len(self._data)
+
+ml = MyList([1, 2, 3])
+print(len(ml))        # 输出：3
+print(ml[0])          # 输出：1
+print(2 in ml)        # 输出：True（Sequence 自动提供 __contains__）
+print(list(reversed(ml)))  # 输出：[3, 2, 1]（Sequence 自动提供）
+```
+
+实现 `__getitem__` 和 `__len__` 后，`Sequence` 自动帮你补全 `__contains__`、`__iter__`、`index`、`count` 等方法。
+
+## 实战：动物类层级
+
+综合运用继承、`super()`、方法重写、抽象基类，构建一个动物世界模拟系统：
+
+```py
+from abc import ABC, abstractmethod
+
+
+class Animal(ABC):
+    """动物基类。"""
+
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+    @abstractmethod
+    def speak(self) -> str:
+        """每个动物都有自己的叫声。"""
+
+    @abstractmethod
+    def move(self) -> str:
+        """每个动物都有自己的移动方式。"""
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.name}, {self.age}岁)"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(name={self.name!r}, age={self.age})"
+
+
+class Mammal(Animal):
+    """哺乳动物：默认移动方式是走。"""
+
+    def move(self) -> str:
+        return f"{self.name} 在走路"
+
+
+class Bird(Animal):
+    """鸟类：默认移动方式是飞。"""
+
+    def move(self) -> str:
+        return f"{self.name} 在飞翔"
+
+
+class Dog(Mammal):
+    def __init__(self, name: str, age: int, breed: str) -> None:
+        super().__init__(name, age)  # 复用父类初始化
+        self.breed = breed
+
+    def speak(self) -> str:
+        return f"{self.name}（{self.breed}）汪汪叫！"
+
+    def fetch(self) -> str:
+        return f"{self.name} 把球叼了回来"
+
+
+class Cat(Mammal):
+    def speak(self) -> str:
+        return f"{self.name} 喵喵叫"
+
+
+class Parrot(Bird):
+    def __init__(self, name: str, age: int, vocabulary: list[str] | None = None) -> None:
+        super().__init__(name, age)
+        self.vocabulary = vocabulary or []
+
+    def speak(self) -> str:
+        words = "、".join(self.vocabulary) if self.vocabulary else "吱吱"
+        return f"{self.name} 说：{words}"
+
+
+def make_animals_speak(animals: list[Animal]) -> None:
+    """多态演示：同一接口，不同行为。"""
+    for animal in animals:
+        print(animal)
+        print(f"  叫声：{animal.speak()}")
+        print(f"  移动：{animal.move()}")
+
+
+# 创建各种动物
+zoo: list[Animal] = [
+    Dog("旺财", 3, "柴犬"),
+    Cat("咪咪", 2),
+    Parrot("波利", 5, ["你好", "再见", "想吃东西"]),
+]
+
+make_animals_speak(zoo)
+
+print("\n--- 类型检查 ---")
+for animal in zoo:
+    # isinstance 配合多分支处理
+    if isinstance(animal, Dog):
+        print(f"狗专属行为：{animal.fetch()}")
+    elif isinstance(animal, Parrot):
+        print(f"鹦鹉词汇量：{len(animal.vocabulary)}")
+
+print("\n--- 类层级检查 ---")
+print(f"Dog 是 Animal 子类：{issubclass(Dog, Animal)}")
+print(f"Dog 是 Bird 子类：{issubclass(Dog, Bird)}")
+print(f"Dog 的 MRO：{[c.__name__ for c in Dog.__mro__]}")
+```
+
+输出：
+
+```text
+Dog(旺财, 3岁)
+  叫声：旺财（柴犬）汪汪叫！
+  移动：旺财 在走路
+Cat(咪咪, 2岁)
+  叫声：咪咪 喵喵叫
+  移动：咪咪 在走路
+Parrot(波利, 5岁)
+  叫声：波利 说：你好、再见、想吃东西
+  移动：波利 在飞翔
+
+--- 类型检查 ---
+狗专属行为：旺财 把球叼了回来
+鹦鹉词汇量：3
+
+--- 类层级检查 ---
+Dog 是 Animal 子类：True
+Dog 是 Bird 子类：False
+Dog 的 MRO：['Dog', 'Mammal', 'Animal', 'object']
+```
+
+## 小结
+
+- `class 子类(父类):` 实现继承；所有类最终继承自 `object`。
+- 子类可重写父类方法；用 `super()` 调用父类方法（实际调用 MRO 中的下一个类）。
+- MRO 由 **C3 线性化**算法决定，用 `类.__mro__` 查看；多继承时按 MRO 顺序解析方法。
+- 多继承要小心菱形继承，推荐用 `super()` + 关键字参数传递的**协作式多继承**模式。
+- Mixin 是多继承最实用的应用，用于增加单一功能。
+- `isinstance(obj, cls)` 匹配子类，`issubclass(sub, sup)` 判断继承关系，优先用 `isinstance` 而非 `type` 比较。
+- `abc.ABC` + `@abstractmethod` 定义接口契约，强制子类实现关键方法。
+
+下一节将深入**多态**——同一接口在不同对象上表现出不同行为。

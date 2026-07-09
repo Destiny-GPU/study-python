@@ -1,0 +1,387 @@
+---
+sidebar_position: 1
+sidebar_label: '列表'
+title: 列表（List）
+description: Python 列表是最常用的可变序列，支持任意类型元素的有序存储与灵活的增删改查操作。
+---
+
+# 列表（List）
+
+列表（`list`）是 Python 中最灵活、使用频率最高的内置数据结构之一。它是一个**有序、可变**的序列容器，能够容纳任意类型的对象，并支持高效的尾部增删以及丰富的操作方法。掌握列表是写出 Pythonic 代码的第一步。
+
+## 创建列表
+
+创建列表有多种方式，最常见的是使用方括号 `[]` 字面量。
+
+```py
+# 1. 字面量创建
+fruits = ["apple", "banana", "cherry"]
+print(fruits)  # ['apple', 'banana', 'cherry']
+
+# 2. 使用 list() 构造器从可迭代对象转换
+letters = list("python")
+print(letters)  # ['p', 'y', 't', 'h', 'o', 'n']
+
+# 3. 创建空列表
+empty: list[int] = []
+also_empty = list()
+
+# 4. 列表中可以混合不同类型
+mixed = [1, "two", 3.0, [4, 5], True]
+print(mixed)  # [1, 'two', 3.0, [4, 5], True]
+```
+
+:::tip 使用类型注解
+在 Python 3.9+ 中，可以直接使用 `list[int]` 作为类型注解，无需从 `typing` 导入 `List`。Python 3.12 进一步强化了对泛型容器的注解支持。
+:::
+
+## 索引与切片
+
+列表通过索引访问元素，索引从 `0` 开始；负索引从末尾反向计数，`-1` 表示最后一个元素。
+
+```py
+nums = [10, 20, 30, 40, 50, 60]
+
+# 正向索引
+print(nums[0])   # 10
+print(nums[3])   # 40
+
+# 负索引
+print(nums[-1])  # 60
+print(nums[-2])  # 50
+
+# 切片：[start:stop:step]
+print(nums[1:4])    # [20, 30, 40]
+print(nums[:3])    # [10, 20, 30]
+print(nums[3:])    # [40, 50, 60]
+print(nums[::2])   # [10, 30, 50]  步长为 2
+print(nums[::-1])  # [60, 50, 40, 30, 20, 10]  反转列表
+```
+
+:::warning 索引越界
+直接用超出范围的索引访问会抛出 `IndexError`。切片则不会越界报错，而是返回可用的部分，这是切片和索引的一个重要差异。
+:::
+
+```py
+nums = [10, 20, 30]
+# print(nums[5])  # IndexError: list index out of range
+print(nums[1:100])  # [20, 30]  切片安全
+```
+
+## 增删改查
+
+### 修改元素
+
+通过索引或切片直接赋值即可修改元素。
+
+```py
+nums = [10, 20, 30, 40]
+nums[1] = 99
+print(nums)  # [10, 99, 30, 40]
+
+# 切片赋值可替换一段区间，长度可以不同
+nums[1:3] = [100, 200, 300]
+print(nums)  # [10, 100, 200, 300, 40]
+```
+
+### 添加元素
+
+```py
+fruits = ["apple", "banana"]
+
+# append: 在末尾追加单个元素
+fruits.append("cherry")
+print(fruits)  # ['apple', 'banana', 'cherry']
+
+# insert: 在指定位置插入元素
+fruits.insert(1, "avocado")
+print(fruits)  # ['apple', 'avocado', 'banana', 'cherry']
+
+# extend: 追加另一个可迭代对象的所有元素
+fruits.extend(["date", "elderberry"])
+print(fruits)  # ['apple', 'avocado', 'banana', 'cherry', 'date', 'elderberry']
+
+# 使用 + 拼接（生成新列表，不修改原列表）
+more = fruits + ["fig"]
+print(more[-1])  # fig
+```
+
+:::info append vs extend
+`append` 把参数作为**一个整体**加进去；`extend` 把可迭代对象**展开**逐个追加。混用是初学者常见的坑。
+:::
+
+```py
+data = [1, 2, 3]
+data.append([4, 5])   # [1, 2, 3, [4, 5]]
+data2 = [1, 2, 3]
+data2.extend([4, 5])  # [1, 2, 3, 4, 5]
+```
+
+### 删除元素
+
+Python 提供多种删除方式，各有适用场景。
+
+```py
+fruits = ["apple", "banana", "cherry", "banana", "date"]
+
+# remove: 按值删除第一个匹配项（不存在会抛 ValueError）
+fruits.remove("banana")
+print(fruits)  # ['apple', 'cherry', 'banana', 'date']
+
+# pop: 按索引删除并返回该元素，默认删除最后一个
+last = fruits.pop()
+print(last, fruits)  # date ['apple', 'cherry', 'banana']
+
+middle = fruits.pop(1)
+print(middle, fruits)  # cherry ['apple', 'banana']
+
+# del 语句：按索引或切片删除
+del fruits[0]
+print(fruits)  # ['banana']
+
+# clear: 清空整个列表
+fruits.clear()
+print(fruits)  # []
+```
+
+| 方法/语句 | 说明 | 返回值 |
+| --- | --- | --- |
+| `remove(x)` | 删除第一个等于 `x` 的元素 | 无（`None`） |
+| `pop(i)` | 删除索引 `i` 处元素（默认末尾） | 被删除的元素 |
+| `del lst[i]` | 删除索引/切片对应元素 | 无 |
+| `clear()` | 清空列表 | 无 |
+
+## 列表常用方法
+
+```py
+nums = [3, 1, 4, 1, 5, 9, 2, 6]
+
+# count: 统计某元素出现次数
+print(nums.count(1))  # 2
+
+# index: 查找元素首次出现的索引
+print(nums.index(5))  # 4
+
+# copy: 创建浅拷贝
+copy_nums = nums.copy()
+
+# reverse: 原地反转
+nums.reverse()
+print(nums)  # [6, 2, 9, 5, 1, 4, 1, 3]
+```
+
+## 排序
+
+排序有两种方式：原地排序 `list.sort()` 和生成新列表的 `sorted()` 函数。
+
+```py
+nums = [3, 1, 4, 1, 5, 9, 2, 6]
+
+# sorted: 返回新列表，原列表不变
+ascending = sorted(nums)
+descending = sorted(nums, reverse=True)
+print(ascending)   # [1, 1, 2, 3, 4, 5, 6, 9]
+print(descending)  # [9, 6, 5, 4, 3, 2, 1, 1]
+print(nums)        # [3, 1, 4, 1, 5, 9, 2, 6]  原列表未变
+
+# sort: 原地排序，返回 None
+nums.sort()
+print(nums)  # [1, 1, 2, 3, 4, 5, 6, 9]
+
+# 用 key 指定排序依据
+words = ["banana", "apple", "cherry", "date"]
+words.sort(key=len)
+print(words)  # ['date', 'apple', 'banana', 'cherry']
+```
+
+:::tip key 函数
+`key` 接受一个函数，对每个元素计算"排序键"。常用 `len`、`str.lower`、`abs`，或用 `lambda` 自定义。
+:::
+
+```py
+students = [
+    {"name": "Alice", "score": 88},
+    {"name": "Bob", "score": 95},
+    {"name": "Charlie", "score": 72},
+]
+
+# 按 score 降序
+students.sort(key=lambda s: s["score"], reverse=True)
+print([s["name"] for s in students])  # ['Bob', 'Alice', 'Charlie']
+```
+
+## copy 与深浅拷贝
+
+赋值只是绑定引用，修改一方另一方也会变。要真正复制列表，需理解**浅拷贝**和**深拷贝**。
+
+```py
+import copy
+
+original = [[1, 2], [3, 4]]
+
+# 引用：完全同步
+ref = original
+ref[0][0] = 99
+print(original)  # [[99, 2], [3, 4]]  原列表也被改了
+
+original = [[1, 2], [3, 4]]
+
+# 浅拷贝：复制外层，内层仍共享
+shallow = original.copy()       # 等价于 list(original) 或 original[:]
+shallow[0][0] = 99
+print(original)  # [[99, 2], [3, 4]]  内层被改了
+
+original = [[1, 2], [3, 4]]
+
+# 深拷贝：递归复制所有层级
+deep = copy.deepcopy(original)
+deep[0][0] = 99
+print(original)  # [[1, 2], [3, 4]]  完全独立
+```
+
+:::warning 嵌套结构的拷贝陷阱
+对于一维列表，浅拷贝就够用。但只要列表里装着可变对象（嵌套列表、字典等），想让副本完全独立就必须用 `copy.deepcopy`。
+:::
+
+## 列表推导式预告
+
+列表推导式是 Python 中创建列表的优雅写法，本节先做铺垫，详细内容见[推导式](./comprehensions.mdx)一章。
+
+```py
+# 传统写法
+squares = []
+for x in range(5):
+    squares.append(x * x)
+
+# 推导式写法
+squares = [x * x for x in range(5)]
+print(squares)  # [0, 1, 4, 9, 16]
+```
+
+## in 与 len
+
+```py
+fruits = ["apple", "banana", "cherry"]
+
+# in: 成员测试
+print("banana" in fruits)   # True
+print("date" not in fruits)  # True
+
+# len: 获取长度
+print(len(fruits))  # 3
+```
+
+:::info 线性查找
+列表的 `in` 操作是线性扫描，时间复杂度 O(n)。如果需要频繁判断成员存在，建议改用集合（`set`），其查找是 O(1)。
+:::
+
+## 嵌套列表
+
+列表可以嵌套，常用于表示矩阵、二维表格等。
+
+```py
+matrix = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+]
+
+# 访问元素
+print(matrix[1][2])  # 6  第 2 行第 3 列
+
+# 遍历所有元素
+for row in matrix:
+    for value in row:
+        print(value, end=" ")
+    print()
+# 输出：
+# 1 2 3
+# 4 5 6
+# 7 8 9
+
+# 用推导式构造 3x3 单位矩阵
+identity = [[1 if i == j else 0 for j in range(3)] for i in range(3)]
+print(identity)  # [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+```
+
+:::warning 初始化嵌套列表的陷阱
+不要用 `[[0] * 3] * 3` 创建矩阵，外层的三个引用指向同一个内层列表，改一行会全跟着变。应使用推导式：`[[0] * 3 for _ in range(3)]`。
+:::
+
+```py
+# 错误示范
+bad = [[0] * 3] * 3
+bad[0][0] = 1
+print(bad)  # [[1, 0, 0], [1, 0, 0], [1, 0, 0]]  全变了
+
+# 正确写法
+good = [[0] * 3 for _ in range(3)]
+good[0][0] = 1
+print(good)  # [[1, 0, 0], [0, 0, 0], [0, 0, 0]]
+```
+
+## 实战：待办事项管理
+
+下面用列表实现一个简单的命令行待办事项管理器，综合运用增删改查与排序。
+
+```py
+from datetime import date
+
+
+def main() -> None:
+    todos: list[dict] = [
+        {"task": "学习 Python 列表", "done": True, "priority": 2},
+        {"task": "完成数据结构作业", "done": False, "priority": 1},
+        {"task": "整理学习笔记", "done": False, "priority": 3},
+    ]
+
+    # 1. 添加新任务
+    todos.append({"task": "复习切片操作", "done": False, "priority": 2})
+
+    # 2. 标记完成（找到第一个未完成且优先级最高的任务）
+    todos.sort(key=lambda t: t["priority"])
+    for todo in todos:
+        if not todo["done"]:
+            todo["done"] = True
+            print(f"已完成: {todo['task']}")
+            break
+
+    # 3. 删除已完成的任务
+    todos = [t for t in todos if not t["done"]]
+
+    # 4. 打印剩余任务
+    print(f"\n剩余待办（{len(todos)} 项）:")
+    for i, todo in enumerate(todos, start=1):
+        flag = "✔" if todo["done"] else " "
+        print(f"  {i}. [{flag}] (P{todo['priority']}) {todo['task']}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+运行结果示意：
+
+```
+已完成: 完成数据结构作业
+
+剩余待办（2 项）:
+  1. [ ] (P2) 学习 Python 列表
+  2. [ ] (P2) 复习切片操作
+```
+
+:::tip 真实场景
+实际项目中，待办事项更适合用字典或自定义类来表达，本例主要演示列表作为容器的用法。`enumerate(todos, start=1)` 是生成带序号输出的常用技巧。
+:::
+
+## 小结
+
+- 列表是**有序、可变**的序列，用 `[]` 创建，支持任意类型元素。
+- 索引从 `0` 开始，支持负索引；切片 `lst[start:stop:step]` 安全且强大。
+- `append`/`insert`/`extend` 用于添加，`remove`/`pop`/`del`/`clear` 用于删除。
+- `sort()` 原地排序，`sorted()` 返回新列表；都支持 `key` 与 `reverse` 参数。
+- 浅拷贝（`copy`/`[:]`）只复制外层，嵌套可变对象需要 `copy.deepcopy`。
+- 初始化嵌套列表时务必用推导式，避免引用共享陷阱。
+- 频繁成员判断请改用 `set`，频繁首部增删请考虑 `collections.deque`。
+
+掌握列表后，下一节我们将学习**不可变序列——元组**。

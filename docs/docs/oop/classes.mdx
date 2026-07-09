@@ -1,0 +1,393 @@
+---
+sidebar_position: 1
+sidebar_label: '类与对象'
+title: 类与对象
+description: 学习 class 定义、__init__、self、实例属性与类属性、实例方法、__str__/__repr__、属性类型注解，构建面向对象程序的基础。
+---
+
+# 类与对象
+
+面向对象编程（Object-Oriented Programming，OOP）是一种以"对象"为核心的编程范式。对象将**数据**（属性）和**行为**（方法）封装在一起，使我们能更自然地模拟现实世界。Python 是一门彻底的面向对象语言：数字、字符串、函数、类本身都是对象。掌握类与对象是构建大型程序、理解框架源码、写出可维护代码的基石。
+
+## 定义类与创建对象
+
+使用 `class` 关键字定义类，通过"调用"类名来创建实例（对象）：
+
+```py
+class Dog:
+    """一只小狗。"""
+    pass  # 空类用 pass 占位
+
+# 创建实例
+d1 = Dog()
+d2 = Dog()
+
+print(type(d1))       # 输出：<class '__main__.Dog'>
+print(d1 is d2)       # 输出：False（两个不同实例）
+print(isinstance(d1, Dog))  # 输出：True
+```
+
+:::note Python 中的类也是对象
+类本身也是对象（`type` 的实例），可以赋值、传递、动态修改。这一点与 Java/C++ 有所不同。
+:::
+
+## `__init__` 与 `self`
+
+`__init__` 是**初始化方法**，在创建实例后自动调用，用于设置实例属性。`self` 代表实例本身，是所有实例方法的第一个参数。
+
+```py
+class Dog:
+    def __init__(self, name: str, age: int):
+        # self.属性 = 参数   把数据挂到当前实例上
+        self.name = name
+        self.age = age
+
+    def bark(self) -> str:
+        # 实例方法通过 self 访问实例属性
+        return f"{self.name} 汪汪叫！"
+
+# 创建时传入参数，自动调用 __init__
+dog = Dog("旺财", 3)
+print(dog.bark())   # 输出：旺财 汪汪叫！
+print(dog.name)      # 输出：旺财
+print(dog.age)       # 输出：3
+```
+
+:::warning 关于 self
+- `self` 只是约定俗成的名字，理论上叫 `this`、`me` 也行，但**强烈建议**沿用 `self`。
+- 调用方法时**不需要手动传 self**，Python 会自动把实例绑定到第一个参数：
+  `dog.bark()` 等价于 `Dog.bark(dog)`。
+:::
+
+### `__new__` 与 `__init__` 的分工
+
+`__new__` 负责**创建**实例（返回新对象），`__init__` 负责**初始化**实例。绝大多数情况下只重写 `__init__` 即可，只有实现单例、不可变类型（如 `tuple` 子类）时才需要重写 `__new__`。
+
+```py
+class Singleton:
+    _instance: "Singleton | None" = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+a = Singleton()
+b = Singleton()
+print(a is b)  # 输出：True（同一个实例）
+```
+
+## 实例属性 vs 类属性
+
+属性按归属可分为两类：
+
+| 类型       | 定义位置            | 归属   | 访问方式              |
+|------------|---------------------|--------|-----------------------|
+| 类属性     | 类体中、方法外      | 类     | `类名.属性` 或 `实例.属性` |
+| 实例属性   | `__init__` 或方法内 | 实例   | `实例.属性`           |
+
+```py
+class Dog:
+    species = "Canis lupus familiaris"  # 类属性：所有狗共享
+    count = 0                            # 类属性：统计总数
+
+    def __init__(self, name: str):
+        self.name = name  # 实例属性：每只狗独有
+        Dog.count += 1    # 修改类属性要用 类名.属性
+
+# 类属性通过类访问
+print(Dog.species)  # 输出：Canis lupus familiaris
+print(Dog.count)   # 输出：0
+
+d1 = Dog("旺财")
+d2 = Dog("小白")
+
+# 也可以通过实例访问类属性
+print(d1.species)   # 输出：Canis lupus familiaris
+print(Dog.count)   # 输出：2
+print(d1.count, d2.count)  # 输出：2 2
+```
+
+:::warning 通过实例修改类属性的陷阱
+给实例属性赋值时，如果同名，会在实例上**新建**一个实例属性，**不会**修改类属性：
+
+```py
+d1.species = "临时物种"  # 在 d1 上新增实例属性
+print(d1.species)        # 输出：临时物种（实例属性屏蔽了类属性）
+print(d2.species)        # 输出：Canis lupus familiaris（类属性未变）
+print(Dog.species)       # 输出：Canis lupus familiaris
+```
+
+修改类属性务必用 `类名.属性 = ...`。
+:::
+
+## 实例方法、类方法与静态方法
+
+```py
+class Counter:
+    total = 0  # 类属性
+
+    def __init__(self, name: str):
+        self.name = name  # 实例属性
+        Counter.total += 1
+
+    def describe(self) -> str:
+        """实例方法：第一个参数是 self，可访问实例和类属性"""
+        return f"{self.name}（编号 {self.total}）"
+
+    @classmethod
+    def reset(cls) -> None:
+        """类方法：第一个参数是 cls（类本身），常用于工厂方法"""
+        cls.total = 0
+
+    @staticmethod
+    def help() -> str:
+        """静态方法：不需要 self/cls，与类逻辑相关但不依赖实例/类状态"""
+        return "使用 Counter(name) 创建计数器"
+
+c1 = Counter("A")
+c2 = Counter("B")
+print(c1.describe())  # 输出：A（编号 2）
+print(Counter.help()) # 输出：使用 Counter(name) 创建计数器
+
+Counter.reset()
+print(Counter.total)  # 输出：0
+```
+
+:::tip 何时用哪种方法？
+- **实例方法**：需要访问或修改实例状态时使用。
+- **类方法**：需要操作类级状态，或作为**工厂方法**（返回类的新实例）时使用。
+- **静态方法**：逻辑上属于这个类，但不需要访问实例或类状态时使用（相当于放在类命名空间里的普通函数）。
+:::
+
+## `__str__` 与 `__repr__`
+
+默认打印对象会显示类名和地址，可读性差。通过重写两个魔术方法来定制：
+
+- `__str__`：面向**终端用户**的友好字符串，`print(obj)` / `str(obj)` 时触发。
+- `____repr__`：面向**开发者**的明确字符串，`repr(obj)` / 在交互式终端直接输入变量时触发。**理想情况下应是一个能重建该对象的有效表达式。**
+
+```py
+class Point:
+    def __init__(self, x: float, y: float):
+        self.x = x
+        self.y = y
+
+    def __repr__(self) -> str:
+        # 开发者视角：应该能 eval 重建对象
+        return f"Point({self.x!r}, {self.y!r})"
+
+    def __str__(self) -> str:
+        # 用户视角：简洁友好
+        return f"({self.x}, {self.y})"
+
+p = Point(3, 4)
+print(p)            # 输出：(3, 4)        ← 调用 __str__
+print(repr(p))      # 输出：Point(3, 4)   ← 调用 __repr__
+print(f"{p!r}")     # 输出：Point(3, 4)   ← !r 强制用 repr
+print([p, p])       # 输出：[Point(3, 4), Point(3, 4)]  ← 容器内用 __repr__
+```
+
+:::tip 只重写 __repr__ 的策略
+如果只重写 `__repr__`，当 `__str__` 未定义时会回退到 `__repr__`。所以简单场景下**只写 `__repr__`** 就能让 `print` 和 `repr` 都有合理输出。
+:::
+
+## 属性访问机制
+
+Python 对属性访问有一套查找规则，理解它有助于排查"为何改了类属性实例却不变"之类的问题：
+
+1. 先查**实例**的 `__dict__`（实例属性字典）。
+2. 找不到再查**类**的 `__dict__`，再沿继承链查找父类。
+3. 还找不到则调用 `__getattr__`（如果定义了），或抛出 `AttributeError`。
+
+```py
+class Color:
+    default = "red"  # 类属性
+
+c = Color()
+print(c.__dict__)    # 输出：{}（实例还没有自己的属性）
+print(c.default)      # 输出：red（沿查找链找到类属性）
+
+c.default = "blue"   # 赋值会在实例上新建属性
+print(c.__dict__)    # 输出：{'default': 'blue'}
+print(Color.default) # 输出：red（类属性没变）
+
+del c.default        # 删除实例属性后又会"露出"类属性
+print(c.default)      # 输出：red
+```
+
+:::info 动态查看与修改属性
+- `hasattr(obj, "name")`：判断是否有某属性
+- `getattr(obj, "name", default)`：安全获取属性
+- `setattr(obj, "name", value)`：动态设置属性
+- `delattr(obj, "name")`：删除属性
+
+这些函数在写元编程、序列化框架时很有用。
+:::
+
+## 类型注解：属性与方法的类型
+
+Python 3.12+ 支持在类体直接用 `属性: 类型` 形式声明**类级别的类型注解**，配合 `__init__` 赋值，让 IDE 和类型检查器（如 mypy / pyright）更好推断：
+
+```py
+class Student:
+    # 类级别的类型注解（不创建类属性，仅用于类型检查）
+    name: str
+    age: int
+    scores: list[float]
+
+    def __init__(self, name: str, age: int, scores: list[float] | None = None):
+        self.name = name
+        self.age = age
+        self.scores = scores if scores is not None else []
+
+    def average(self) -> float:
+        return sum(self.scores) / len(self.scores) if self.scores else 0.0
+
+    def __repr__(self) -> str:
+        return f"Student(name={self.name!r}, age={self.age}, avg={self.average:.1f})"
+
+s: Student = Student("小明", 18, [90, 85, 88])
+print(s.average())  # 输出：87.66666666666667
+print(s)            # 输出：Student(name='小明', age=18, avg=87.7)
+```
+
+:::note 注解只声明，不创建属性
+`name: str` 这样的注解**不会**真正给类添加属性，只是写进 `__annotations__` 字典。真正的赋值发生在 `__init__` 中的 `self.name = name`。若想同时声明并赋默认值，可以写 `name: str = "匿名"`，但此时它就成了**类属性**。
+:::
+
+## 实战：学生信息管理
+
+综合运用以上知识，实现一个简洁的学生信息管理类：
+
+```py
+class Student:
+    """学生信息。
+
+    Args:
+        name: 姓名。
+        age: 年龄。
+        scores: 成绩列表。
+    """
+    school = "Python 实验学校"  # 类属性：所有学生共享
+    _next_id: int = 1            # 受保护的类属性：自增 ID
+
+    def __init__(self, name: str, age: int, scores: list[float] | None = None) -> None:
+        self.id: int = Student._next_id
+        Student._next_id += 1
+        self.name = name
+        self.age = age
+        self.scores: list[float] = list(scores) if scores else []
+
+    def average(self) -> float:
+        """平均分。"""
+        return sum(self.scores) / len(self.scores) if self.scores else 0.0
+
+    def add_score(self, score: float) -> None:
+        if score < 0 or score > 100:
+            raise ValueError(f"非法分数：{score}")
+        self.scores.append(score)
+
+    def grade(self) -> str:
+        avg = self.average()
+        if avg >= 90:
+            return "优秀"
+        elif avg >= 75:
+            return "良好"
+        elif avg >= 60:
+            return "及格"
+        return "不及格"
+
+    def __repr__(self) -> str:
+        return (
+            f"Student(id={self.id}, name={self.name!r}, "
+            f"age={self.age}, avg={self.average():.1f}, grade={self.grade()!r})"
+        )
+
+    def __str__(self) -> str:
+        return f"#{self.id} {self.name}（{self.school}）平均 {self.average():.1f}分"
+
+
+class StudentManager:
+    """学生管理器。"""
+
+    def __init__(self) -> None:
+        self.students: list[Student] = []
+
+    def add(self, student: Student) -> None:
+        self.students.append(student)
+
+    def find(self, name: str) -> Student | None:
+        for s in self.students:
+            if s.name == name:
+                return s
+        return None
+
+    def best(self) -> Student | None:
+        if not self.students:
+            return None
+        return max(self.students, key=lambda s: s.average())
+
+    def __repr__(self) -> str:
+        return f"StudentManager({len(self.students)} students)"
+
+
+# 使用示例
+manager = StudentManager()
+manager.add(Student("小明", 18, [95, 88, 92]))
+manager.add(Student("小红", 17, [78, 85, 80]))
+manager.add(Student("小刚", 19, [55, 62, 58]))
+
+print("--- 所有学生 ---")
+for s in manager.students:
+    print(s)  # 调用 __str__
+    print(f"  开发视图：{s!r}")  # 调用 __repr__
+
+print("\n--- 查找 ---")
+target = manager.find("小红")
+if target:
+    target.add_score(90)
+    print(f"添加成绩后：{target!r}")
+
+print("\n--- 优秀学生 ---")
+best = manager.best()
+if best:
+    print(f"最高分：{best.name}（{best.average():.1f}）")
+
+print("\n--- 统计 ---")
+print(f"共创建学生数（自增 ID 体现）：{Student._next_id - 1}")
+print(manager)
+```
+
+输出示例：
+
+```text
+--- 所有学生 ---
+#1 小明（Python 实验学校）平均 91.7分
+  开发视图：Student(id=1, name='小明', age=18, avg=91.7, grade='优秀')
+#2 小红（Python 实验学校）平均 81.0分
+  开发视图：Student(id=2, name='小红', age=17, avg=81.0, grade='良好')
+#3 小刚（Python 实验学校）平均 58.3分
+  开发视图：Student(id=3, name='小刚', age=19, avg=58.3, grade='不及格')
+
+--- 查找 ---
+添加成绩后：Student(id=2, name='小红', age=17, avg=83.3, grade='良好')
+
+--- 优秀学生 ---
+最高分：小明（91.7）
+
+--- 统计 ---
+共创建学生数（自增 ID 体现）：3
+StudentManager(3 students)
+```
+
+## 小结
+
+- `class` 定义类，"调用"类名创建实例；`__init__` 负责初始化，`self` 指向当前实例。
+- **类属性**归所有实例共享，**实例属性**归单个实例独有；修改类属性要用 `类名.属性`。
+- 三种方法：实例方法（`self`）、类方法（`@classmethod`，`cls`）、静态方法（`@staticmethod`，无 self/cls）。
+- `__str__` 面向用户、`__repr__` 面向开发者；简单场景只写 `__repr__` 即可。
+- 属性查找顺序：实例 `__dict__` → 类 `__dict__` → 父类链 → `__getattr__`。
+- 类型注解 `属性: 类型` 不创建属性，只写进 `__annotations__`，配合类型检查器提升可维护性。
+
+下一节将介绍**继承**——通过复用已有类来构建层级化的类型体系。

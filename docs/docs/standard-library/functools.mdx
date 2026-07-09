@@ -1,0 +1,846 @@
+---
+sidebar_position: 6
+sidebar_label: 'functools'
+title: functools 函数工具
+description: 掌握 @cache、@lru_cache、@cached_property、partial、reduce、singledispatch、wraps、total_ordering 与 cmp_to_key，写出高效且可复用的函数代码。
+---
+
+# functools 函数工具
+
+`functools` 是 Python 函数式编程的核心工具箱：缓存计算结果、固定部分参数、按类型分派、保留元信息、补全比较运算……这些工具让函数更高效、更通用、更可组合。本章系统介绍 `functools` 的常用工具，并对比 Python 3.9+ 引入的 `@cache` 与经典 `@lru_cache`。
+
+## @cache 与 @lru_cache：函数结果缓存
+
+### @cache：无界缓存（Python 3.9+）
+
+`@cache` 是最简单的缓存装饰器，把"参数 → 返回值"存入字典，下次相同参数直接返回缓存结果：
+
+```py
+from functools import cache
+import time
+
+
+@cache
+def slow_square(n: int) -> int:
+    """模拟耗时计算。"""
+    time.sleep(0.5)
+    return n * n
+
+
+# 第一次调用：耗时 0.5s
+start = time.perf_counter()
+print(slow_square(4))  # 16
+print(f"首次：{time.perf_counter() - start:.2f}s")
+
+# 第二次调用：瞬间返回
+start = time.perf_counter()
+print(slow_square(4))  # 16
+print(f"缓存命中：{time.perf_counter() - start:.6f}s")
+
+# 查看缓存信息
+print(slow_square.cache_info())
+# CacheInfo(hits=1, misses=1, maxsize=None, currsize=1)
+
+# 清空缓存
+slow_square.cache_clear()
+```
+
+### @lru_cache：LRU 淘汰缓存
+
+`@cache` 会无限增长，长跑进程可能内存爆炸。`@lru_cache` 限制最大条目数，超出时按 LRU（最近最少使用）淘汰：
+
+```py
+from functools import lru_cache
+
+
+@lru_cache(maxsize=128)
+def fibonacci(n: int) -> int:
+    if n < 2:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+
+print(fibonacci(100))  # 354224848179261915075
+print(fibonacci.cache_info())
+# CacheInfo(hits=..., misses=101, maxsize=128, currsize=101)
+```
+
+:::tip @cache 与 @lru_cache 的选择
+- 参数取值有限且数量少 → `@cache`，简单高效
+- 参数空间大或长跑服务 → `@lru_cache(maxsize=N)`，限制内存
+- `@cache` 等价于 `@lru_cache(maxsize=None)`，但更简洁
+
+默认参数都是按值比较（必须可哈希），不可哈希的参数（如 list）会抛 `TypeError`。
+:::
+
+### typed 参数：区分类型
+
+```py
+from functools import lru_cache
+
+
+@lru_cache(maxsize=None, typed=True)
+def add(a, b):
+    return a + b
+
+
+# typed=True：1 和 1.0 视为不同参数，分别缓存
+print(add(1, 2))     # 3
+print(add(1.0, 2.0)) # 3.0
+print(add.cache_info())
+# typed=False（默认）：两次调用算同一参数，hits=1
+# typed=True：算两次不同参数，hits=0
+```
+
+:::warning 缓存键的可哈希性
+`@cache` / `@lru_cache` 用参数作为字典键，参数必须**可哈希**。`list`、`dict`、`set` 不可哈希：
+
+```py
+@cache
+def process(items: list[int]) -> int:
+    return sum(items)
+
+process([1, 2, 3])  # TypeError: unhashable type: 'list'
+```
+
+需要缓存列表参数时，转为 `tuple` 再传入，或自行实现缓存键映射。
+:::
+
+## @cached_property：方法结果缓存
+
+`@cached_property` 把方法变为"计算一次后缓存"的属性，类似 `@property` 但只计算一次：
+
+```py
+from functools import cached_property
+
+
+class DataSet:
+    def __init__(self, numbers: list[float]) -> None:
+        self._numbers = numbers
+
+    @cached_property
+    def sum(self) -> float:
+        print("  计算 sum...")
+        return sum(self._numbers)
+
+    @cached_property
+    def mean(self) -> float:
+        print("  计算 mean...")
+        return self.sum / len(self._numbers)
+
+
+ds = DataSet([1, 2, 3, 4, 5])
+print("第一次访问 sum：")
+print(ds.sum)
+#   计算 sum...
+#   15
+
+print("第二次访问 sum：")
+print(ds.sum)  # 直接返回缓存，不再打印
+#   15
+
+print("访问 mean（会用到已缓存的 sum）：")
+print(ds.mean)
+#   计算 mean...
+#   3.0
+```
+
+:::tip @cached_property vs @property
+`@property` 每次访问都重新计算；`@cached_property` 第一次计算后存入实例 `__dict__`，后续直接读取。当计算成本高且结果不变时用 `@cached_property`，每次都要重算用 `@property`。
+:::
+
+### 使缓存失效
+
+```py
+from functools import cached_property
+
+
+class DataSet:
+    def __init__(self, numbers):
+        self._numbers = numbers
+
+    @cached_property
+    def sum(self):
+        return sum(self._numbers)
+
+    def add(self, n):
+        self._numbers.append(n)
+        # 让缓存失效：删除 __dict__ 中的条目
+        self.__dict__.pop("sum", None)
+
+
+ds = DataSet([1, 2, 3])
+print(ds.sum)  # 6，已缓存
+
+ds.add(4)
+print(ds.sum)  # 10，重新计算（因为前面删除了缓存）
+```
+
+:::warning @cached_property 与 __slots__
+类使用 `__slots__` 时没有 `__dict__`，`@cached_property` 默认无法工作。Python 3.12 起改进了此问题，但仍需为缓存属性显式声明 `__slots__` 槽位。否则会抛 `AttributeError`。
+:::
+
+## partial：偏函数，固定部分参数
+
+`partial` 把"多参数函数"变为"少参数函数"，固定部分参数后返回新函数：
+
+```py
+from functools import partial
+
+
+def power(base: float, exponent: float) -> float:
+    return base ** exponent
+
+
+# 固定 exponent，得到新函数
+square = partial(power, exponent=2)
+cube = partial(power, exponent=3)
+
+print(square(5))  # 25
+print(cube(2))    # 8
+
+
+# 固定位置参数
+def greet(greeting: str, name: str) -> str:
+    return f"{greeting}, {name}!"
+
+
+hello = partial(greet, "Hello")
+hi = partial(greet, "Hi")
+print(hello("Alice"))  # Hello, Alice!
+print(hi("Bob"))       # Hi, Bob!
+```
+
+### 实用场景
+
+```py
+from functools import partial
+import logging
+
+
+# 1. 为回调函数预设参数
+def on_button_click(button_id: int, event_type: str) -> None:
+    print(f"按钮 {button_id} 触发 {event_type}")
+
+
+# 给不同按钮绑定不同的回调
+button1_cb = partial(on_button_click, 1)
+button2_cb = partial(on_button_click, 2)
+button1_cb("click")  # 按钮 1 触发 click
+button2_cb("hover")  # 按钮 2 触发 hover
+
+
+# 2. 简化日志调用
+error = partial(logging.error, stacklevel=2)
+warn = partial(logging.warning, stacklevel=2)
+
+
+# 3. 把方法转成函数
+class App:
+    def handle(self, request: str) -> str:
+        return f"处理: {request}"
+
+
+app = App()
+handle_func = partial(app.handle)  # 已绑定实例
+print(handle_func("GET /"))  # 处理: GET /
+```
+
+:::tip partial vs lambda
+`partial(func, arg)` 与 `lambda x: func(arg, x)` 在很多场景等价。`partial` 更直观地表达"固定参数"语义，且保留原函数的 `__name__`、`__doc__` 等元信息（通过 `func`、`args`、`keywords` 属性访问）。需要复杂逻辑时用 lambda，仅需固定参数时用 `partial`。
+:::
+
+## reduce：归约
+
+`reduce` 把二元函数累积应用到序列上，把序列"归约"成单个值：
+
+```py
+from functools import reduce
+import operator
+
+
+# 1 * 2 * 3 * 4 = 24
+product = reduce(operator.mul, [1, 2, 3, 4])
+print(product)  # 24
+
+# ((1 + 2) + 3) + 4 = 10
+total = reduce(operator.add, [1, 2, 3, 4], 0)  # 0 是初始值
+print(total)  # 10
+
+
+# 自定义归约：找最大值
+maximum = reduce(lambda a, b: a if a > b else b, [3, 1, 4, 1, 5, 9, 2, 6])
+print(maximum)  # 9
+
+
+# 把键值对列表合成字典
+pairs = [("a", 1), ("b", 2), ("c", 3)]
+merged = reduce(lambda acc, kv: {**acc, kv[0]: kv[1]}, pairs, {})
+print(merged)  # {'a': 1, 'b': 2, 'c': 3}
+```
+
+:::warning reduce 不总是最佳选择
+`reduce(operator.add, nums)` 等价于 `sum(nums)`，但可读性更差。能用内置函数（`sum`、`max`、`min`、`any`、`all`）表达的就别用 `reduce`。`reduce` 真正适合"累积状态需要复杂转换"的场景，比如把列表逐步合成嵌套结构。
+:::
+
+### reduce 的工作流程
+
+```py
+from functools import reduce
+
+
+# 模拟 reduce 内部过程
+def show_reduce(func, iterable, initial=None):
+    it = iter(iterable)
+    if initial is None:
+        try:
+            accumulator = next(it)
+        except StopIteration:
+            raise TypeError("reduce() of empty sequence with no initial value")
+    else:
+        accumulator = initial
+    for element in it:
+        print(f"  累加器: {accumulator!r}, 当前元素: {element!r}")
+        accumulator = func(accumulator, element)
+    return accumulator
+
+
+print("最终结果:", show_reduce(lambda a, b: a + b, [1, 2, 3, 4], 0))
+#   累加器: 0, 当前元素: 1
+#   累加器: 1, 当前元素: 2
+#   累加器: 3, 当前元素: 3
+#   累加器: 6, 当前元素: 4
+# 最终结果: 10
+```
+
+## singledispatch：通用分派
+
+`singledispatch` 实现"根据第一个参数的类型分派到不同实现"——面向对象的多继承之外的另一种多态：
+
+```py
+from functools import singledispatch
+
+
+@singledispatch
+def to_json(obj) -> str:
+    """把对象转为 JSON 字符串。"""
+    raise TypeError(f"不支持类型: {type(obj)}")
+
+
+@to_json.register
+def _(obj: str) -> str:
+    return f'"{obj}"'
+
+
+@to_json.register
+def _(obj: int) -> str:
+    return str(obj)
+
+
+@to_json.register
+def _(obj: list) -> str:
+    items = ", ".join(to_json(x) for x in obj)
+    return f"[{items}]"
+
+
+@to_json.register
+def _(obj: dict) -> str:
+    items = ", ".join(f'"{k}": {to_json(v)}' for k, v in obj.items())
+    return "{" + items + "}"
+
+
+print(to_json("hello"))           # "hello"
+print(to_json(42))                 # 42
+print(to_json([1, "two", 3]))      # [1, "two", 3]
+print(to_json({"a": 1, "b": [2, 3]}))  # {"a": 1, "b": [2, 3]}
+```
+
+:::tip singledispatch 解决的问题
+没有 `singledispatch`，处理多种类型要么写一长串 `if isinstance(obj, ...)`，要么为每种类型定义独立函数让调用方选择。`singledispatch` 让你按类型分别实现，新类型可在任何地方注册，无需修改原函数——这正是"开闭原则"的体现。
+:::
+
+### 注册自定义类型
+
+```py
+from functools import singledispatch
+from dataclasses import dataclass
+
+
+@singledispatch
+def describe(obj) -> str:
+    return f"未知对象: {obj!r}"
+
+
+@describe.register
+def _(obj: int) -> str:
+    return f"整数 {obj}"
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+
+# 为自定义类型注册实现
+@describe.register
+def _(obj: Point) -> str:
+    return f"点 ({obj.x}, {obj.y})"
+
+
+# 也可以用字符串形式注册（避免导入循环）
+@describe.register
+def _(obj: complex) -> str:
+    return f"复数 {obj.real}+{obj.imag}j"
+
+
+print(describe(42))           # 整数 42
+print(describe(Point(3, 4)))  # 点 (3.0, 4.0)
+print(describe(1 + 2j))       # 复数 1.0+2.0j
+print(describe("hi"))         # 未知对象: 'hi'
+```
+
+### singledispatchmethod（Python 3.11+）
+
+`singledispatchmethod` 把分派应用到类的方法上——根据第二个参数（第一个是 `self`）的类型分派：
+
+```py
+from functools import singledispatchmethod
+from dataclasses import dataclass
+
+
+@dataclass
+class Rectangle:
+    width: float
+    height: float
+
+
+@dataclass
+class Circle:
+    radius: float
+
+
+class Geometry:
+    @singledispatchmethod
+    def area(self, shape) -> float:
+        raise TypeError(f"不支持的形状: {type(shape)}")
+
+    @area.register
+    def _(self, shape: Rectangle) -> float:
+        return shape.width * shape.height
+
+    @area.register
+    def _(self, shape: Circle) -> float:
+        import math
+        return math.pi * shape.radius ** 2
+
+
+geo = Geometry()
+print(geo.area(Rectangle(3, 4)))  # 12.0
+print(geo.area(Circle(5)))         # 78.53981633974483
+```
+
+:::info singledispatchmethod 的价值
+普通 `singledispatch` 是模块级函数，无法分派到 `self` 之外的方法上。`singledispatchmethod` 让面向对象的多态与函数分派结合——可以在一个类里集中管理多个形状的处理逻辑，又不必为每种形状定义子类。3.11 之前要实现类似功能需要第三方库或手写 `if isinstance` 链。
+:::
+
+## @wraps：保留元信息
+
+写装饰器时，包装后的函数会丢失原函数的 `__name__`、`__doc__`、`__module__` 等信息。`@wraps` 把这些信息从原函数复制到包装函数：
+
+```py
+from functools import wraps
+
+
+# 不用 @wraps 的装饰器
+def bad_timer(func):
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+@bad_timer
+def greet(name):
+    """问候某人。"""
+    return f"Hello, {name}"
+
+
+print(greet.__name__)  # wrapper（丢失了原名 greet）
+print(greet.__doc__)   # None（丢失了文档字符串）
+
+
+# 用 @wraps 的装饰器
+def good_timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+@good_timer
+def greet2(name):
+    """问候某人。"""
+    return f"Hello, {name}"
+
+
+print(greet2.__name__)  # greet2（保留原名）
+print(greet2.__doc__)   # 问候某人。（保留文档）
+```
+
+### 完整的计时装饰器示例
+
+```py
+from functools import wraps
+import time
+from typing import Any, Callable
+
+
+def timer(func: Callable[..., Any]) -> Callable[..., Any]:
+    """打印函数执行耗时。"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} 耗时 {elapsed:.6f}s")
+        return result
+    return wrapper
+
+
+@timer
+def slow_function(n: int) -> int:
+    """模拟耗时计算。"""
+    total = 0
+    for i in range(n):
+        total += i
+    return total
+
+
+print(slow_function(1_000_000))
+# slow_function 耗时 0.053421s
+# 499999500000
+
+# help 仍能显示原函数文档
+help(slow_function)
+# Help on function slow_function in module __main__:
+# slow_function(n: int) -> int
+#     模拟耗时计算。
+```
+
+:::tip 装饰器必备 @wraps
+任何装饰器都应该用 `@wraps(func)` 装饰包装函数。否则 `help()`、调试器、文档生成工具、`inspect.signature` 都会看到错误的函数名与签名，给排错带来困扰。`@wraps` 还会复制 `__wrapped__` 属性，指向原函数，方便 `inspect.unwrap` 还原。
+:::
+
+## @total_ordering：补全比较运算
+
+定义类时只需实现 `__eq__` 和 `__lt__`（或 `__le__`、`__gt__`、`__ge__` 中任一），`@total_ordering` 会自动补全其他比较运算：
+
+```py
+from functools import total_ordering
+
+
+@total_ordering
+class Student:
+    def __init__(self, name: str, score: float) -> None:
+        self.name = name
+        self.score = score
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Student):
+            return NotImplemented
+        return self.score == other.score
+
+    def __lt__(self, other: "Student") -> bool:
+        return self.score < other.score
+
+    # @total_ordering 自动补全 __le__、__gt__、__ge__
+
+
+s1 = Student("Alice", 85)
+s2 = Student("Bob", 90)
+s3 = Student("Charlie", 85)
+
+print(s1 < s2)   # True   原生实现
+print(s2 > s1)   # True   @total_ordering 补全
+print(s1 <= s3)  # True   @total_ordering 补全
+print(s1 >= s3)  # True   @total_ordering 补全
+print(s1 == s3)  # True   原生实现
+
+# 排序
+students = [s2, s1, s3]
+students.sort()
+print([s.name for s in students])  # ['Alice', 'Charlie', 'Bob']
+```
+
+:::note total_ordering 的性能
+`@total_ordering` 补全的方法是通过已定义方法间接计算，性能略低于直接实现所有比较方法。在性能敏感场景（如大量排序）建议直接实现全部六个方法，或用 `@dataclass(order=True)`。
+:::
+
+## cmp_to_key：旧式比较转 key
+
+Python 3 移除了 `sort(cmp=...)`，旧代码用 `cmp(a, b)` 返回 -1/0/1 的比较函数无法直接用。`cmp_to_key` 把它转成 `key=` 接受的对象：
+
+```py
+from functools import cmp_to_key
+
+
+# 旧式比较函数：返回负数表示 a < b
+def compare_length(a: str, b: str) -> int:
+    if len(a) < len(b):
+        return -1
+    if len(a) > len(b):
+        return 1
+    return 0
+
+
+words = ["apple", "fig", "banana", "kiwi"]
+
+# 把 cmp 函数转为 key 对象
+sorted_words = sorted(words, key=cmp_to_key(compare_length))
+print(sorted_words)  # ['fig', 'kiwi', 'apple', 'banana']
+```
+
+:::tip 优先用 key 函数
+现代代码应优先用 `key=len` 而非 `cmp_to_key(compare_length)`：
+
+```py
+sorted(words, key=len)  # ['fig', 'kiwi', 'apple', 'banana']
+```
+
+`key=` 比 `cmp=` 快得多——`key` 对每个元素只算一次，`cmp` 要在每对比较时调用。`cmp_to_key` 主要用于迁移遗留代码或处理复杂的多字段比较（如先按长度再按字典序）。
+:::
+
+### 多字段排序
+
+```py
+from functools import cmp_to_key
+
+
+def compare_person(a: tuple, b: tuple) -> int:
+    """先按年龄升序，再按名字字典序。"""
+    name_a, age_a = a
+    name_b, age_b = b
+    if age_a != age_b:
+        return -1 if age_a < age_b else 1
+    if name_a < name_b:
+        return -1
+    if name_a > name_b:
+        return 1
+    return 0
+
+
+people = [("Alice", 30), ("Bob", 25), ("Charlie", 30), ("Dave", 25)]
+print(sorted(people, key=cmp_to_key(compare_person)))
+# [('Bob', 25), ('Dave', 25), ('Alice', 30), ('Charlie', 30)]
+
+# 等价的现代写法：用元组作为 key
+print(sorted(people, key=lambda p: (p[1], p[0])))
+```
+
+## 实战：带缓存的递归与类型分派
+
+下面综合运用 `@lru_cache`、`@singledispatch`、`@wraps`，实现一个表达式求值器：
+
+```py
+from functools import lru_cache, singledispatch, wraps, total_ordering
+from dataclasses import dataclass
+from typing import Union
+
+
+# === 1. 表达式 AST ===
+@dataclass(frozen=True)
+class Number:
+    value: float
+
+
+@dataclass(frozen=True)
+class Add:
+    left: "Expr"
+    right: "Expr"
+
+
+@dataclass(frozen=True)
+class Mul:
+    left: "Expr"
+    right: "Expr"
+
+
+Expr = Union[Number, Add, Mul]
+
+
+# === 2. 用 singledispatch 实现求值 ===
+@singledispatch
+def evaluate(expr: Expr) -> float:
+    raise TypeError(f"不支持的表达式类型: {type(expr)}")
+
+
+@evaluate.register
+def _(expr: Number) -> float:
+    return expr.value
+
+
+@evaluate.register
+def _(expr: Add) -> float:
+    return evaluate(expr.left) + evaluate(expr.right)
+
+
+@evaluate.register
+def _(expr: Mul) -> float:
+    return evaluate(expr.left) * evaluate(expr.right)
+
+
+# === 3. 用 lru_cache 加速重复子表达式 ===
+@lru_cache(maxsize=1024)
+def evaluate_cached(expr: Expr) -> float:
+    """带缓存的求值，重复子树只算一次。"""
+    if isinstance(expr, Number):
+        return expr.value
+    if isinstance(expr, Add):
+        return evaluate_cached(expr.left) + evaluate_cached(expr.right)
+    if isinstance(expr, Mul):
+        return evaluate_cached(expr.left) * evaluate_cached(expr.right)
+    raise TypeError(f"不支持的类型: {type(expr)}")
+
+
+# === 4. 用 total_ordering + cached_property 实现带缓存的分数 ===
+@total_ordering
+@dataclass(frozen=True)
+class Fraction:
+    numerator: int
+    denominator: int
+
+    def __post_init__(self):
+        if self.denominator == 0:
+            raise ZeroDivisionError("分母不能为 0")
+
+    @property
+    def value(self) -> float:
+        return self.numerator / self.denominator
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Fraction):
+            return NotImplemented
+        # 通分后比较
+        return (self.numerator * other.denominator
+                == other.numerator * self.denominator)
+
+    def __lt__(self, other: "Fraction") -> bool:
+        return (self.numerator * other.denominator
+                < other.numerator * self.denominator)
+
+    def __repr__(self) -> str:
+        return f"{self.numerator}/{self.denominator}"
+
+
+# === 5. 装饰器：记录函数调用次数 ===
+def count_calls(func):
+    """统计函数被调用的次数。"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        wrapper.call_count += 1
+        return func(*args, **kwargs)
+    wrapper.call_count = 0
+    return wrapper
+
+
+@count_calls
+def fib(n: int) -> int:
+    if n < 2:
+        return n
+    return fib(n - 1) + fib(n - 2)
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("1. 表达式求值（singledispatch）")
+    print("=" * 60)
+    # (3 + 4) * (2 + 5)
+    expr = Mul(Add(Number(3), Number(4)), Add(Number(2), Number(5)))
+    print(f"(3 + 4) * (2 + 5) = {evaluate(expr)}")
+    # 49.0
+
+    print()
+    print("=" * 60)
+    print("2. 带缓存的递归（lru_cache）")
+    print("=" * 60)
+    # 构造一个有重复子表达式的复杂表达式
+    sub = Add(Number(1), Number(2))  # 1 + 2 = 3
+    # ((1+2) + (1+2)) * ((1+2) + (1+2))
+    big = Mul(Add(sub, sub), Add(sub, sub))
+    result = evaluate_cached(big)
+    print(f"((1+2)+(1+2)) * ((1+2)+(1+2)) = {result}")
+    print(f"缓存信息: {evaluate_cached.cache_info()}")
+
+    print()
+    print("=" * 60)
+    print("3. 分数比较（total_ordering）")
+    print("=" * 60)
+    fracs = [Fraction(1, 2), Fraction(3, 4), Fraction(1, 3), Fraction(2, 4)]
+    for f in fracs:
+        print(f"  {f} = {f.value:.4f}")
+
+    print()
+    print("排序后:", sorted(fracs))
+    print(f"1/2 == 2/4: {Fraction(1, 2) == Fraction(2, 4)}")  # True
+    print(f"1/3 < 1/2: {Fraction(1, 3) < Fraction(1, 2)}")   # True
+
+    print()
+    print("=" * 60)
+    print("4. 调用计数装饰器（wraps）")
+    print("=" * 60)
+    print(f"fib(10) = {fib(10)}")
+    print(f"调用次数: {fib.call_count}")
+    print(f"函数名: {fib.__name__}")  # fib（保留原名）
+```
+
+输出：
+
+```text
+============================================================
+1. 表达式求值（singledispatch）
+============================================================
+(3 + 4) * (2 + 5) = 49.0
+
+============================================================
+2. 带缓存的递归（lru_cache）
+============================================================
+((1+2)+(1+2)) * ((1+2)+(1+2)) = 36.0
+缓存信息: CacheInfo(hits=2, misses=5, maxsize=1024, currsize=5)
+
+============================================================
+3. 分数比较（total_ordering）
+============================================================
+  1/2 = 0.5000
+  3/4 = 0.7500
+  1/3 = 0.3333
+  2/4 = 0.5000
+
+排序后: [1/3, 1/2, 2/4, 3/4]
+1/2 == 2/4: True
+1/3 < 1/2: True
+
+============================================================
+4. 调用计数装饰器（wraps）
+============================================================
+fib(10) = 55
+调用次数: 177
+函数名: fib
+```
+
+:::tip 缓存让递归免于指数爆炸
+没缓存的 `fib(10)` 需要 177 次调用，`fib(40)` 需要 2.6 亿次——指数级爆炸。加 `@lru_cache` 后 `fib(40)` 只需 41 次调用。这是动态规划"自顶向下 + 记忆化"的标准技巧，`functools` 让它在 Python 中一行装饰器就能实现。
+:::
+
+## 小结
+
+- `@cache`（3.9+）无界缓存，`@lru_cache(maxsize=N)` 限制大小按 LRU 淘汰；参数必须可哈希。
+- `typed=True` 让 `1` 和 `1.0` 视为不同参数分别缓存。
+- `@cached_property` 让方法只计算一次并缓存到实例 `__dict__`，失效时 `del self.__dict__["attr"]`。
+- `partial(func, *args, **kwargs)` 固定部分参数返回新函数，比 `lambda` 更明确语义。
+- `reduce(func, iterable, initial)` 把序列归约为单个值，能用 `sum`/`max`/`min` 替代时优先用内置。
+- `@singledispatch` 按第一个参数类型分派，3.11+ 的 `singledispatchmethod` 用于类方法。
+- `@wraps(func)` 是写装饰器的必备工具，保留原函数的 `__name__`、`__doc__`、签名。
+- `@total_ordering` 只需实现 `__eq__` 和一个比较运算，自动补全其余四个。
+- `cmp_to_key` 把旧式 `cmp(a, b)` 函数转为 `key=` 接受的对象，新代码应直接用 `key=` 函数。
+
+至此，"标准库精选"章节结束。这些模块覆盖了 Python 日常开发 80% 以上的工具需求：路径、时间、容器、迭代、函数工具、系统交互。继续深入可阅读官方文档的 [Standard Library](https://docs.python.org/3/library/index.html) 章节。

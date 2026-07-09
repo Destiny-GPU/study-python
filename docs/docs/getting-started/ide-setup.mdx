@@ -1,0 +1,389 @@
+---
+sidebar_position: 3
+sidebar_label: 'IDE 配置'
+title: IDE 配置指南
+description: 配置 VS Code 与 PyCharm 进行 Python 开发，集成 uv 现代环境管理工具。
+---
+
+# IDE 配置指南
+
+工欲善其事，必先利其器。一款顺手的编辑器或 IDE，能让你的 Python 学习效率成倍提升。本章介绍两大主流选择：
+
+- **VS Code**：免费、轻量、插件生态丰富，适合初学者到资深开发者
+- **PyCharm**：JetBrains 出品的专业 Python IDE，开箱即用，功能强大
+
+两者都很优秀，选你喜欢的即可。本教程后续示例默认以 VS Code 演示。
+
+## VS Code 配置
+
+### 1. 安装 VS Code
+
+从 [官网](https://code.visualstudio.com/) 下载对应平台的安装包。
+
+- **Linux**：可下载 `.deb` / `.rpm` 包，或通过 Snap 商店安装
+- **Windows**：下载 `.exe` 安装包，建议勾选"添加到 PATH"
+- **macOS**：下载 `.zip`，解压后拖入"应用程序"
+
+安装完成后，用 `code .` 命令可在 VS Code 中打开当前目录。
+
+### 2. 安装 Python 扩展
+
+打开 VS Code，按 `Ctrl+Shift+X`（macOS：`Cmd+Shift+X`）进入扩展市场，搜索并安装以下扩展：
+
+| 扩展 | 作用 |
+| --- | --- |
+| **Python**（Microsoft 官方） | 提供 Python 语言支持：调试、IntelliSense、代码导航、测试 |
+| **Pylance**（Microsoft 官方） | 高性能的语言服务器，提供快速且准确的类型检查与补全 |
+| **Ruff**（Astral） | 用 Rust 编写的超快 linter & formatter，可替代 flake8 + black + isort |
+| **uv**（Astral） | 在 VS Code 中直接管理 uv 环境与依赖 |
+
+:::tip 一键安装推荐扩展
+VS Code 支持用"扩展包"批量安装。在扩展市场搜索 "Python Extension Pack" 即可获得一组常用 Python 工具。
+:::
+
+### 3. 选择解释器
+
+按 `Ctrl+Shift+P`（macOS：`Cmd+Shift+P`）打开命令面板，输入 `Python: Select Interpreter`，选择你之前安装的 Python 3.12+ 解释器。
+
+如果你使用 `uv` 管理项目，VS Code 会自动识别项目根目录下的 `.venv` 目录，并在列表里显示为 `Python 3.12.x ('.venv': venv)`。选中它即可。
+
+```json
+// .vscode/settings.json（VS Code 工作区配置示例）
+{
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.analysis.typeCheckingMode": "basic",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
+}
+```
+
+:::note typeCheckingMode 三档
+Pylance 提供三档类型检查强度：
+- `off`：关闭类型检查
+- `basic`：基础检查（推荐初学者，平衡提示与噪音）
+- `standard`：标准检查
+- `strict`：严格模式（适合大型项目，会报告所有可疑类型问题）
+:::
+
+### 4. 配置 Pylance 智能提示
+
+Pylance 是 VS Code 中 Python 智能提示的核心。安装 Python 扩展时会自动一并安装。它会基于类型注解提供：
+
+- **代码补全**：输入 `.` 后弹出方法/属性列表
+- **悬停提示**：鼠标悬停显示函数签名与 docstring
+- **跳转定义**：`F12` 跳转到函数/类的定义
+- **查找引用**：`Shift+F12` 查看所有引用
+- **实时类型错误**：在编辑器中以波浪线标出可疑代码
+
+```py
+def add(a: int, b: int) -> int:
+    """两数相加。"""
+    return a + b
+
+# 把鼠标悬停在 add( 上，会看到：add(a: int, b: int) -> int
+result = add(1, 2)
+```
+
+### 5. 配置调试器
+
+VS Code 内置了 Python 调试器，支持断点、单步、变量查看、调用栈等。在左侧点击"运行和调试"图标（或按 `Ctrl+Shift+D`），点击"创建 launch.json 文件"，选择 "Python File"：
+
+```json
+// .vscode/launch.json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: 当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Python: uv run",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "module": "uv",
+      "args": ["run", "python", "${file}"]
+    }
+  ]
+}
+```
+
+调试技巧：
+
+- 在代码行号左侧单击可设置/取消**断点**（红点）
+- `F5` 启动调试，`F10` 单步跳过，`F11` 单步进入，`Shift+F11` 单步跳出
+- 调试时左下角"变量"面板可查看与修改变量值
+- 在"监视"面板可输入任意表达式实时求值
+
+:::tip 条件断点
+右键点击断点，选择"编辑断点"，可设置**条件表达式**或**命中次数**。例如设置条件 `count > 100`，程序只在 `count` 超过 100 时才停在该行——对循环调试非常有用。
+:::
+
+### 6. 推荐的 VS Code 设置
+
+下面这份 `settings.json` 是一套对 Python 友好的通用配置，你可以直接套用并按需调整：
+
+```json
+{
+  // Python 相关
+  "python.defaultInterpreterPath": ".venv/bin/python",
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  "python.terminal.executeInFileDir": true,
+
+  // 格式化：交给 Ruff
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    },
+    "editor.tabSize": 4
+  },
+
+  // 通用编辑器设置
+  "editor.rulers": [88, 100],
+  "editor.fontLigatures": true,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.renderWhitespace": "boundary"
+}
+```
+
+:::info Ruff 是什么
+[Ruff](https://github.com/astral-sh/ruff) 同样出自 Astral 团队，用 Rust 编写，可以**同时替代 flake8、pylint、black、isort** 等多个工具，速度快一两个数量级。它的配置写在 `pyproject.toml` 的 `[tool.ruff]` 段。本教程项目就采用了 Ruff。
+:::
+
+## PyCharm 配置
+
+[PyCharm](https://www.jetbrains.com/pycharm/) 是 JetBrains 公司出品的专业 Python IDE，分两个版本：
+
+- **Community**：免费开源版，已能满足日常 Python 开发
+- **Professional**：付费版，额外支持 Web 框架、数据库工具、远程开发等
+
+### 1. 安装
+
+从 [官网下载页](https://www.jetbrains.com/pycharm/download/) 选择对应平台版本。Linux 用户可解压 `tar.gz` 到任意目录运行 `bin/pycharm.sh`，或通过 [JetBrains Toolbox](https://www.jetbrains.com/toolbox-app/) 统一管理。
+
+### 2. 创建项目
+
+打开 PyCharm → New Project，按以下步骤：
+
+1. **Location**：选择项目目录
+2. **Python interpreter**：
+   - 选择已有的系统解释器
+   - 或选 "New environment using uv"（PyCharm 2024.2+ 已原生支持 uv）
+3. 点击 Create
+
+:::tip PyCharm 原生支持 uv
+PyCharm 2024.2 及以上版本已内置 uv 支持，创建项目时可自动生成 `pyproject.toml` 和 `.venv`，添加依赖也走 uv。如果你用旧版本，需要先在命令行用 `uv init` 创建项目，再用 PyCharm 打开。
+:::
+
+### 3. 关键设置
+
+进入 `File → Settings`（macOS：`PyCharm → Settings`）：
+
+- **Editor → Code Style → Python**：设置缩进、行宽（建议 88~100）
+- **Project: xxx → Python Interpreter**：确认指向项目虚拟环境
+- **Tools → Python Integrated Tools**：
+  - Default test runner：`pytest`
+  - Docstring format：可选 `Google` 或 `NumPy` 风格
+
+### 4. 调试
+
+PyCharm 的调试体验在所有 IDE 中名列前茅：
+
+- 点击代码行号右侧的空白处设置断点
+- 右上角点击"虫子"图标（或 `Shift+F9`）启动调试
+- 调试面板提供 Variables、Watches、Frames、Console 四个标签页
+- 支持**条件断点**（右键断点 → Condition）和**方法断点**
+
+:::info PyCharm vs VS Code
+| 维度 | VS Code | PyCharm |
+| --- | --- | --- |
+| 启动速度 | 极快 | 较慢 |
+| 内存占用 | 低 | 较高 |
+| 智能提示 | 优秀（Pylance） | 极致（自带索引） |
+| 重构能力 | 良好 | 行业标杆 |
+| 价格 | 免费 | Community 免费 / Professional 付费 |
+| 扩展生态 | 全语言通用 | Python 专属优化 |
+
+结论：追求轻量与多语言切换 → VS Code；深耕 Python 与大型项目 → PyCharm。两者都试用一下，看哪个更顺手。
+:::
+
+## 结合 uv 管理环境
+
+无论你用 VS Code 还是 PyCharm，都强烈推荐用 `uv` 来管理项目环境。下面是一套现代 Python 项目的标准目录结构：
+
+```text
+my-project/
+├── .venv/              # uv 自动创建的虚拟环境（加入 .gitignore）
+├── .vscode/            # VS Code 配置
+│   ├── settings.json
+│   └── launch.json
+├── src/                # 源代码目录
+│   └── my_project/
+│       └── __init__.py
+├── tests/              # 测试目录
+│   └── test_main.py
+├── pyproject.toml      # 项目元数据与依赖
+├── uv.lock             # uv 锁定的依赖版本
+├── README.md
+└── .python-version     # uv 使用的 Python 版本
+```
+
+初始化命令：
+
+```bash
+# 创建项目（自动生成上面的结构骨架）
+uv init my-project
+cd my-project
+
+# 指定 Python 版本
+uv python pin 3.12
+
+# 添加依赖与开发依赖
+uv add requests
+uv add --dev pytest ruff
+
+# 同步环境
+uv sync
+```
+
+对应的 `pyproject.toml` 长这样：
+
+```toml
+[project]
+name = "my-project"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+```
+
+:::tip 让 IDE 识别 uv 环境
+- **VS Code**：安装 Python 扩展后，命令面板运行 `Python: Select Interpreter`，选择带 `.venv` 的条目即可。Ruff 扩展会自动使用项目里的 Ruff。
+- **PyCharm**：`Settings → Project → Python Interpreter → Add Interpreter → Add Local Interpreter`，选择项目下的 `.venv/bin/python`。
+:::
+
+## 实战：从零配置一个 Python 项目
+
+让我们把上面学到的内容串起来，完整跑一遍流程。
+
+```bash
+# 1. 用 uv 创建项目骨架
+uv init python-demo
+cd python-demo
+uv python pin 3.12
+
+# 2. 添加依赖（会自动创建 .venv）
+uv add requests
+uv add --dev pytest ruff
+
+# 3. 用 VS Code 打开项目
+code .
+```
+
+在 VS Code 中完成下面的配置：
+
+1. 命令面板执行 `Python: Select Interpreter`，选择 `.venv` 下的 Python
+2. 安装 Ruff 扩展，并在 `settings.json` 中启用保存时自动格式化
+3. 在 `src/python_demo/main.py` 中写入：
+
+```py
+"""python-demo 入口模块。"""
+
+import sys
+
+import requests
+
+
+def fetch_repo_info(owner: str, repo: str) -> dict[str, str]:
+    """从 GitHub API 获取仓库信息。"""
+    url = f"https://api.github.com/repos/{owner}/{repo}"
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    return {
+        "name": data["full_name"],
+        "stars": str(data["stargazers_count"]),
+        "language": data["language"] or "未知",
+    }
+
+
+def main() -> None:
+    owner = sys.argv[1] if len(sys.argv) > 1 else "astral-sh"
+    repo = sys.argv[2] if len(sys.argv) > 2 else "uv"
+    info = fetch_repo_info(owner, repo)
+    print(f"仓库：{info['name']}")
+    print(f"语言：{info['language']}")
+    print(f"⭐ 数：{info['stars']}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+4. 在 `launch.json` 中添加运行配置，按 `F5` 调试，给 `return` 那行打断点，观察 `data` 变量内容
+5. 运行：
+
+```bash
+uv run python -m python_demo.main astral-sh ruff
+```
+
+预期输出类似：
+
+```text
+仓库：astral-sh/ruff
+语言：Rust
+⭐ 数：35000
+```
+
+:::warning 保存时自动格式化的副作用
+开启 `editor.formatOnSave` 后，每次保存都会被 Ruff 重排。如果你正和别人协作且不想让格式变更混进提交，可以把它关掉，改成手动按 `Ctrl+Shift+I` 格式化。
+:::
+
+## 其他可选编辑器
+
+| 编辑器 | 特点 | 适合人群 |
+| --- | --- | --- |
+| **Neovim** | 高度可定制，配合 LSP 可达 IDE 级体验 | 资深键盘流开发者 |
+| **Sublime Text** | 启动极快，支持 LSP | 偏好轻量编辑器者 |
+| **Zed** | Rust 编写的新一代编辑器，原生 LSP | 尝鲜者 |
+| **JupyterLab** | 交互式 Notebook | 数据科学与教学 |
+| **Cursor** | 基于 VS Code 的 AI 编辑器 | 重视 AI 辅助编程者 |
+
+:::note 学习建议
+新手阶段不要在配置上花太多时间——**先用起来**。VS Code + Python 扩展 + uv 这套组合，足够你从入门用到进阶，无需折腾。等你写出几千行代码、对工具有了真实需求之后，再考虑切换或深度定制。
+:::
+
+## 小结
+
+- **VS Code** 免费、轻量，配合 Python + Pylance + Ruff 扩展即可获得出色的开发体验。
+- **PyCharm** 是专业 Python IDE，智能提示与重构能力行业领先，Community 版免费。
+- 推荐用 **Ruff** 替代传统的 flake8 + black + isort，速度快、配置统一。
+- 用 **uv** 管理项目环境是现代 Python 的最佳实践，VS Code 与 PyCharm 都已原生支持。
+- 调试器是排错利器，掌握断点、单步、变量查看会大幅提升效率。
+
+环境就绪，工具顺手，下一章我们系统梳理运行 Python 代码的几种方式。

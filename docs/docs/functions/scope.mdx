@@ -1,0 +1,498 @@
+---
+sidebar_position: 4
+sidebar_label: '作用域 LEGB'
+title: 作用域 LEGB
+description: 理解 Python 的 LEGB 作用域规则、局部/嵌套/全局/内置作用域、global 与 nonlocal 声明以及闭包
+---
+
+# 作用域 LEGB
+
+作用域（scope）决定了变量名在何处可见、何时被销毁。Python 采用 **LEGB 规则**查找变量：Local（局部）→ Enclosing（嵌套）→ Global（全局）→ Built-in（内置）。理解作用域是掌握闭包、装饰器等高级特性的基础，也能帮你避开许多"变量未定义"或"意外修改全局变量"的坑。
+
+## L-E-G-B 规则
+
+Python 查找一个变量名时，按以下顺序依次查找：
+
+| 简称 | 名称 | 说明 |
+| --- | --- | --- |
+| **L** | Local | 当前函数内部的局部作用域 |
+| **E** | Enclosing | 外层嵌套函数的作用域（闭包中常见） |
+| **G** | Global | 模块级全局作用域 |
+| **B** | Built-in | 解释器内置的名字，如 `len`、`print`、`int` |
+
+一旦在某层找到该名字，就停止向上查找；如果四层都找不到，抛出 `NameError`。
+
+```py
+x = "global"  # G：全局
+
+def outer():
+    y = "enclosing"  # E：外层函数
+
+    def inner():
+        z = "local"  # L：局部
+        print(f"z = {z}")        # 找 L：local
+        print(f"y = {y}")        # L 没有 → 找 E：enclosing
+        print(f"x = {x}")        # L、E 都没有 → 找 G：global
+        print(f"len = {len}")    # L、E、G 都没有 → 找 B：内置函数
+
+    inner()
+
+outer()
+```
+
+输出：
+
+```text
+z = local
+y = enclosing
+x = global
+len = <built-in function len>
+```
+
+## 局部作用域
+
+函数内部定义的变量是**局部变量**，仅在函数执行期间存在，函数返回后销毁：
+
+```py
+def demo():
+    local_var = 100  # 局部变量
+    print(local_var)
+
+demo()       # 输出：100
+# print(local_var)  # NameError: name 'local_var' is not defined
+```
+
+:::warning 函数内的赋值默认创建局部变量
+在函数内部对变量赋值（不是 += 之类复合赋值的读取，而是 `=` 赋值），会**默认**创建一个局部变量，即使外层有同名变量：
+```py
+x = 10
+
+def modify():
+    x = 20  # 这里创建的是局部变量 x，不影响外层
+    print(f"函数内 x = {x}")
+
+modify()           # 输出：函数内 x = 20
+print(f"函数外 x = {x}")  # 输出：函数外 x = 10
+```
+:::
+
+### 控制流不创建新作用域
+
+`if`/`for`/`while`/`with` 等控制块**不会**创建新作用域，只有函数、类、模块才会：
+
+```py
+for i in range(3):
+    msg = "hello"
+print(i)    # 输出：2（for 变量在循环外仍然可见）
+print(msg)  # 输出：hello
+```
+
+```py
+def demo():
+    for i in range(3):
+        msg = "hello"
+    # 在函数内部，i 和 msg 都可见
+    print(i, msg)
+
+demo()
+# print(i)  # NameError：i 只在 demo 内可见
+```
+
+## 嵌套函数
+
+函数内部可以再定义函数，形成嵌套结构。内层函数可以访问外层函数的局部变量：
+
+```py
+def outer():
+    outer_var = "我是外层变量"
+
+    def inner():
+        # 内层函数可以读取外层变量
+        print(outer_var)
+
+    inner()
+
+outer()  # 输出：我是外层变量
+# inner()  # NameError：inner 只在 outer 内可见
+```
+
+## global 声明
+
+如果要在函数内部**修改**全局变量，需要使用 `global` 声明：
+
+```py
+counter = 0
+
+def increment():
+    global counter  # 声明使用全局变量
+    counter += 1
+
+print(counter)  # 输出：0
+increment()
+increment()
+increment()
+print(counter)  # 输出：3
+```
+
+:::warning 滥用 global 是反模式
+`global` 让函数产生隐式副作用，难以测试和复用。大多数情况下应该用返回值代替：
+```py
+# 不推荐
+total = 0
+def add(x):
+    global total
+    total += x
+
+# 推荐
+def add(total, x):
+    return total + x
+
+total = 0
+total = add(total, 5)
+```
+:::
+
+### 多个全局变量
+
+```py
+config = {"debug": False}
+count = 0
+
+def setup():
+    global config, count
+    config["debug"] = True  # 注意：修改字典内容不需要 global
+    count = 100             # 但重新绑定变量需要 global
+
+setup()
+print(config)  # 输出：{'debug': True}
+print(count)    # 输出：100
+```
+
+:::info 修改 vs 绑定
+- 修改**可变对象**的**内容**（如 `lst.append(x)`、`d[k]=v`）：不需要 `global`
+- 重新**绑定**变量名（如 `x = 5`、`lst = [...]`）：需要 `global`
+
+```py
+data = [1, 2, 3]
+
+def modify():
+    data.append(4)  # 修改原对象，不需要 global
+
+def rebind():
+    global data
+    data = [10, 20]  # 重新绑定，需要 global
+
+modify()
+print(data)  # 输出：[1, 2, 3, 4]
+
+rebind()
+print(data)  # 输出：[10, 20]
+```
+:::
+
+## nonlocal 声明
+
+`nonlocal` 用于在**嵌套函数**中修改外层（但不是全局）函数的变量。Python 3 引入：
+
+```py
+def make_counter():
+    count = 0  # 外层函数的局部变量
+
+    def inner():
+        nonlocal count  # 声明使用外层的 count
+        count += 1
+        return count
+
+    return inner
+
+counter = make_counter()
+print(counter())  # 输出：1
+print(counter())  # 输出：2
+print(counter())  # 输出：3
+```
+
+:::warning nonlocal 不能跨到全局
+`nonlocal` 只能查找**最近一层的外层函数**作用域，不能跳到模块级全局。如果外层没有该变量，会报错：
+```py
+x = 10
+
+def outer():
+    def inner():
+        nonlocal x  # SyntaxError: no binding for nonlocal 'x'
+        x += 1
+    inner()
+```
+如果确实需要修改全局变量，使用 `global`。
+:::
+
+## 闭包
+
+闭包（closure）是引用了自由变量的函数。被引用的自由变量将与函数一同存在，即使离开了创建它的环境。
+
+### 闭包的形成条件
+
+1. 必须有嵌套函数
+2. 内层函数引用了外层函数的变量
+3. 外层函数返回了内层函数
+
+```py
+def make_multiplier(factor):
+    """返回一个将输入乘以 factor 的函数"""
+    def multiplier(x):
+        return x * factor  # 引用外层变量 factor
+    return multiplier  # 返回内层函数
+
+double = make_multiplier(2)
+triple = make_multiplier(3)
+
+print(double(5))  # 输出：10
+print(triple(5))  # 输出：15
+```
+
+虽然 `make_multiplier` 已经返回，但 `factor` 仍然存活在内层函数中——这就是闭包。
+
+### 查看闭包变量
+
+可以通过 `__closure__` 属性查看闭包引用的变量：
+
+```py
+print(double.__closure__)
+# 输出：(<cell at 0x...: int object at 0x...>,)
+print(double.__closure__[0].cell_contents)  # 输出：2
+```
+
+### 闭包的典型用途
+
+闭包常用于**工厂函数**和**保持状态**：
+
+```py
+def make_avg():
+    """返回一个计算移动平均的函数"""
+    total = 0
+    count = 0
+
+    def avg(value):
+        nonlocal total, count
+        total += value
+        count += 1
+        return total / count
+
+    return avg
+
+avg = make_avg()
+print(avg(10))  # 输出：10.0
+print(avg(20))  # 输出：15.0
+print(avg(30))  # 输出：20.0
+```
+
+### 闭包陷阱：循环中的延迟绑定
+
+```py
+# 经典陷阱：所有返回的函数都引用同一个 i
+funcs = []
+for i in range(3):
+    funcs.append(lambda: i)  # 注意：lambda 捕获的是变量 i，不是当时的值
+
+print([f() for f in funcs])  # 输出：[2, 2, 2]，而不是 [0, 1, 2]
+```
+
+原因：lambda 捕获的是变量 `i` 的**引用**，循环结束时 `i = 2`。
+
+**修复方法 1**：使用默认参数立即绑定值
+
+```py
+funcs = [lambda i=i: i for i in range(3)]
+print([f() for f in funcs])  # 输出：[0, 1, 2]
+```
+
+**修复方法 2**：使用工厂函数
+
+```py
+def make_func(n):
+    return lambda: n
+
+funcs = [make_func(i) for i in range(3)]
+print([f() for f in funcs])  # 输出：[0, 1, 2]
+```
+
+:::tip 闭包的本质
+闭包 = 函数 + 引用的环境变量。每次调用外层函数，都会创建一组新的环境变量，因此每次都是独立的"实例"：
+```py
+c1 = make_counter()
+c2 = make_counter()
+c1()  # 1
+c1()  # 2
+c2()  # 1  ← c2 是独立状态
+```
+:::
+
+## 变量查找顺序详解
+
+完整示例展示 LEGB 各层：
+
+```py
+# B：内置函数
+print("--- 内置作用域 B ---")
+print(len("abc"))  # 找到内置 len
+
+# G：全局作用域
+print("\n--- 全局作用域 G ---")
+message = "global message"
+
+def show_global():
+    print(message)  # L、E 都没有 → G
+
+show_global()
+
+# E：嵌套作用域
+print("\n--- 嵌套作用域 E ---")
+def outer():
+    message = "enclosing message"
+
+    def inner():
+        print(message)  # L 没有 → E
+
+    inner()
+
+outer()
+
+# L：局部作用域
+print("\n--- 局部作用域 L ---")
+def show_local():
+    message = "local message"  # L
+    print(message)
+
+show_local()
+print(message)  # 仍是 G：global message
+```
+
+### 覆盖内置名（不要这样做）
+
+```py
+# 不要在全局覆盖内置名
+# len = 5  # 危险：之后调用 len(...) 会报错
+
+def bad():
+    len = 10  # 局部变量覆盖内置，仅在本函数内
+    print(len)  # 输出：10
+    # print(len("abc"))  # TypeError: 'int' object is not callable
+
+bad()
+print(len("abc"))  # 输出：3，全局 len 仍是内置函数
+```
+
+## 实战：计数器闭包
+
+下面实现一个完整、可配置的计数器闭包，展示闭包的多种用法：
+
+```py
+def make_counter(
+    start: int = 0,
+    step: int = 1,
+    max_value: int | None = None,
+):
+    """创建一个计数器闭包。
+
+    Args:
+        start: 初始值。
+        step: 每次递增的步长。
+        max_value: 最大值上限，超过则停止计数。
+
+    Returns:
+        一个函数，调用时返回当前值并递增。
+    """
+    count = start  # 闭包状态
+
+    def counter() -> int:
+        nonlocal count
+        if max_value is not None and count > max_value:
+            raise OverflowError(f"计数超过最大值 {max_value}")
+        current = count
+        count += step
+        return current
+
+    # 给闭包附加一些元信息
+    def reset():
+        nonlocal count
+        count = start
+
+    def get_value() -> int:
+        """获取当前值但不递增"""
+        return count
+
+    # 通过属性附加额外函数
+    counter.reset = reset  # type: ignore[attr-defined]
+    counter.peek = get_value  # type: ignore[attr-defined]
+    return counter
+
+
+# 基本使用
+print("--- 基本 ---")
+c = make_counter()
+print(c())  # 输出：0
+print(c())  # 输出：1
+print(c())  # 输出：2
+print(c.peek())  # 输出：3  ← 当前值
+
+# 自定义起始与步长
+print("\n--- 自定义步长 ---")
+c2 = make_counter(start=10, step=5)
+print(c2())  # 输出：10
+print(c2())  # 输出：15
+print(c2())  # 输出：20
+
+# 重置
+print("\n--- 重置 ---")
+c2.reset()
+print(c2())  # 输出：10
+
+# 上限保护
+print("\n--- 上限保护 ---")
+c3 = make_counter(start=0, step=1, max_value=3)
+print(c3())  # 输出：0
+print(c3())  # 输出：1
+print(c3())  # 输出：2
+print(c3())  # 输出：3
+try:
+    c3()  # 触发上限
+except OverflowError as e:
+    print(f"错误：{e}")  # 输出：错误：计数超过最大值 3
+
+# 查看闭包变量
+print("\n--- 闭包变量 ---")
+print(f"闭包单元格数：{len(c3.__closure__)}")
+```
+
+:::tip 闭包 vs 类
+上面的计数器也可以用类实现：
+```py
+class Counter:
+    def __init__(self, start=0, step=1, max_value=None):
+        self.count = start
+        self.step = step
+        self.max_value = max_value
+
+    def __call__(self):
+        if self.max_value is not None and self.count > self.max_value:
+            raise OverflowError(...)
+        current = self.count
+        self.count += self.step
+        return current
+
+    def reset(self):
+        self.count = self.start
+```
+当状态和行为较多时，类通常更清晰；当只需简单状态时，闭包更轻量。
+:::
+
+## 小结
+
+- Python 用 **LEGB 规则**查找变量：Local → Enclosing → Global → Built-in
+- 函数内部对变量赋值默认创建局部变量，要修改外层变量必须用 `global`（修改全局）或 `nonlocal`（修改外层嵌套函数变量）
+- `if`/`for`/`while` 不创建新作用域，只有函数/类/模块才会
+- **修改**可变对象内容不需要 `global`/`nonlocal`，**重新绑定**变量名才需要
+- 闭包 = 函数 + 引用的环境变量，常用于工厂函数和保持状态
+- 循环中创建闭包要小心"延迟绑定"陷阱，用默认参数或工厂函数立即绑定值
+- `global` 是反模式，应优先用返回值传递结果
+
+下一节将介绍递归——一种通过函数自我调用来解决分治问题的编程技巧。

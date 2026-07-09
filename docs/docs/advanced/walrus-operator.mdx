@@ -1,0 +1,610 @@
+---
+sidebar_position: 5
+sidebar_label: '海象运算符'
+title: 海象运算符
+description: 学习 Python 3.8+ 的海象运算符 :=，掌握赋值表达式在条件、循环、推导式中的应用与可读性权衡。
+---
+
+# 海象运算符
+
+海象运算符 `:=`（walrus operator，PEP 572）是 Python 3.8 引入的**赋值表达式**语法。它让"赋值"可以作为表达式出现在原本不允许的位置——`if` 条件、`while` 循环、列表推导式等。这个看似微小的语法改进，能消除大量"先赋值、再判断"的重复代码，是现代 Python 代码风格的重要组成。
+
+:::info 为什么叫"海象"
+`:=` 看起来像一只海象的眼睛和象牙——冒号是眼睛，等号是两颗朝下的象牙。这是社区起的昵称，正式名称是 **赋值表达式（assignment expression）** 或 **命名表达式（named expression）**。
+:::
+
+## := 语法
+
+`:=` 的基本形式是 `变量名 := 表达式`，它**计算表达式的值，赋给变量，并返回这个值**：
+
+```py
+# 普通赋值语句：没有返回值，不能用在表达式里
+n = 10
+# 下面这行会报错：
+# (n = 10) + 5  # SyntaxError
+
+# 海象运算符：是表达式，有返回值
+result = (n := 10) + 5
+print(n)         # 10（赋值了）
+print(result)    # 15（返回值参与计算）
+```
+
+```py
+# 直接用在表达式里
+data = (value := [1, 2, 3])
+print(value)  # [1, 2, 3]
+print(data)   # [1, 2, 3]（value 就是 data 的值）
+```
+
+:::tip := 返回的是赋值的值
+`(n := 10)` 整个表达式的值就是 `10`，同时 `n` 也被赋值为 `10`。这让 `:=` 能嵌套在任何需要"值"的地方。
+:::
+
+## 赋值表达式 vs 赋值语句
+
+`:=`（赋值表达式）和 `=`（赋值语句）的关键区别：
+
+| 特性 | `=` 赋值语句 | `:=` 赋值表达式 |
+|------|-------------|-----------------|
+| 是表达式吗 | 否 | 是 |
+| 有返回值 | 无 | 有（赋值的值） |
+| 能用 `if`/`while` 条件中 | 不能 | 能 |
+| 能用 `lambda` 参数默认值 | 不能 | 能 |
+| 支持链式赋值 | `a = b = 1` | 不支持 |
+| 支持元组解包 | `a, b = 1, 2` | 不支持 |
+
+```py
+# 赋值语句：必须单独一行
+x = 5
+y = 10
+z = 15
+
+# 赋值表达式：嵌套在表达式里
+# 不能链式：a := b := 1  # 语法错误
+# 不能解包：(a, b) := (1, 2)  # 语法错误
+```
+
+:::warning := 的语法限制
+`:=` 的优先级很低，必要时要用括号。下面两种写法效果不同：
+
+```py
+# 推荐写法：明确加括号
+if (n := len("hello")) > 3:
+    print(f"长度 {n} 大于 3")
+
+# 不加括号会被解析为 n := (len("hello") > 3)
+# if n := len("hello") > 3:  # n 会是布尔值！
+#     print(n)  # True
+```
+
+规则：**使用 `:=` 时永远加括号**，避免优先级陷阱。
+:::
+
+## 在 if 条件中的应用
+
+最常见的场景：在 `if` 条件中赋值并判断，避免重复计算或重复调用：
+
+```py
+# 不用海象运算符：要调用两次 len()
+text = "Hello, World!"
+if len(text) > 10:
+    print(f"文本太长：{len(text)} 字符")  # 又调用了一次 len
+
+
+# 用海象运算符：只调用一次
+if (n := len(text)) > 10:
+    print(f"文本太长：{n} 字符")
+```
+
+```py
+# 处理输入：先取值，再判断是否有效
+def get_input() -> str | None:
+    # 模拟用户输入
+    return "hello"
+
+
+# 不用海象运算符
+user_input = get_input()
+if user_input is not None:
+    print(f"收到输入：{user_input}")
+
+
+# 用海象运算符：赋值和判断合二为一
+if (user_input := get_input()) is not None:
+    print(f"收到输入：{user_input}")
+```
+
+:::tip 消除"调用两次"的反模式
+海象运算符最经典的应用是消除"先调用取值、判断时又调用一次"的重复。对于 `input()`、`re.match()`、`dict.get()` 等返回值可能为"空"或"需要复用"的调用，`:=` 让代码更紧凑：
+
+```py
+# 输入循环：读取直到空行
+lines = []
+while (line := input("> ")) != "":
+    lines.append(line)
+```
+:::
+
+## 在 while 循环中的应用
+
+`while` 条件中的 `:=` 能持续读取并判断，是处理"读-处理-读"循环的利器：
+
+```py
+# 经典模式：读取输入直到 EOF 或空值
+def read_line() -> str | None:
+    # 模拟读取文件行
+    return None
+
+
+# 不用海象运算符：需要先读一次
+line = read_line()
+while line is not None:
+    print(line)
+    line = read_line()
+
+
+# 用海象运算符：一行搞定
+while (line := read_line()) is not None:
+    print(line)
+```
+
+```py
+# 读取数字直到输入 0
+def read_number() -> int:
+    # 模拟用户输入
+    return 0
+
+
+total = 0
+while (n := read_number()) != 0:
+    total += n
+    print(f"加入 {n}，当前总和 {total}")
+
+print(f"最终总和：{total}")
+```
+
+### 模拟逐行读取
+
+```py
+def fake_file_lines():
+    """模拟一个逐行返回的文件。"""
+    yield "第一行"
+    yield "第二行"
+    yield "第三行"
+    return  # 结束
+
+
+def read_line_from(iterator) -> str | None:
+    try:
+        return next(iterator)
+    except StopIteration:
+        return None
+
+
+lines_iter = fake_file_lines()
+
+# 用海象运算符循环读取
+collected = []
+while (line := read_line_from(lines_iter)) is not None:
+    collected.append(line)
+
+print(collected)  # ['第一行', '第二行', '第三行']
+```
+
+## 在列表推导式中的应用
+
+海象运算符在推导式（comprehension）中尤其强大——可以在 `if` 过滤条件中赋值，然后在表达式体中复用：
+
+```py
+# 不用海象运算符：调用两次 expensive_func
+def process(x: int) -> int:
+    return x * x
+
+
+nums = [1, 2, 3, 4, 5]
+
+# 不用海象：重复计算
+results = [process(n) for n in nums if process(n) > 5]
+print(results)  # [9, 16, 25]
+
+
+# 用海象运算符：只算一次，结果复用
+results = [y for n in nums if (y := process(n)) > 5]
+print(results)  # [9, 16, 25]
+```
+
+```py
+# 过滤并转换：用 := 避免重复计算
+def normalize(text: str) -> str | None:
+    """标准化文本，无效时返回 None。"""
+    s = text.strip().lower()
+    return s if s else None
+
+
+raw_texts = ["  Hello  ", "", "  World  ", "   ", "Python"]
+
+# 不用海象：要调用两次 normalize
+valid = [normalize(t) for t in raw_texts if normalize(t) is not None]
+print(valid)  # ['hello', 'world', 'python']
+
+
+# 用海象：只调用一次
+valid = [norm for t in raw_texts if (norm := normalize(t)) is not None]
+print(valid)  # ['hello', 'world', 'python']
+```
+
+:::tip 推导式中 := 的价值
+推导式中如果过滤条件调用了"昂贵"的函数，`:=` 能避免在过滤和转换时调用两次。即使不昂贵，避免重复调用也是好习惯——尤其当函数有副作用或返回值可能变化时。
+:::
+
+## 减少重复计算
+
+`:=` 的核心价值是"计算一次，多处使用"。这在函数调用、属性访问、IO 操作中尤其有用：
+
+```py
+# 字典查找：避免重复 get()
+config = {"host": "localhost", "port": 8080, "debug": None}
+
+
+def get_config_value(key: str) -> str:
+    # 不用海象
+    if config.get(key) is not None:
+        return str(config.get(key))  # 又 get 一次
+
+    # 用海象：只 get 一次
+    if (val := config.get(key)) is not None:
+        return str(val)
+    return "default"
+
+
+print(get_config_value("host"))   # localhost
+print(get_config_value("debug"))   # default
+```
+
+```py
+# 正则匹配：避免重复 match
+import re
+
+
+def extract_number(text: str) -> int | None:
+    pattern = re.compile(r"\d+")
+
+    # 不用海象
+    m = pattern.search(text)
+    if m:
+        return int(m.group())  # 又访问 m.group()
+
+    # 用海象：更紧凑
+    if (m := pattern.search(text)):
+        return int(m.group())
+    return None
+
+
+print(extract_number("价格 42 元"))   # 42
+print(extract_number("无数字"))       # None
+```
+
+## 与 comprehensions 配合
+
+`:=` 在推导式中能创建"中间变量"，让复杂表达式更清晰：
+
+```py
+# 分组：把数字按奇偶分组
+nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# 不用海象：要在 if 里重复 n % 2
+evens = [n for n in nums if n % 2 == 0]
+
+# 用海象：复用余数
+evens = [n for n in nums if (r := n % 2) == 0]
+odds = [n for n in nums if (r := n % 2) == 1]
+
+print(evens)  # [2, 4, 6, 8, 10]
+print(odds)   # [1, 3, 5, 7, 9]
+```
+
+### 在推导式中累积状态
+
+`:=` 可以让推导式"记住"前一次的值，实现简单的累积：
+
+```py
+# 计算前缀和：每个元素是前面所有元素之和
+nums = [1, 2, 3, 4, 5]
+
+# 传统写法用循环
+prefix_sums = []
+total = 0
+for n in nums:
+    total += n
+    prefix_sums.append(total)
+
+print(prefix_sums)  # [1, 3, 6, 10, 15]
+
+
+# 用海象运算符在推导式中实现
+total = 0
+prefix_sums = [(total := total + n) for n in nums]
+print(prefix_sums)  # [1, 3, 6, 10, 15]
+```
+
+:::warning 推导式中滥用 := 的陷阱
+虽然 `:=` 能在推导式中累积状态，但这会**破坏推导式的纯函数性**，让代码难以理解。上例虽然能工作，但传统循环更清晰。`:=` 的最佳用途是"避免重复计算"，而非"在推导式里写有状态逻辑"。
+
+```py
+# 不推荐：状态累积让推导式难读
+total = 0
+result = [(total := total + n) for n in nums]
+
+# 推荐：简单过滤和转换
+result = [y for n in nums if (y := process(n)) > threshold]
+```
+:::
+
+## 默认参数中的 :=
+
+`:=` 可以用在 lambda 默认参数中，实现"惰性求值"：
+
+```py
+# lambda 的默认参数在定义时求值
+# 用 := 可以让默认值依赖运行时状态
+def make_adder(base: int):
+    # 默认参数每次调用都会重新求值
+    return lambda x, b=(base := base + 10): x + b
+
+
+# 普通 lambda
+adder = lambda x: x + 5
+print(adder(3))  # 8
+```
+
+:::note 这个用法很少见
+`:=` 在 lambda 默认参数中的用法比较小众，主要场景是需要在默认值中"修改"某个外部变量。日常代码中很少用到，了解即可。
+:::
+
+## 三元表达式中的 :=
+
+`:=` 可以用在三元表达式 `a if cond else b` 中：
+
+```py
+# 根据 condition 选择不同的值，并把结果存下来
+condition = True
+
+result = (x := 42) if condition else (x := 0)
+print(result)  # 42
+print(x)       # 42
+```
+
+```py
+# 更实用的例子：缓存计算结果
+import math
+
+
+def get_radius() -> float:
+    return 5.0
+
+
+# 不用海象
+r = get_radius()
+area = math.pi * r * r if r > 0 else 0
+
+# 用海象
+area = math.pi * (r := get_radius()) ** 2 if (r := get_radius()) > 0 else 0
+# 注意：上面会调用两次 get_radius()，不好
+
+# 正确写法：先算一次
+area = math.pi * r**2 if (r := get_radius()) > 0 else 0
+print(area)  # 78.53981633974483
+```
+
+## 可读性权衡
+
+`:=` 能让代码更紧凑，但**不是所有场景都该用**。判断标准是：**是否让代码更易读**。
+
+### 应该用 := 的场景
+
+```py
+# 1. if 条件中赋值并判断（经典模式）
+if (match := pattern.search(text)):
+    return match.group()
+
+# 2. while 循环中持续读取
+while (chunk := file.read(8192)):
+    process(chunk)
+
+# 3. 推导式中避免重复计算
+results = [y for n in nums if (y := transform(n)) is not None]
+
+# 4. any/all 中的"找到第一个满足条件的"
+if any((match := pattern.search(line)) for line in lines):
+    print(f"找到 {match.group()}")
+```
+
+### 不应该用 := 的场景
+
+```py
+# 1. 简单赋值：用 = 更清晰
+x = 10  # 好
+# (x := 10)  # 多余
+
+# 2. 嵌套过深：难读
+# 坏例子
+result = (a := (b := (c := compute()))) + (d := other())
+# 拆开更清晰
+c = compute()
+b = c
+a = c
+d = other()
+result = a + d
+
+# 3. 推导式中的状态累积（前面已讨论）
+
+# 4. 仅为"少写一行"而用
+# 不必要
+if (n := 10) > 5:  # n 永远是 10，直接写 if 10 > 5
+    pass
+```
+
+:::tip 可读性第一
+`:=` 的目标是**减少重复、提升清晰度**，而非"少写代码"。如果一个 `:=` 让代码更难理解，就拆成多行用普通 `=`。代码被阅读的次数远多于被编写的次数。
+:::
+
+## 实战：文件读取与正则匹配
+
+下面综合运用 `:=` 处理"逐行读取文件 + 正则匹配"的典型场景：
+
+```py
+import re
+from typing import Iterator
+
+
+def read_lines(content: str) -> Iterator[str]:
+    """模拟逐行读取文件（避免依赖真实文件）。"""
+    yield from content.splitlines()
+
+
+# 示例日志内容
+log_content = """
+[2024-01-01 10:00:00] INFO  Starting server on port 8080
+[2024-01-01 10:00:01] DEBUG Loading config from /etc/app.conf
+[2024-01-01 10:00:02] ERROR Connection failed: timeout
+[2024-01-01 10:00:03] WARN  Retrying connection (attempt 1)
+[2024-01-01 10:00:04] INFO  Server started successfully
+"""
+
+
+# 模式：解析日志行
+log_pattern = re.compile(
+    r"\[(?P<timestamp>[\d\-: ]+)\]\s+"
+    r"(?P<level>\w+)\s+"
+    r"(?P<message>.+)"
+)
+
+
+def parse_logs(content: str) -> list[dict[str, str]]:
+    """解析日志，使用海象运算符避免重复 match。"""
+    entries = []
+    for line in read_lines(content):
+        line = line.strip()
+        if not line:
+            continue
+        # 关键：:= 让 match 只调用一次，结果在 if 和 append 中复用
+        if (match := log_pattern.search(line)):
+            entries.append({
+                "timestamp": match.group("timestamp"),
+                "level": match.group("level"),
+                "message": match.group("message").strip(),
+            })
+    return entries
+
+
+logs = parse_logs(log_content)
+for log in logs:
+    print(f"{log['level']:6} | {log['timestamp']} | {log['message']}")
+```
+
+输出：
+
+```text
+INFO   | 2024-01-01 10:00:00 | Starting server on port 8080
+DEBUG  | 2024-01-01 10:00:01 | Loading config from /etc/app.conf
+ERROR  | 2024-01-01 10:00:02 | Connection failed: timeout
+WARN   | 2024-01-01 10:00:03 | Retrying connection (attempt 1)
+INFO   | 2024-01-01 10:00:04 | Server started successfully
+```
+
+### 提取所有错误日志
+
+```py
+# 用 := 在推导式中提取错误日志的详细信息
+error_pattern = re.compile(r"(?P<type>\w+):\s*(?P<detail>.+)")
+
+# 从所有 ERROR 级别的日志中提取错误类型和详情
+errors = [
+    {
+        "type": m.group("type"),
+        "detail": m.group("detail"),
+        "timestamp": log["timestamp"],
+    }
+    for log in logs
+    if log["level"] == "ERROR"
+    and (m := error_pattern.search(log["message"]))
+]
+
+print("\n错误详情：")
+for err in errors:
+    print(f"  {err['timestamp']} - {err['type']}: {err['detail']}")
+# 输出：
+# 错误详情：
+#   2024-01-01 10:00:02 - Connection: timeout
+```
+
+:::tip 综合应用
+上面的推导式综合运用了 `:=`：
+1. `if log["level"] == "ERROR"` 先过滤错误日志
+2. `and (m := error_pattern.search(...))` 在 `and` 中赋值——只有前面的条件为真时才会执行
+3. `m.group("type")` 在表达式体中复用 `m`
+
+`and` 的短路特性确保 `m` 只在错误日志上被赋值。这是 `:=` 与逻辑运算符配合的典型模式。
+:::
+
+### 分块读取处理
+
+模拟大文件分块读取——`:=` 让"读一块、判断非空、处理"的循环非常紧凑：
+
+```py
+def read_chunks(content: bytes, chunk_size: int) -> Iterator[bytes]:
+    """模拟分块读取二进制内容。"""
+    for i in range(0, len(content), chunk_size):
+        yield content[i:i + chunk_size]
+
+
+# 模拟二进制数据
+data = b"Hello, World! This is a test of chunked reading." * 3
+
+# 用海象运算符逐块处理
+chunk_size = 16
+total_bytes = 0
+chunks_count = 0
+
+# read_chunks 返回生成器，next(None) 在结束时返回 None
+iterator = read_chunks(data, chunk_size)
+
+
+def next_chunk(it) -> bytes | None:
+    try:
+        return next(it)
+    except StopIteration:
+        return None
+
+
+# 经典的 while + := 模式
+while (chunk := next_chunk(iterator)) is not None:
+    chunks_count += 1
+    total_bytes += len(chunk)
+    print(f"块 {chunks_count}: {len(chunk)} 字节，内容预览 {chunk[:8]!r}...")
+
+print(f"\n总共 {chunks_count} 块，{total_bytes} 字节")
+```
+
+输出：
+
+```text
+块 1: 16 字节，内容预览 b'Hello, W'...
+块 2: 16 字节，内容预览 b'orld! Thi'...
+块 3: 16 字节，内容预览 b's is a tes'...
+...
+总共 9 块，129 字节
+```
+
+## 小结
+
+- `:=` 是**赋值表达式**，计算值、赋值、并返回值，让赋值能嵌入表达式。
+- 与 `=` 不同，`:=` 是表达式有返回值，但不支持链式赋值和元组解包。
+- 在 `if` 条件中赋值并判断，避免重复调用——`if (n := func()) > 0:`。
+- 在 `while` 循环中持续读取，是"读-处理-读"模式的利器——`while (line := read()) != "":`。
+- 在推导式的 `if` 过滤中复用计算结果——`[y for n in nums if (y := f(n)) > 0]`。
+- 使用 `:=` 时永远加括号，避免优先级陷阱。
+- **可读性优先**：用 `:=` 减少重复、提升清晰度，而非少写代码；嵌套过深就拆开。
+- 经典场景：正则匹配 `re.match`、字典 `get`、文件/输入读取、推导式过滤。
+
+至此，进阶特性章节完成。接下来可以前往 [标准库](../standard-library/os) 章节继续探索。

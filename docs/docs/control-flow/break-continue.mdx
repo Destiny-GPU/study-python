@@ -1,0 +1,332 @@
+---
+sidebar_position: 4
+sidebar_label: 'break 与 continue'
+title: break 与 continue
+description: 学习 Python 的 break、continue、pass 语句，理解它们与 else 子句的配合及嵌套循环行为。
+---
+
+# break 与 continue
+
+`break`、`continue`、`pass` 是控制循环执行流程的三种重要语句。`break` 跳出循环，`continue` 跳过本次，`pass` 则是"什么都不做"的占位符。理解它们的精确语义，能让你写出更灵活的循环逻辑。
+
+## break：跳出循环
+
+`break` 立即终止当前所在的循环，程序继续执行循环之后的代码：
+
+```py
+for i in range(10):
+    if i == 5:
+        break
+    print(i, end=" ")
+print("\n循环结束。")
+```
+
+输出：
+
+```text
+0 1 2 3 4
+循环结束。
+```
+
+`break` 在 `while` 中同样适用：
+
+```py
+n = 0
+while True:
+    if n >= 5:
+        break
+    print(n, end=" ")
+    n += 1
+# 输出：0 1 2 3 4
+```
+
+:::tip break 的典型用途
+- 找到目标后立即停止搜索
+- 在 `while True:` 无限循环中作为退出条件
+- 检测到错误状态时中止处理
+:::
+
+## continue：跳过本次
+
+`continue` 跳过循环体剩余部分，直接进入下一次迭代：
+
+```py
+for i in range(10):
+    if i % 2 == 0:
+        continue  # 跳过偶数
+    print(i, end=" ")
+# 输出：1 3 5 7 9
+```
+
+```py
+# 处理列表时跳过空值
+data = ["hello", "", "world", None, "python"]
+for item in data:
+    if not item:
+        continue
+    print(item.upper())
+```
+
+输出：
+
+```text
+HELLO
+WORLD
+PYTHON
+```
+
+:::warning 慎用 continue
+`continue` 用得太多会让代码"跳跃"严重，难以跟踪执行流。许多 `continue` 可以通过 `if-else` 或反转条件来消除：
+
+```py
+# 不推荐：用 continue 跳过
+for item in data:
+    if not item:
+        continue
+    process(item)
+
+# 推荐：用 if 正向判断
+for item in data:
+    if item:
+        process(item)
+```
+
+只有当 `continue` 能让主逻辑更突出、跳过的分支较简单时才推荐使用。
+:::
+
+## break 与 else 子句的配合
+
+`for` 和 `while` 都有 `else` 子句，**只有循环未被 `break` 打断时才执行 `else`**。这是 `break` 与 `else` 配合的核心语义：
+
+```py
+def search(items: list[int], target: int) -> None:
+    """在列表中查找目标。"""
+    for item in items:
+        if item == target:
+            print(f"找到了 {target}！")
+            break
+    else:
+        # 循环正常结束，说明没找到
+        print(f"列表中没有 {target}。")
+
+
+search([1, 3, 5, 7], 5)   # 找到了 5！
+search([1, 3, 5, 7], 9)   # 列表中没有 9。
+```
+
+这种模式非常契合"查找-未找到"的场景，但许多开发者不熟悉 `for...else`，因此下面是更常见的替代写法：
+
+```py
+def search_alt(items: list[int], target: int) -> None:
+    found = False
+    for item in items:
+        if item == target:
+            found = True
+            break
+    if found:
+        print(f"找到了 {target}！")
+    else:
+        print(f"列表中没有 {target}。")
+```
+
+:::note 两种写法对比
+`for...else` 更紧凑，但需要读者熟悉这一不常见语法；标志变量写法更显式，适合团队协作。在关键逻辑中，显式往往胜过巧妙。
+:::
+
+## 嵌套循环中的 break
+
+`break` 只跳出 **最内层** 的循环，不会跳出外层循环：
+
+```py
+for i in range(3):
+    for j in range(3):
+        if j == 1:
+            break  # 只跳出内层循环
+        print(f"i={i}, j={j}")
+    print(f"--- i={i} 结束 ---")
+```
+
+输出：
+
+```text
+i=0, j=0
+--- i=0 结束 ---
+i=1, j=0
+--- i=1 结束 ---
+i=2, j=0
+--- i=2 结束 ---
+```
+
+可以看到，`j` 始终只到 0 就被 `break` 跳出，但外层 `i` 仍正常遍历完。
+
+:::warning 想一次跳出多层循环？
+Python 没有"带标签的 break"（不像 Java 的 `break label;`）。要跳出多层循环，常用技巧有：
+
+```py
+# 方法 1：用标志变量
+found = False
+for i in range(3):
+    for j in range(3):
+        if i == 1 and j == 1:
+            found = True
+            break
+    if found:
+        break
+
+# 方法 2：用 return（封装到函数中）
+def search_matrix(matrix: list[list[int]], target: int) -> tuple[int, int] | None:
+    for i, row in enumerate(matrix):
+        for j, val in enumerate(row):
+            if val == target:
+                return (i, j)
+    return None
+```
+
+将循环封装进函数，用 `return` 一次性退出，是最 Pythonic 的方式。
+:::
+
+## pass 语句
+
+`pass` 是一个空操作语句，什么都不做。它主要用作 **占位符**，保持语法结构完整：
+
+```py
+# 占位：函数尚未实现
+def todo_function():
+    pass  # 之后实现
+
+# 占位：空类
+class EmptyClass:
+    pass
+
+# 占位：条件分支暂不处理
+x = 10
+if x > 0:
+    print("正数")
+elif x < 0:
+    pass  # 负数暂不处理
+else:
+    print("零")
+```
+
+:::tip 何时用 pass
+- 占位：定义函数/类/分支时还没想好实现
+- 在 `try-except` 中忽略异常：`except ValueError: pass`
+- 作为代码骨架的临时填充
+
+但生产代码中应避免大量 `pass`，未实现的逻辑应该用 `raise NotImplementedError()` 明确表示，而不是静默跳过：
+
+```py
+def must_implement():
+    raise NotImplementedError("等待实现")
+```
+:::
+
+## break、continue、pass 对比
+
+| 语句 | 作用 | 适用场景 |
+|------|------|----------|
+| `break` | 跳出整个循环 | 找到目标、错误中止 |
+| `continue` | 跳过本次，进入下次 | 跳过不合格元素 |
+| `pass` | 什么都不做 | 语法占位 |
+
+```py
+# 综合示例：处理一组数据，遇到错误跳过，遇到结束标志停止
+def process_data(data: list[int]) -> list[int]:
+    results = []
+    for value in data:
+        if value == -1:
+            print("遇到结束标志，停止处理。")
+            break
+        if value < 0:
+            print(f"跳过负值：{value}")
+            continue
+        if value == 0:
+            pass  # 0 暂时不处理，但保留分支
+        else:
+            results.append(value * 2)
+    return results
+
+
+print(process_data([5, -3, 0, 8, -2, -1, 100]))
+```
+
+输出：
+
+```text
+跳过负值：-3
+跳过负值：-2
+遇到结束标志，停止处理。
+[10, 16]
+```
+
+## 实战：查找素数
+
+综合运用 `break` 和 `for...else` 实现一个素数判断函数，并查找指定范围内的所有素数：
+
+```py
+def is_prime(n: int) -> bool:
+    """判断 n 是否为素数。
+
+    Args:
+        n: 大于 0 的整数。
+
+    Returns:
+        True 表示是素数。
+    """
+    if n < 2:
+        return False
+    # 只需检查到 sqrt(n)，超过则必无因子
+    for i in range(2, int(n ** 0.5) + 1):
+        if n % i == 0:
+            # 找到因子，不是素数
+            return False
+    # 循环正常结束（无 break），说明是素数
+    return True
+
+
+def find_primes(start: int, end: int) -> list[int]:
+    """查找 [start, end] 范围内的所有素数。"""
+    return [n for n in range(start, end + 1) if is_prime(n)]
+
+
+# 测试
+print(f"1 到 50 内的素数：{find_primes(1, 50)}")
+```
+
+输出：
+
+```text
+1 到 50 内的素数：[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
+```
+
+:::info 优化到 sqrt(n) 的原因
+判断素数时，如果 `n` 有因子 `d`，那么 `d` 和 `n/d` 中必有一个 ≤ √n。因此只需检查 `2` 到 `√n` 范围内的整数，能将时间复杂度从 O(n) 降到 O(√n)。这是常见的算法优化思路。
+:::
+
+下面是用 `for...else` 写的等价版本，更直观地展示"循环未被打断即素数"的语义：
+
+```py
+def is_prime_alt(n: int) -> bool:
+    """用 for...else 判断素数。"""
+    if n < 2:
+        return False
+    for i in range(2, int(n ** 0.5) + 1):
+        if n % i == 0:
+            break
+    else:
+        # 循环正常结束，没找到因子，是素数
+        return True
+    # 被 break 打断，不是素数
+    return False
+```
+
+两种写法等价，但第一种（用 `return False` 提前返回）更直观，是更推荐的现代写法。
+
+## 小结
+
+- `break` 跳出当前循环，常用于查找、错误中止场景。
+- `continue` 跳过本次迭代，慎用以免降低可读性，简单的跳过逻辑可用 `if` 替代。
+- `pass` 是空操作占位符，但生产代码中未实现的逻辑应抛 `NotImplementedError`。
+- `for...else` / `while...else` 仅在循环未被 `break` 时执行 `else`，适合"查找-未找到"场景。
+- `break` 只跳出最内层循环；要跳出多层循环，最佳实践是把循环封装进函数用 `return`。
+- 判断素数演示了 `break` 在算法优化中的作用，以及循环次数优化的思路。

@@ -1,0 +1,859 @@
+---
+sidebar_position: 2
+sidebar_label: 'typing 模块'
+title: typing 模块
+description: 深入 typing 模块，掌握 Callable、TypeVar、Generic、Protocol、TypedDict、Literal、Final 等高级类型工具。
+---
+
+# typing 模块
+
+上一节介绍了类型注解的基础用法。本节深入 Python 标准库的 `typing` 模块——它是整个类型系统的核心工具箱，提供了函数签名、泛型、协议、字面量类型等丰富抽象。掌握 `typing` 是编写大型、健壮 Python 项目的基础，也是阅读主流框架（FastAPI、Pydantic、SQLAlchemy）源码的钥匙。
+
+:::info Python 版本演进
+`typing` 模块在持续演进。许多原本需要从 `typing` 导入的工具，在新版 Python 中有了更简洁的原生替代：
+- Python 3.9：`list[int]` 取代 `List[int]`（PEP 585）
+- Python 3.10：`X | Y` 取代 `Union[X, Y]`（PEP 604）
+- Python 3.12：`type` 语句取代 `TypeAlias`（PEP 695）
+
+本教程面向 Python 3.12+，优先使用新语法，但仍会介绍 `typing` 中的经典工具。
+:::
+
+## Any、NoReturn、Never
+
+### Any：任意类型
+
+`Any` 表示"任意类型"，相当于关闭类型检查——任何类型都与 `Any` 兼容：
+
+```py
+from typing import Any
+
+
+def process_anything(data: Any) -> Any:
+    # 不做任何类型约束，运行时不报错
+    return data
+
+
+x: Any = 10
+x = "hello"  # Any 可以赋值为任何类型，检查器不警告
+print(process_anything(42))
+```
+
+:::warning 谨慎使用 Any
+`Any` 是类型安全的"逃生舱"，使用它等于放弃类型检查。应尽量用更具体的类型或 `object`。`object` 是所有类型的基类，但与 `Any` 不同——`object` 的方法很少，类型检查器会强制你做窄化：
+
+```py
+def process_object(data: object) -> None:
+    # data.upper()  # 类型检查器报错：object 没有 upper 方法
+    if isinstance(data, str):
+        print(data.upper())  # 收窄为 str 后才能调用
+```
+
+优先用 `object` 表达"未知类型"，用 `Any` 表达"明确放弃类型检查"。
+:::
+
+### NoReturn 与 Never
+
+`NoReturn` 标注"函数永不返回"——它要么抛异常，要么无限循环：
+
+```py
+from typing import NoReturn, Never
+
+
+def fail(message: str) -> NoReturn:
+    """总是抛出异常，永不返回。"""
+    raise RuntimeError(message)
+
+
+def infinite_loop() -> NoReturn:
+    """死循环，永不返回。"""
+    while True:
+        pass
+
+
+# Never 是 Python 3.11+ 引入的，语义更精确
+# NoReturn 是 Never 的旧别名
+def unreachable() -> Never:
+    raise AssertionError("这行代码不应该被执行到")
+```
+
+:::note NoReturn 与 Never 的区别
+`NoReturn` 和 `Never` 几乎等价，都表示"函数不正常返回"。`Never`（Python 3.11+，PEP 664）是更现代的写法，语义上更清晰——它表示"该类型没有值"，可用于更广泛的场景（如穷尽检查）。
+:::
+
+## Callable：可调用对象
+
+`Callable` 标注函数、lambda、实现了 `__call__` 的对象等可调用物：
+
+```py
+from typing import Callable
+
+
+# Callable[[参数类型列表], 返回类型]
+def apply(func: Callable[[int, int], int], a: int, b: int) -> int:
+    return func(a, b)
+
+
+print(apply(lambda x, y: x + y, 3, 5))  # 8
+print(apply(max, 3, 5))                  # 5
+
+
+# 不带参数的 Callable：Callable[[], int]
+def get_counter() -> Callable[[], int]:
+    count = 0
+
+    def counter() -> int:
+        nonlocal count
+        count += 1
+        return count
+
+    return counter
+
+
+c = get_counter()
+print(c(), c(), c())  # 1 2 3
+```
+
+### 不限参数的 Callable
+
+`...`（省略号）表示"任意参数签名"：
+
+```py
+# 接受任意参数，返回 int
+def log_and_call(func: Callable[..., int], *args, **kwargs) -> int:
+    print(f"调用 {getattr(func, '__name__', 'callable')}")
+    return func(*args, **kwargs)
+
+
+print(log_and_call(int, "42"))  # 调用 int / 42
+```
+
+:::tip 类也是 Callable
+类本身也是可调用对象（调用类会创建实例）。`Callable[[str, int], Person]` 可以表示一个接收 `str` 和 `int`、返回 `Person` 的类或工厂函数。
+:::
+
+## Iterable、Iterator、Generator
+
+`Iterable` 表示"可迭代对象"（实现了 `__iter__`），`Iterator` 表示"迭代器"（实现了 `__iter__` 和 `__next__`）：
+
+```py
+from typing import Iterable, Iterator
+
+
+def sum_all(numbers: Iterable[int]) -> int:
+    """对任意可迭代对象求和。"""
+    return sum(numbers)
+
+
+print(sum_all([1, 2, 3]))       # 6
+print(sum_all((x for x in range(5))))  # 10
+print(sum_all({1, 2, 3}))        # 6
+
+
+def first(iterator: Iterator[int]) -> int | None:
+    """取迭代器的第一个元素。"""
+    return next(iterator, None)
+
+
+print(first(iter([1, 2, 3])))  # 1
+```
+
+### Generator
+
+`Generator` 标注生成器，签名为 `Generator[YieldType, SendType, ReturnType]`：
+
+```py
+from typing import Generator
+
+
+def counter(start: int, stop: int) -> Generator[int, None, str]:
+    """生成 start 到 stop 的数字，最后返回 "done"。"""
+    for i in range(start, stop):
+        yield i
+    return "done"
+
+
+gen = counter(1, 4)
+print(next(gen))  # 1
+print(next(gen))  # 2
+print(next(gen))  # 3
+# 再 next 会抛 StopIteration("done")
+```
+
+:::note SendType 的含义
+`Generator[Y, S, R]` 中：
+- `Y`：`yield` 表达式产出的值的类型
+- `S`：`send()` 方法传入的值的类型（不用 `send` 则为 `None`）
+- `R`：生成器结束时的返回值类型（`return` 语句的值）
+
+普通的 `yield` 生成器，`SendType` 和 `ReturnType` 通常为 `None`，可简写为 `Generator[int, None, None]`。
+:::
+
+## TypeVar：类型变量
+
+`TypeVar` 用于定义泛型类型变量，让函数的多个参数或返回值共享同一个"占位类型"：
+
+```py
+from typing import TypeVar
+
+
+T = TypeVar("T")
+
+
+def first(items: list[T]) -> T | None:
+    """返回列表第一个元素，保持元素类型。"""
+    return items[0] if items else None
+
+
+print(first([1, 2, 3]))        # 1，类型推断为 int | None
+print(first(["a", "b"]))        # a，类型推断为 str | None
+print(first([3.14, 2.71]))      # 3.14，类型推断为 float | None
+```
+
+:::tip TypeVar 的核心价值
+没有 `TypeVar`，`first` 只能标注为 `list[object] -> object | None`，丢失了"输入列表元素类型与返回值类型一致"的信息。`TypeVar` 让类型检查器能精确追踪这种关系。
+:::
+
+### 受限 TypeVar
+
+`TypeVar` 可以限定取值范围：
+
+```py
+from typing import TypeVar
+
+
+# 只能是 int 或 float
+Number = TypeVar("Number", int, float)
+
+
+def add(a: Number, b: Number) -> Number:
+    return a + b
+
+
+print(add(1, 2))       # 3
+print(add(1.5, 2.5))   # 4.0
+# add("a", "b")  # 类型检查器报错：str 不在 Number 的取值范围
+
+
+# 约束 TypeVar：必须是某个类的子类
+class Animal:
+    def speak(self) -> str:
+        return "..."
+
+
+class Dog(Animal):
+    def speak(self) -> str:
+        return "汪汪"
+
+
+class Cat(Animal):
+    def speak(self) -> str:
+        return "喵喵"
+
+
+A = TypeVar("A", bound=Animal)
+
+
+def make_speak(animal: A) -> A:
+    print(animal.speak())
+    return animal
+
+
+d = make_speak(Dog())  # 返回类型仍是 Dog（而非 Animal）
+print(type(d).__name__)  # Dog
+```
+
+## Generic：泛型类
+
+`Generic` 让自定义类成为泛型类，可以像 `list[T]` 那样使用：
+
+```py
+from typing import Generic, TypeVar
+
+
+T = TypeVar("T")
+
+
+class Stack(Generic[T]):
+    """泛型栈，元素类型由 T 决定。"""
+
+    def __init__(self) -> None:
+        self._items: list[T] = []
+
+    def push(self, item: T) -> None:
+        self._items.append(item)
+
+    def pop(self) -> T:
+        if not self._items:
+            raise IndexError("pop from empty stack")
+        return self._items.pop()
+
+    def peek(self) -> T | None:
+        return self._items[-1] if self._items else None
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+
+# 使用时指定类型参数
+int_stack: Stack[int] = Stack()
+int_stack.push(1)
+int_stack.push(2)
+print(int_stack.pop())  # 2
+
+str_stack: Stack[str] = Stack()
+str_stack.push("hello")
+print(str_stack.pop())  # hello
+```
+
+## ParamSpec（Python 3.10+）
+
+`ParamSpec`（PEP 612）捕获可调用对象的**参数签名**，常用于装饰器类型注解：
+
+```py
+from typing import ParamSpec, TypeVar, Callable
+from functools import wraps
+import time
+
+
+P = ParamSpec("P")  # 参数签名变量
+R = TypeVar("R")     # 返回值变量
+
+
+def timer(func: Callable[P, R]) -> Callable[P, R]:
+    """计时装饰器，保留原函数的参数签名。"""
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        print(f"{func.__name__} 耗时 {elapsed:.6f}s")
+        return result
+    return wrapper
+
+
+@timer
+def add(a: int, b: int) -> int:
+    return a + b
+
+
+@timer
+def greet(name: str, *, greeting: str = "Hello") -> str:
+    return f"{greeting}, {name}"
+
+
+print(add(1, 2))               # add 耗时 ... / 3
+print(greet("Alice", greeting="Hi"))  # greet 耗时 ... / Hi, Alice
+```
+
+:::note ParamSpec 解决的问题
+没有 `ParamSpec`，装饰器只能用 `Callable[..., R]`，会丢失原函数的参数信息——类型检查器无法检查 `add("a", "b")` 这样的错误调用。`ParamSpec` 让装饰器精确转发参数签名，是编写类型安全的装饰器的关键工具。
+:::
+
+## TypeGuard：类型守卫
+
+`TypeGuard` 用于在条件分支中收窄类型（上一节已介绍）。这里展示一个更实用的例子：
+
+```py
+from typing import TypeGuard, Any
+
+
+def is_response_dict(obj: Any) -> TypeGuard[dict[str, object]]:
+    """判断 obj 是否为符合响应格式的字典。"""
+    return (
+        isinstance(obj, dict)
+        and "status" in obj
+        and isinstance(obj["status"], int)
+    )
+
+
+def handle(data: object) -> str:
+    if is_response_dict(data):
+        # 这里 data 被收窄为 dict[str, object]
+        status: int = data["status"]  # 类型检查器知道这是 int
+        return f"状态码：{status}"
+    return "非响应数据"
+
+
+print(handle({"status": 200, "body": "OK"}))  # 状态码：200
+print(handle("hello"))                        # 非响应数据
+```
+
+## Literal：字面量类型
+
+`Literal` 把值本身作为类型，常用于限定参数取值范围：
+
+```py
+from typing import Literal
+
+
+def set_mode(mode: Literal["r", "w", "a"]) -> str:
+    return f"以 {mode} 模式打开"
+
+
+print(set_mode("r"))  # 以 r 模式打开
+# set_mode("x")  # 类型检查器报错：字面量 "x" 不在 Literal["r", "w", "a"] 中
+
+
+# 布尔字面量
+def configure(debug: Literal[True] | None = None) -> None:
+    if debug:
+        print("调试模式开启")
+
+
+configure(True)
+configure(None)
+# configure(False)  # 类型检查器报错
+```
+
+:::tip Literal 的常见用途
+- 限定字符串参数取值（如模式、状态、配置项）
+- 标记"重载分支"（配合 `@overload`）
+- 与 `Enum` 互补——`Literal` 用于少量固定值，`Enum` 用于大量枚举
+:::
+
+## Final：不可变绑定
+
+`Final` 标注"最终"变量——声明后不应重新赋值：
+
+```py
+from typing import Final
+
+
+MAX_CONNECTIONS: Final[int] = 100
+TIMEOUT: Final[float] = 30.0
+APP_NAME: Final[str] = "MyApp"
+
+
+# MAX_CONNECTIONS = 200  # 类型检查器报错：Final 变量不应重新赋值
+
+
+print(f"{APP_NAME}: 最多 {MAX_CONNECTIONS} 连接，超时 {TIMEOUT}s")
+```
+
+`Final` 也可用于类属性，表示子类不应覆盖：
+
+```py
+class Config:
+    VERSION: Final[str] = "1.0.0"
+    MAX_RETRIES: Final[int] = 3
+
+
+class SubConfig(Config):
+    pass
+    # VERSION = "2.0.0"  # 类型检查器报错：不应覆盖 Final 属性
+```
+
+:::note Final 与常量
+`Final` 是类型检查期的"常量"声明，运行时不强制。它告诉类型检查器"这个变量不应被重新赋值"，便于发现意外修改。与 `const`（其他语言）不同，Python 的 `Final` 只约束重新绑定，不约束对象内容——`Final` 的列表仍可 `append`。
+:::
+
+## ClassVar：类变量
+
+`ClassVar` 标注"类变量"——属于类而非实例，不应在实例上设置：
+
+```py
+from typing import ClassVar
+
+
+class Counter:
+    # 类变量：所有实例共享
+    total_created: ClassVar[int] = 0
+    instances: ClassVar[list["Counter"]] = []
+
+    def __init__(self, name: str) -> None:
+        self.name = name  # 实例变量
+        Counter.total_created += 1
+        Counter.instances.append(self)
+
+
+c1 = Counter("first")
+c2 = Counter("second")
+print(Counter.total_created)  # 2
+print([c.name for c in Counter.instances])  # ['first', 'second']
+
+# 类型检查器会警告：不应在实例上设置 ClassVar
+# c1.total_created = 100  # 不推荐
+```
+
+## Protocol：结构化类型
+
+`Protocol`（PEP 544）定义**结构化类型**——鸭子类型的类型化版本。只要对象有相应的方法/属性，就算"实现"了协议，无需继承：
+
+```py
+from typing import Protocol
+
+
+class SupportsClose(Protocol):
+    """有 close() 方法的对象。"""
+    def close(self) -> None: ...
+
+
+def cleanup(resource: SupportsClose) -> None:
+    resource.close()
+
+
+class FileLike:
+    """无需继承 SupportsClose，只要有 close 方法即可。"""
+    def close(self) -> None:
+        print("文件已关闭")
+
+
+class Connection:
+    def close(self) -> None:
+        print("连接已关闭")
+
+
+cleanup(FileLike())    # 文件已关闭
+cleanup(Connection())  # 连接已关闭
+```
+
+:::tip Protocol vs ABC
+`Protocol` 与 `ABC`（抽象基类）都用于定义接口，但机制不同：
+- **ABC**：_nominal typing_，必须显式继承才算是子类
+- **Protocol**：_structural typing_，只要结构匹配就算实现
+
+Protocol 更灵活，特别适合"第三方类适配"——你可以为已有类"声明"协议而无需修改其源码。
+:::
+
+### 带属性的 Protocol
+
+```py
+from typing import Protocol
+
+
+class Named(Protocol):
+    name: str
+
+
+def greet(obj: Named) -> str:
+    return f"Hello, {obj.name}!"
+
+
+class User:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+
+class Animal:
+    name: str = "Rex"
+
+
+print(greet(User("Alice")))  # Hello, Alice!
+print(greet(Animal()))       # Hello, Rex!
+```
+
+### 运行时检查 Protocol
+
+默认情况下 `Protocol` 只用于静态检查。加 `@runtime_checkable` 装饰器后，可以用 `isinstance` 检查：
+
+```py
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable
+class Drawable(Protocol):
+    def draw(self) -> None: ...
+
+
+class Circle:
+    def draw(self) -> None:
+        print("画圆")
+
+
+class Square:
+    def draw(self) -> None:
+        print("画方")
+
+
+print(isinstance(Circle(), Drawable))  # True
+print(isinstance(Square(), Drawable))  # True
+print(isinstance("hello", Drawable))   # False
+```
+
+:::warning runtime_checkable 的局限
+`@runtime_checkable` 的 `isinstance` 检查只验证**方法/属性存在**，不验证签名。它只能检查属性名是否存在，无法检查参数类型或返回类型。复杂协议的运行时检查可能不可靠。
+:::
+
+## TypedDict：类型化字典
+
+`TypedDict`（PEP 589）给字典的每个键标注类型，弥补"普通 dict 类型太宽泛"的问题：
+
+```py
+from typing import TypedDict
+
+
+class User(TypedDict):
+    id: int
+    name: str
+    email: str
+    age: int
+
+
+# 字典字面量会被检查器按 User 结构校验
+user: User = {
+    "id": 1,
+    "name": "Alice",
+    "email": "alice@example.com",
+    "age": 30,
+}
+
+print(user["name"])  # Alice
+# user["id"] = "abc"  # 类型检查器报错：应为 int
+```
+
+### 可选键与 required/NotRequired
+
+```py
+from typing import TypedDict, NotRequired
+
+
+class Article(TypedDict):
+    title: str
+    content: str
+    tags: NotRequired[list[str]]  # 可选键
+
+
+a: Article = {"title": "Hello", "content": "World"}  # 不写 tags 也合法
+print(a)
+```
+
+:::note Python 3.11+ 的 Required/NotRequired
+Python 3.11+ 引入了 `Required` 和 `NotRequired`：
+- 默认所有键都是必需的
+- `NotRequired[X]` 标记可选键
+- 也可用 `total=False` 让整个 TypedDict 的所有键都可选
+
+```py
+class Config(TypedDict, total=False):
+    """所有键都可选。"""
+    host: str
+    port: int
+    debug: bool
+```
+:::
+
+### 函数式写法
+
+`TypedDict` 也可用函数式语法创建：
+
+```py
+from typing import TypedDict
+
+
+Point = TypedDict("Point", {"x": int, "y": int, "label": str})
+
+p: Point = {"x": 1, "y": 2, "label": "origin"}
+print(p)
+```
+
+## Annotated：附加元信息
+
+`Annotated[X, meta]` 在类型之外附加额外元信息，常用于校验、文档、序列化框架：
+
+```py
+from typing import Annotated
+from dataclasses import dataclass
+
+
+# 附加验证信息（需要框架支持，如 pydantic）
+def validate_positive(x: int) -> bool:
+    return x > 0
+
+
+@dataclass
+class Product:
+    name: str
+    price: Annotated[int, "must be positive", validate_positive] = 0
+    quantity: Annotated[int, "range 0-100"] = 0
+
+
+p = Product("Widget", 99, 10)
+print(p)
+print(Product.__annotations__)
+# {'name': <class 'str'>, 'price': typing.Annotated[int, 'must be positive', ...], ...}
+
+
+# 运行时访问附加信息
+from typing import get_type_hints
+
+hints = get_type_hints(Product, include_extras=True)
+print(hints["price"].__metadata__)  # ('must be positive', <function validate_positive>)
+```
+
+:::tip Annotated 的应用场景
+`Annotated` 让类型注解携带额外数据，被各类框架利用：
+- **Pydantic**：`Annotated[int, Field(gt=0)]` 表达"正整数"
+- **FastAPI**：`Annotated[str, Query(max_length=50)]` 表达"URL 查询参数"
+- **cattrs**：自定义反序列化逻辑
+
+运行时通过 `typing.get_type_hints(cls, include_extras=True)` 读取附加的元信息。
+:::
+
+## Python 3.12+ 新特性
+
+### type 语句定义泛型
+
+Python 3.12 的 `type` 语句（PEP 695）支持泛型参数，无需 `TypeVar`：
+
+```py
+# 旧写法
+from typing import TypeVar, Generic
+
+T_old = TypeVar("T_old")
+
+
+class Stack_old(Generic[T_old]):
+    def __init__(self) -> None:
+        self._items: list[T_old] = []
+
+
+# Python 3.12+ 新写法：泛型类直接用 [T]
+class Stack[T]:
+    """泛型栈，无需 TypeVar 和 Generic。"""
+    def __init__(self) -> None:
+        self._items: list[T] = []
+
+    def push(self, item: T) -> None:
+        self._items.append(item)
+
+    def pop(self) -> T:
+        return self._items.pop()
+
+
+s = Stack[int]()
+s.push(1)
+print(s.pop())  # 1
+
+
+# 泛型函数也支持
+def first[T](items: list[T]) -> T | None:
+    return items[0] if items else None
+
+
+print(first([1, 2, 3]))  # 1
+
+
+# 泛型类型别名
+type Pair[T] = tuple[T, T]
+p: Pair[str] = ("hello", "world")
+print(p)
+```
+
+:::info PEP 695 的革命性
+Python 3.12（PEP 695）引入的 `type` 语句和泛型类语法，让 Python 的泛型表达接近 Rust/Haskell 的简洁程度。关键变化：
+1. 泛型类：`class Stack[T]:` 直接声明类型参数
+2. 泛型函数：`def first[T](items: list[T]):` 直接声明
+3. 泛型类型别名：`type Pair[T] = tuple[T, T]`
+
+这些新语法无需导入 `TypeVar` 和 `Generic`，更简洁直观。
+:::
+
+## 实战：通用容器类
+
+下面实现一个类型安全的通用容器，综合运用 `Generic`、`TypeVar`、`Protocol`、`Literal` 等工具：
+
+```py
+from __future__ import annotations
+from typing import Protocol, TypeVar, Generic, Literal, overload
+from dataclasses import dataclass, field
+
+
+class Comparable(Protocol):
+    """可比较的对象（支持 < 运算）。"""
+    def __lt__(self, other: object) -> bool: ...
+
+
+T = TypeVar("T", bound=Comparable)
+
+
+@dataclass
+class SortedList(Generic[T]):
+    """始终保持有序的列表。"""
+    _items: list[T] = field(default_factory=list)
+    order: Literal["asc", "desc"] = "asc"
+
+    def add(self, item: T) -> None:
+        """插入并保持有序。"""
+        pos = 0
+        if self.order == "asc":
+            while pos < len(self._items) and self._items[pos] < item:
+                pos += 1
+        else:
+            # 降序：找到第一个不小于 item 的位置
+            while pos < len(self._items) and item < self._items[pos]:
+                pos += 1
+        self._items.insert(pos, item)
+
+    @overload
+    def get(self, index: int) -> T: ...
+    @overload
+    def get(self, index: slice) -> list[T]: ...
+    def get(self, index: int | slice) -> T | list[T]:
+        """按索引获取元素。"""
+        return self._items[index]
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def __iter__(self):
+        return iter(self._items)
+
+    def __repr__(self) -> str:
+        return f"SortedList({self._items!r}, order={self.order!r})"
+
+
+# 使用：整数升序列表
+asc_list: SortedList[int] = SortedList(order="asc")
+for n in [5, 2, 8, 1, 9, 3]:
+    asc_list.add(n)
+
+print(asc_list)              # SortedList([1, 2, 3, 5, 8, 9], order='asc')
+print(asc_list.get(0))       # 1
+print(asc_list.get(1:4))     # [2, 3, 5]
+
+
+# 使用：字符串降序列表
+desc_list: SortedList[str] = SortedList(order="desc")
+for s in ["apple", "banana", "cherry", "date"]:
+    desc_list.add(s)
+
+print(desc_list)  # SortedList(['date', 'cherry', 'banana', 'apple'], order='desc')
+print(list(desc_list))
+
+
+# 使用：自定义可比较类
+@dataclass(order=True)
+class Priority:
+    level: int
+    name: str = ""
+
+
+pq: SortedList[Priority] = SortedList(order="asc")
+pq.add(Priority(3, "low"))
+pq.add(Priority(1, "high"))
+pq.add(Priority(2, "mid"))
+
+for p in pq:
+    print(p)
+# Priority(level=1, name='high')
+# Priority(level=2, name='mid')
+# Priority(level=3, name='low')
+```
+
+:::tip @overload 实现重载
+`@overload` 装饰器用于声明**多个类型签名**，帮助类型检查器理解函数在不同参数下的不同返回类型。实际运行的是最后一个未带 `@overload` 的实现。上例中 `get(0)` 返回 `T`，`get(1:4)` 返回 `list[T]`——这种"参数类型决定返回类型"的场景正是 `@overload` 的用武之地。
+:::
+
+## 小结
+
+- `Any` 放弃类型检查，应优先用 `object`；`NoReturn`/`Never` 标注永不返回的函数。
+- `Callable[[参数], 返回]` 标注可调用对象；`Callable[..., R]` 表示任意参数。
+- `Iterable`/`Iterator`/`Generator` 标注迭代相关类型。
+- `TypeVar` 定义类型变量，`Generic` 定义泛型类；`bound` 限定子类，受限 `TypeVar` 限定取值。
+- `ParamSpec`（Python 3.10+）捕获参数签名，是装饰器类型注解的关键。
+- `Literal` 表达字面量类型；`Final` 标注不可变绑定；`ClassVar` 标注类变量。
+- `Protocol` 定义结构化类型（鸭子类型的类型化）；`TypedDict` 类型化字典。
+- `Annotated` 在类型之外附加元信息，被 Pydantic/FastAPI 等框架利用。
+- Python 3.12+ 的 `type` 语句和泛型类语法（PEP 695）让泛型表达更简洁。
+
+下一节将学习异步编程——`async`/`await`、`asyncio`、协程与 TaskGroup。

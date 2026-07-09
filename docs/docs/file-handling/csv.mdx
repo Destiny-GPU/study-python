@@ -1,0 +1,497 @@
+---
+sidebar_position: 4
+sidebar_label: 'CSV 处理'
+title: CSV 处理
+description: 使用标准库 csv 模块读写 CSV 文件，掌握 reader/writer、DictReader/DictWriter、分隔符与引号规则，以及与 pandas 的对比。
+---
+
+# CSV 处理
+
+CSV（Comma-Separated Values，逗号分隔值）是最简单的表格数据格式，被 Excel、数据库导出工具、数据科学工具广泛支持。Python 标准库的 `csv` 模块能正确处理各种边界情况（引号、换行、特殊字符），比手写 `split(',')` 可靠得多。本章带你全面掌握 CSV 的读写。
+
+## 为什么不直接 split(',')？
+
+CSV 看似简单，但藏着不少陷阱：
+
+```csv
+name,age,note
+张三,30,"你好,世界"
+李四,25,"包含""引号"""
+```
+
+如果直接 `line.split(',')`，会得到错误的字段：
+
+```py
+# 错误做法
+line = '张三,30,"你好,世界"'
+print(line.split(','))
+# ['张三', '30', '"你好', '世界"']   ← 字段被错误切分！
+```
+
+`csv` 模块会按 RFC 4180 标准正确解析引号和转义：
+
+```py
+import csv
+
+with open('data.csv', encoding='utf-8') as f:
+    for row in csv.reader(f):
+        print(row)
+# ['name', 'age', 'note']
+# ['张三', '30', '你好,世界']
+# ['李四', '25', '包含"引号"']
+```
+
+:::warning 别再写 split(',')
+任何稍微正式一点的 CSV 都可能包含引号、逗号、换行符。**永远使用 `csv` 模块**，不要用 `str.split(',')`。
+:::
+
+## csv.reader：读取
+
+`csv.reader` 把每一行解析成一个列表：
+
+```py
+import csv
+
+# 写一个示例文件
+with open('users.csv', 'w', encoding='utf-8', newline='') as f:
+    f.write('name,age,city\n')
+    f.write('张三,30,北京\n')
+    f.write('李四,25,上海\n')
+
+# 读取
+with open('users.csv', encoding='utf-8', newline='') as f:
+    reader = csv.reader(f)
+    headers = next(reader)  # 第一行通常是表头
+    print(headers)  # ['name', 'age', 'city']
+
+    for row in reader:
+        name, age, city = row
+        print(f'{name} {age}岁 来自{city}')
+```
+
+输出：
+
+```text
+['name', 'age', 'city']
+张三 30岁 来自北京
+李四 25岁 来自上海
+```
+
+:::note 为什么要加 newline=''？
+CSV 文件在写入时如果用默认的 `newline` 行为，Windows 上会出现 `\r\r\n` 这种多余换行。**打开 CSV 文件时统一加 `newline=''`**，让 `csv` 模块自己处理换行符。这是官方文档明确推荐的做法。
+:::
+
+## csv.writer：写入
+
+`csv.writer` 提供 `writerow()` 和 `writerows()` 两个方法：
+
+```py
+import csv
+
+rows = [
+    ['name', 'age', 'city'],
+    ['张三', 30, '北京'],
+    ['李四', 25, '上海'],
+    ['王五', 28, '广州'],
+]
+
+with open('users.csv', 'w', encoding='utf-8', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(rows[0])         # 写一行
+    writer.writerows(rows[1:])        # 写多行
+```
+
+生成的 `users.csv`：
+
+```csv
+name,age,city
+张三,30,北京
+李四,25,上海
+王五,28,广州
+```
+
+:::tip 自动类型转换
+`csv.writer` 会自动调用 `str()` 把数字、布尔值等转成字符串，不需要手动处理。
+:::
+
+## csv.DictReader：按字典读取
+
+`DictReader` 把每一行解析成 `dict`，键是表头。这是处理带表头 CSV 的**推荐方式**，代码可读性更好：
+
+```py
+import csv
+
+with open('users.csv', encoding='utf-8', newline='') as f:
+    reader = csv.DictReader(f)
+    print(reader.fieldnames)  # ['name', 'age', 'city']
+
+    for row in reader:
+        # row 是 dict，可以直接用字段名访问
+        print(f"{row['name']}: {row['age']}岁, 来自{row['city']}")
+```
+
+输出：
+
+```text
+['name', 'age', 'city']
+张三: 30岁, 来自北京
+李四: 25岁, 来自上海
+王五: 28岁, 来自广州
+```
+
+## csv.DictWriter：按字典写入
+
+`DictWriter` 用字段名列表初始化，写入时传 dict：
+
+```py
+import csv
+
+fields = ['name', 'age', 'city']
+rows = [
+    {'name': '张三', 'age': 30, 'city': '北京'},
+    {'name': '李四', 'age': 25, 'city': '上海'},
+    {'name': '王五', 'age': 28, 'city': '广州'},
+]
+
+with open('users.csv', 'w', encoding='utf-8', newline='') as f:
+    writer = csv.DictWriter(f, fieldnames=fields)
+    writer.writeheader()      # 写表头
+    writer.writerows(rows)   # 写数据行
+```
+
+:::warning 字段名必须匹配
+`DictWriter` 默认会严格检查字典的键。如果字典里有不在 `fieldnames` 中的键，会抛出 `ValueError`。可以用 `extrasaction='ignore'` 来忽略多余字段：
+
+```py
+writer = csv.DictWriter(f, fieldnames=fields, extrasaction='ignore')
+```
+:::
+
+如果字典缺少某个字段，默认会写空字符串。可以用 `restval` 指定默认值：
+
+```py
+writer = csv.DictWriter(f, fieldnames=['name', 'age', 'city'], restval='未知')
+```
+
+## 分隔符与引号
+
+CSV 不止逗号一种分隔符。`csv` 模块支持通过 `dialect` 或单独参数控制：
+
+```py
+import csv
+
+# TSV（Tab-Separated Values）
+with open('data.tsv', 'w', encoding='utf-8', newline='') as f:
+    writer = csv.writer(f, delimiter='\t')
+    writer.writerow(['name', 'age'])
+    writer.writerow(['张三', 30])
+
+# 分号分隔（Excel 中文版导出的默认格式）
+with open('data.csv', 'w', encoding='utf-8', newline='') as f:
+    writer = csv.writer(f, delimiter=';')
+    writer.writerow(['name', 'age'])
+    writer.writerow(['张三', 30])
+```
+
+### quoting 参数
+
+控制何时给字段加引号，常用取值：
+
+| 取值 | 含义 |
+| --- | --- |
+| `csv.QUOTE_MINIMAL`（默认） | 仅在必要时（包含分隔符、引号、换行）加引号 |
+| `csv.QUOTE_ALL` | 所有字段都加引号 |
+| `csv.QUOTE_NONNUMERIC` | 非数字字段加引号；读取时数字自动转 `float` |
+| `csv.QUOTE_NONE` | 不加引号（不推荐，遇到特殊字符会出错） |
+
+```py
+import csv
+
+rows = [['name', 'note'], ['张三', 'hello, world']]
+
+# QUOTE_MINIMAL（默认）：只有含逗号的字段加引号
+with open('minimal.csv', 'w', encoding='utf-8', newline='') as f:
+    csv.writer(f, quoting=csv.QUOTE_MINIMAL).writerows(rows)
+# name,note
+# 张三,"hello, world"
+
+# QUOTE_ALL：全部加引号
+with open('all.csv', 'w', encoding='utf-8', newline='') as f:
+    csv.writer(f, quoting=csv.QUOTE_ALL).writerows(rows)
+# "name","note"
+# "张三","hello, world"
+
+# QUOTE_NONNUMERIC：读取时数字自动转 float
+with open('numeric.csv', 'w', encoding='utf-8', newline='') as f:
+    csv.writer(f, quoting=csv.QUOTE_NONNUMERIC).writerows([['a', 'b'], ['1', '2']])
+
+with open('numeric.csv', encoding='utf-8', newline='') as f:
+    reader = csv.reader(f, quoting=csv.QUOTE_NONNUMERIC)
+    next(reader)  # 跳过表头
+    for row in reader:
+        print(row, [type(x).__name__ for x in row])
+# [1.0, 2.0] ['float', 'float']
+```
+
+:::note Excel 中文版的坑
+Excel 中文版导出的 CSV 默认用 **GBK 编码 + 分号分隔**。读取这种文件要这样写：
+
+```py
+with open('excel.csv', encoding='gbk', newline='') as f:
+    reader = csv.reader(f, delimiter=';')
+```
+
+如果是 UTF-8 BOM 编码（开头有 `\ufeff`），用 `utf-8-sig` 编码打开：
+
+```py
+with open('excel.csv', encoding='utf-8-sig', newline='') as f:
+    ...
+```
+:::
+
+### dialect：复用配置
+
+如果多处用相同的 CSV 配置，可以注册一个 dialect：
+
+```py
+import csv
+
+# 注册一个 Excel 中文版风格的 dialect
+csv.register_dialect(
+    'excel_zh',
+    delimiter=';',
+    encoding='gbk',  # 注意：encoding 不在 dialect 里，要在 open() 里指定
+    quoting=csv.QUOTE_MINIMAL,
+)
+
+with open('data.csv', 'w', encoding='gbk', newline='') as f:
+    writer = csv.writer(f, dialect='excel_zh')
+    writer.writerow(['姓名', '年龄'])
+    writer.writerow(['张三', 30])
+```
+
+## 读取大 CSV 的技巧
+
+`csv.reader` 和 `csv.DictReader` 都是惰性迭代器，**不会一次性把整个文件读入内存**。处理大文件时直接迭代即可：
+
+```py
+import csv
+
+def process_large_csv(path: str, target_city: str) -> int:
+    """统计大 CSV 中指定城市的记录数。"""
+    count = 0
+    with open(path, encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row['city'] == target_city:
+                count += 1
+    return count
+```
+
+如果需要分批处理，可以用 `itertools.islice`：
+
+```py
+import csv
+from itertools import islice
+
+def iter_batches(path: str, batch_size: int = 1000):
+    """按批次读取 CSV 行。"""
+    with open(path, encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f)
+        while batch := list(islice(reader, batch_size)):
+            yield batch
+
+for batch in iter_batches('big.csv', batch_size=500):
+    print(f'处理一批 {len(batch)} 条')
+```
+
+## 与 pandas 对比
+
+`pandas` 是数据分析领域的标准工具，它的 `read_csv` / `to_csv` 功能比标准库 `csv` 模块强大得多：
+
+```py
+# pip install pandas
+import pandas as pd
+
+# 一行读取
+df = pd.read_csv('users.csv', encoding='utf-8')
+print(df.head())        # 预览前 5 行
+print(df['age'].mean())  # 直接算平均年龄
+print(df[df['age'] > 26])  # 直接筛选
+
+# 写入
+df.to_csv('output.csv', index=False, encoding='utf-8')
+```
+
+### 何时用 csv 模块，何时用 pandas？
+
+| 场景 | 推荐工具 |
+| --- | --- |
+| 流式处理 GB 级 CSV，逐行处理 | `csv` 模块 |
+| 写脚本工具，不想引入重依赖 | `csv` 模块 |
+| 需要做筛选、聚合、分组统计 | `pandas` |
+| CSV 中含混合类型、需要类型推断 | `pandas` |
+| 部署到嵌入式/受限环境 | `csv` 模块 |
+| 数据分析与可视化 | `pandas` |
+
+:::tip 体积差异
+`pandas` 安装包超过 50MB（依赖 numpy 等），而 `csv` 是标准库零依赖。如果只是简单地读写几行 CSV，没必要为此引入整个数据科学栈。
+:::
+
+## 实战：学生成绩表处理
+
+我们来做一个完整的实战：读取一份学生成绩 CSV，计算总分和排名，输出到新的 CSV。
+
+输入文件 `scores.csv`：
+
+```csv
+学号,姓名,语文,数学,英语
+1001,张三,85,92,78
+1002,李四,90,88,95
+1003,王五,72,80,68
+1004,赵六,95,98,92
+1005,钱七,60,75,82
+```
+
+```py
+import csv
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass
+class Score:
+    """学生成绩。"""
+    student_id: str
+    name: str
+    chinese: int
+    math: int
+    english: int
+
+    @property
+    def total(self) -> int:
+        return self.chinese + self.math + self.english
+
+    @property
+    def average(self) -> float:
+        return round(self.total / 3, 2)
+
+
+def load_scores(path: str | Path) -> list[Score]:
+    """从 CSV 读取学生成绩。"""
+    scores: list[Score] = []
+    with open(path, encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            scores.append(Score(
+                student_id=row['学号'],
+                name=row['姓名'],
+                chinese=int(row['语文']),
+                math=int(row['数学']),
+                english=int(row['英语']),
+            ))
+    return scores
+
+
+def save_ranking(scores: list[Score], path: str | Path) -> None:
+    """按总分降序输出排名到 CSV。"""
+    ranked = sorted(scores, key=lambda s: -s.total)
+
+    fieldnames = ['排名', '学号', '姓名', '语文', '数学', '英语', '总分', '平均分']
+    with open(path, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for rank, s in enumerate(ranked, start=1):
+            writer.writerow({
+                '排名': rank,
+                '学号': s.student_id,
+                '姓名': s.name,
+                '语文': s.chinese,
+                '数学': s.math,
+                '英语': s.english,
+                '总分': s.total,
+                '平均分': s.average,
+            })
+
+
+def print_summary(scores: list[Score]) -> None:
+    """打印统计摘要。"""
+    n = len(scores)
+    avg_total = sum(s.total for s in scores) / n
+    best = max(scores, key=lambda s: s.total)
+    worst = min(scores, key=lambda s: s.total)
+
+    print(f'共 {n} 名学生')
+    print(f'平均总分：{avg_total:.2f}')
+    print(f'最高分：{best.name}（{best.total} 分）')
+    print(f'最低分：{worst.name}（{worst.total} 分）')
+
+
+if __name__ == '__main__':
+    # 准备输入文件
+    input_path = Path('scores.csv')
+    input_path.write_text(
+        '学号,姓名,语文,数学,英语\n'
+        '1001,张三,85,92,78\n'
+        '1002,李四,90,88,95\n'
+        '1003,王五,72,80,68\n'
+        '1004,赵六,95,98,92\n'
+        '1005,钱七,60,75,82\n',
+        encoding='utf-8',
+    )
+
+    # 处理
+    scores = load_scores(input_path)
+    print_summary(scores)
+    print()
+    save_ranking(scores, 'ranking.csv')
+
+    # 显示结果
+    print('排名结果：')
+    with open('ranking.csv', encoding='utf-8', newline='') as f:
+        for row in csv.reader(f):
+            print('  '.join(row))
+```
+
+输出：
+
+```text
+共 5 名学生
+平均总分：248.80
+最高分：赵六（285 分）
+最低分：王五（220 分）
+
+排名结果：
+排名  学号  姓名  语文  数学  英语  总分  平均分
+1  1004  赵六  95  98  92  285  95.0
+2  1002  李四  90  88  95  273  91.0
+3  1001  张三  85  92  78  255  85.0
+4  1005  钱七  60  75  82  217  72.33
+5  1003  王五  72  80  68  220  73.33
+```
+
+生成的 `ranking.csv`：
+
+```csv
+排名,学号,姓名,语文,数学,英语,总分,平均分
+1,1004,赵六,95,98,92,285,95.0
+2,1002,李四,90,88,95,273,91.0
+3,1001,张三,85,92,78,255,85.0
+4,1005,钱七,60,75,82,217,72.33
+5,1003,王五,72,80,68,220,73.33
+```
+
+:::info 字段顺序很重要
+`DictWriter` 输出的列顺序由 `fieldnames` 决定，与字典的插入顺序无关。**显式列出字段名**可以保证 CSV 的列顺序稳定，方便下游处理。
+:::
+
+## 小结
+
+- **永远用 `csv` 模块**，不要手写 `split(',')`，否则会被引号、逗号、换行符坑到。
+- 打开 CSV 文件**统一加 `newline=''`**，避免 Windows 上的换行符问题。
+- `csv.reader` / `csv.writer` 按列表处理；`csv.DictReader` / `csv.DictWriter` 按 dict 处理，**带表头的 CSV 推荐用 dict 版本**。
+- 分隔符用 `delimiter`，引号行为用 `quoting`；Excel 中文版要小心 GBK 编码 + 分号分隔。
+- 大文件直接迭代 `csv.reader` 即可，内存友好；要分批处理可用 `itertools.islice`。
+- 数据分析选 `pandas`，简单脚本与流式处理选 `csv` 模块。
+
+到这里，文件与 IO 章节就结束了。你已经掌握了文件读写、路径处理、JSON 和 CSV——这四样工具足以应对 90% 的日常数据读写需求。

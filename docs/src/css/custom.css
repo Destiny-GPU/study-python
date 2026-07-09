@@ -1,30 +1,173 @@
 /**
  * Any CSS included here will be global. The classic template
  * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * work well with content-centric websites.
  */
 
-/* You can override the default Infima variables here. */
+/* Python 风格配色：以 Python 官方蓝色 #3776AB 为主色 */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: #3776ab;
+  --ifm-color-primary-dark: #2f6694;
+  --ifm-color-primary-darker: #2c5f8a;
+  --ifm-color-primary-darkest: #244e72;
+  --ifm-color-primary-light: #4a87b9;
+  --ifm-color-primary-lighter: #5390c0;
+  --ifm-color-primary-lightest: #6ba3cc;
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(55, 118, 171, 0.1);
+  /* Python 黄作为辅助色 */
+  --python-yellow: #ffd43b;
+  --python-yellow-dark: #f7c325;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* 暗色模式使用更柔和的蓝绿 */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #4d9de0;
+  --ifm-color-primary-dark: #3d8bcc;
+  --ifm-color-primary-darker: #3983c4;
+  --ifm-color-primary-darkest: #2e6ca1;
+  --ifm-color-primary-light: #63acdf;
+  --ifm-color-primary-lighter: #6fb2e2;
+  --ifm-color-primary-lightest: #8fc2e8;
+  --docusaurus-highlighted-code-line-bg: rgba(77, 157, 224, 0.2);
+}
+
+/* 首页 hero 区域强化样式 */
+.heroBanner {
+  background: linear-gradient(135deg, #3776ab 0%, #2c5f8a 50%, #1e4a73 100%);
+  color: #fff;
+  padding: 5rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 212, 59, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.heroBanner .hero__title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.heroBanner .hero__subtitle {
+  font-size: 1.3rem;
+  opacity: 0.95;
+  margin-bottom: 2rem;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 3rem 1rem;
+  }
+  .heroBanner .hero__title {
+    font-size: 2.2rem;
+  }
+  .heroBanner .hero__subtitle {
+    font-size: 1.1rem;
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* 特性卡片样式 */
+.features {
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+  width: 100%;
+}
+
+.featureSvg {
+  height: 120px;
+  width: 120px;
+}
+
+.featureEmoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.featureCard {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  height: 100%;
+  transition: all 0.25s ease;
+  background: var(--ifm-card-background-color, var(--ifm-background-color));
+}
+
+.featureCard:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(55, 118, 171, 0.15);
+}
+
+/* 学习路径区块 */
+.learningPath {
+  padding: 3rem 0;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.pathStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.pathStep:hover {
+  background: var(--ifm-color-emphasis-200);
+}
+
+.pathStepNumber {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ifm-color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* 统计数据区 */
+.statsSection {
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.statNumber {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--ifm-color-primary);
+  display: block;
+}
+
+.statLabel {
+  font-size: 0.95rem;
+  color: var(--ifm-color-emphasis-600);
+  margin-top: 0.25rem;
 }

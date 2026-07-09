@@ -1,0 +1,659 @@
+---
+sidebar_position: 6
+sidebar_label: '数据类'
+title: 数据类
+description: 学习 @dataclass 装饰器、字段默认值、field(default_factory)、frozen、slots、kw_only、__post_init__ 以及与 NamedTuple 的对比。
+---
+
+# 数据类
+
+数据类（dataclass）是 Python 3.7 引入、并由 `dataclasses` 模块提供的装饰器，用于**自动生成**以数据存储为主的类的样板代码：`__init__`、`__repr__`、`__eq__` 等。当我们需要一个"装数据的容器"时，数据类能比手写类省去大量重复样板，并自带合理的默认行为。Python 3.10+ 又为数据类增加了 `slots`、`kw_only` 等更现代的特性。
+
+## 基本用法：`@dataclass`
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+
+p = Point(3, 4)
+print(p)              # 输出：Point(x=3.0, y=4.0)  ← 自动生成 __repr__
+print(p == Point(3, 4))  # 输出：True              ← 自动生成 __eq__
+print(p == Point(3, 5))  # 输出：False
+```
+
+`@dataclass` 默认会自动生成以下方法（如果未显式定义）：
+
+| 方法           | 默认行为                                       |
+|----------------|------------------------------------------------|
+| `__init__`     | 按声明顺序生成构造器                           |
+| `__repr__`     | 形如 `Point(x=3.0, y=4.0)`                    |
+| `__eq__`       | 按所有字段比较（生成 `__eq__`，并把 `__hash__` 设为 None） |
+| `__str__`      | 回退到 `__repr__`                              |
+
+:::note 类型注解是必须的
+数据类的字段**必须**有类型注解（如 `x: float`）。没有注解的赋值会被当作类属性，不进入 `__init__`：
+```py
+@dataclass
+class Bad:
+    x = 1  # 这是类属性，不是字段！__init__ 不会有 x 参数
+```
+:::
+
+## 字段默认值
+
+带默认值的字段必须放在没有默认值的字段**后面**（与函数参数规则一致）：
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass
+class User:
+    name: str
+    age: int = 18              # 默认值
+    email: str = "unknown"     # 默认值
+
+
+u1 = User("Alice")
+u2 = User("Bob", 25)
+u3 = User("Charlie", 30, "charlie@example.com")
+print(u1)  # 输出：User(name='Alice', age=18, email='unknown')
+print(u3)  # 输出：User(name='Charlie', age=30, email='charlie@example.com')
+```
+
+:::warning 可变默认值陷阱
+**不能**用可变对象（list、dict、set）作为默认值，否则所有实例会共享同一个对象：
+
+```py
+@dataclass
+class Bad:
+    items: list = []  # ValueError: mutable default ... is not allowed
+```
+
+这是 Python 为了避免经典"可变默认参数"陷阱而强制的限制。
+:::
+
+## `field(default_factory=...)`：可变默认值
+
+用 `field(default_factory=callable)` 让每次创建实例时调用 `callable()` 生成新对象：
+
+```py
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Student:
+    name: str
+    age: int = 18
+    scores: list[float] = field(default_factory=list)  # 每次新建空列表
+    tags: set[str] = field(default_factory=set)
+
+s1 = Student("Alice")
+s2 = Student("Bob")
+s1.scores.append(90)
+s2.scores.append(80)
+print(s1.scores)  # 输出：[90]  ← 各自独立
+print(s2.scores)  # 输出：[80]
+```
+
+### `field` 的其他参数
+
+```py
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Product:
+    name: str
+    price: float
+    # default_factory：用于可变默认值
+    tags: list[str] = field(default_factory=list)
+    # repr=False：在 __repr__ 中隐藏（如密码、敏感数据）
+    secret: str = field(default="", repr=False)
+    # compare=False：不参与 __eq__ 比较
+    internal_id: int = field(default=0, compare=False)
+    # init=False：不进入 __init__，由 __post_init__ 或其他逻辑赋值
+    display_name: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        # init=False 的字段在这里赋值
+        self.display_name = f"{self.name}（￥{self.price:.2f}）"
+
+
+p = Product("键盘", 199.0, tags=["外设", "电子"], secret="confidential")
+print(p)
+# 输出：Product(name='键盘', price=199.0, tags=['外设', '电子'], internal_id=0, display_name='键盘（￥199.00）')
+# secret 因 repr=False 被隐藏
+
+p1 = Product("A", 10.0, internal_id=1)
+p2 = Product("A", 10.0, internal_id=999)
+print(p1 == p2)  # 输出：True（internal_id 因 compare=False 被忽略）
+```
+
+:::tip field 常用参数
+- `default`：不可变默认值
+- `default_factory`：可变默认值工厂
+- `init`（默认 True）：是否进入 `__init__`
+- `repr`（默认 True）：是否出现在 `__repr__`
+- `compare`（默认 True）：是否参与 `__eq__`/`__lt__`
+- `hash`（默认 None）：跟随 compare；设为 True/False 可单独控制
+- `metadata`：附加元数据字典，供第三方工具使用
+:::
+
+## `@dataclass` 的参数
+
+```py
+@dataclass(
+    init=True,        # 生成 __init__（默认 True）
+    repr=True,        # 生成 __repr__（默认 True）
+    eq=True,          # 生成 __eq__（默认 True）
+    order=False,      # 生成 __lt__/__le__/__gt__/__ge__（默认 False）
+    unsafe_hash=False,  # 强制生成 __hash__（默认 False）
+    frozen=False,     # 实例不可变（默认 False）
+    match_args=True,  # 生成 __match_args__（3.10+，默认 True）
+    kw_only=False,    # 字段仅关键字参数（3.10+，默认 False）
+    slots=False,      # 生成 __slots__（3.10+，默认 False）
+    weakref_slot=False,  # 添加 __weakref__ 槽位（3.11+，默认 False）
+)
+class Cfg: ...
+```
+
+### `order=True`：自动生成比较方法
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass(order=True)
+class Priority:
+    level: int
+    name: str = ""
+
+
+tasks = [
+    Priority(3, "低"),
+    Priority(1, "高"),
+    Priority(2, "中"),
+]
+for t in sorted(tasks):
+    print(t)
+# 输出：
+# Priority(level=1, name='高')
+# Priority(level=2, name='中')
+# Priority(level=3, name='低')
+```
+
+:::warning order 比较顺序
+`order=True` 按字段声明顺序比较（元组式比较）。如果想让某字段不参与排序，用 `field(compare=False)`。
+:::
+
+## `frozen=True`：不可变数据类
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Color:
+    r: int
+    g: int
+    b: int
+
+
+c = Color(255, 128, 0)
+print(c)  # 输出：Color(r=255, g=128, b=0)
+
+# c.r = 100  # FrozenInstanceError: cannot assign to field 'r'
+
+# frozen 数据类自动可哈希（因为 __hash__ 不被设为 None）
+print(hash(c))  # 输出：某个整数
+print(c in {Color(255, 128, 0), Color(0, 0, 0)})  # 输出：True
+```
+
+:::tip 何时用 frozen？
+- 当数据类表示**值对象**（如颜色、坐标、金额、日期）时用 `frozen=True`
+- 需要把实例放入集合、用作字典键时用 `frozen=True`
+- 多线程/并发场景下，不可变对象更安全
+:::
+
+:::warning frozen 字段仍可被内部可变对象修改
+`frozen` 只阻止**重新赋值字段**，不能阻止字段引用的可变对象被修改：
+
+```py
+@dataclass(frozen=True)
+class Box:
+    items: list[int] = field(default_factory=list)
+
+b = Box()
+# b.items = []  # FrozenInstanceError
+b.items.append(1)  # OK！items 列表本身是可变的
+```
+
+要真正不可变，字段也得是不可变类型（tuple、frozenset 等）。
+:::
+
+## `slots=True`（Python 3.10+）
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class Point:
+    x: float
+    y: float
+
+
+p = Point(3, 4)
+# p.z = 5  # AttributeError: 'Point' object has no attribute 'z'
+# 没有 __dict__，节省内存
+# print(p.__dict__)  # AttributeError
+```
+
+`slots=True` 自动生成 `__slots__`，相比手动声明更省事，且与数据类机制完美兼容。
+
+:::note slots 的注意事项
+- `slots=True` 时不能给实例动态添加属性
+- 子类如果也想要 slots，需要继续声明 `@dataclass(slots=True)`
+- 想同时支持弱引用，加 `weakref_slot=True`（Python 3.11+）
+:::
+
+## `kw_only=True`（Python 3.10+）
+
+让所有字段只能通过关键字参数传入，避免"位置参数顺序混乱"问题：
+
+```py
+from dataclasses import dataclass, field
+
+
+@dataclass
+class User:
+    id: int
+    name: str
+    email: str = ""
+    is_active: bool = True
+
+# 传统方式：位置参数容易写错
+# User(1, "Alice", True, "alice@example.com")  ← 把 True 当成 email！
+
+@dataclass(kw_only=True)
+class UserKW:
+    id: int
+    name: str
+    email: str = ""
+    is_active: bool = True
+
+
+# UserKW(1, "Alice")  # TypeError: 必须用关键字参数
+u = UserKW(id=1, name="Alice", email="a@example.com", is_active=False)
+print(u)  # 输出：UserKW(id=1, name='Alice', email='a@example.com', is_active=False)
+```
+
+### 单字段 `kw_only`
+
+也可以只让部分字段成为关键字参数（用 `field(kw_only=True)`）：
+
+```py
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Server:
+    host: str
+    port: int = 80
+    timeout: float = field(default=30.0, kw_only=True)
+    retries: int = field(default=3, kw_only=True)
+
+
+s = Server("localhost", 8080, timeout=10.0, retries=5)
+# s = Server("localhost", 8080, 10.0, 5)  # TypeError（后两个必须用关键字）
+print(s)
+```
+
+## `__post_init__`：初始化后的钩子
+
+`__init__` 自动生成后，`__post_init__` 会在最后被调用，常用于派生字段、参数校验、初始化非字段属性：
+
+```py
+from dataclasses import dataclass, field
+from datetime import date
+
+
+@dataclass
+class Person:
+    name: str
+    birth_year: int
+    # init=False 的派生字段
+    age: int = field(init=False)
+    # 普通字段
+    created_at: date = field(default_factory=date.today)
+
+    def __post_init__(self) -> None:
+        # 校验
+        if self.birth_year < 1900 or self.birth_year > date.today().year:
+            raise ValueError(f"非法出生年份：{self.birth_year}")
+        # 计算派生字段
+        self.age = date.today().year - self.birth_year
+
+
+p = Person("Alice", 1995)
+print(p)  # 输出：Person(name='Alice', birth_year=1995, age=..., created_at=...)
+print(p.age)  # 输出：根据当前年份计算
+
+# Person("Bob", 1800)  # ValueError
+```
+
+### `InitVar`：仅用于 `__post_init__` 的参数
+
+`InitVar` 声明的字段会进入 `__init__`，但**不会**成为实例属性，只传给 `__post_init__`：
+
+```py
+from dataclasses import dataclass, field, InitVar
+
+
+@dataclass
+class DatabaseConfig:
+    host: str
+    port: int
+    # 仅初始化参数，不存储为属性
+    password: InitVar[str] = ""
+
+    # __post_init__ 接收所有 InitVar
+    def __post_init__(self, password: str) -> None:
+        # 用 password 做点事，但不保存明文
+        self._auth_token = hash(f"{self.host}:{password}") if password else 0
+
+
+cfg = DatabaseConfig("localhost", 5432, password="secret")
+print(cfg)  # 输出：DatabaseConfig(host='localhost', port=5432)
+# password 不在 repr 中，也不作为属性存在
+# print(cfg.password)  # AttributeError
+```
+
+## 与 `NamedTuple` 对比
+
+`typing.NamedTuple` 也能"装数据"，且本质是 `tuple` 子类——不可变、可索引、可解包：
+
+```py
+from typing import NamedTuple
+from dataclasses import dataclass
+
+
+class PointNT(NamedTuple):
+    x: float
+    y: float
+    label: str = ""
+
+
+@dataclass
+class PointDC:
+    x: float
+    y: float
+    label: str = ""
+
+
+# === 共同点 ===
+p_nt = PointNT(3, 4, "A")
+p_dc = PointDC(3, 4, "A")
+print(p_nt)          # 输出：PointNT(x=3.0, y=4.0, label='A')
+print(p_dc)          # 输出：PointDC(x=3.0, y=4.0, label='A')
+print(p_nt == PointNT(3, 4, "A"))  # 输出：True
+print(p_dc == PointDC(3, 4, "A"))  # 输出：True
+
+# === 区别 ===
+# 1. NamedTuple 是元组，可索引、可解包
+print(p_nt[0])       # 输出：3
+x, y, label = p_nt   # 解包
+print(x, y, label)   # 输出：3.0 4.0 A
+# print(p_dc[0])     # AttributeError（dataclass 不支持索引）
+
+# 2. NamedTuple 默认不可变
+# p_nt.x = 10        # AttributeError
+p_dc.x = 10          # OK（普通 dataclass 可变）
+
+# 3. NamedTuple 更省内存
+import sys
+print(sys.getsizeof(p_nt))  # 输出：64 左右
+print(sys.getsizeof(p_dc) + sys.getsizeof(p_dc.__dict__))  # 输出：更大
+```
+
+:::tip 选哪个？
+- **NamedTuple**：数据是"一组值"、需要不可变、需要解包/索引、内存敏感时（如坐标、记录、CSV 行）
+- **dataclass**：需要可变、需要默认工厂、需要 `__post_init__`、需要继承、需要更灵活的默认值时
+- **frozen dataclass**：需要不可变但又不想要 tuple 行为（如值对象、配置）
+:::
+
+## 继承与默认值合并
+
+数据类支持继承，子类会合并父类的字段。注意默认值规则：**有默认值的字段不能出现在没有默认值的字段之前**：
+
+```py
+from dataclasses import dataclass
+
+
+@dataclass
+class Base:
+    x: float
+
+
+@dataclass
+class Derived(Base):
+    y: float = 0.0  # 子类加默认值 OK
+
+
+d = Derived(1.0, 2.0)
+print(d)  # 输出：Derived(x=1.0, y=2.0)
+
+# ❌ 反例：父类字段无默认值，子类字段有默认值后，再加无默认值字段会报错
+# @dataclass
+# class Bad(Base):
+#     y: float = 0.0
+#     z: float          # TypeError: non-default argument 'z' follows default argument
+```
+
+:::note 字段顺序
+子类的字段会**追加**到父类字段之后，整体顺序是"父类字段 + 子类字段"。如果有默认值混排问题，可以用 `kw_only=True` 解决。
+:::
+
+## 实战：配置管理
+
+综合运用 `@dataclass`、`field`、`__post_init__`、`frozen`、`slots`，实现一个可序列化、可校验的应用配置：
+
+```py
+from dataclasses import dataclass, field, asdict, replace
+from typing import Any
+import json
+import os
+
+
+@dataclass
+class DatabaseConfig:
+    host: str = "localhost"
+    port: int = 5432
+    username: str = "root"
+    # 密码不在 repr 中
+    password: str = field(default="", repr=False)
+    database: str = "app"
+    # 连接池大小
+    pool_size: int = field(default=10, kw_only=True)
+
+    def __post_init__(self) -> None:
+        if not (1 <= self.port <= 65535):
+            raise ValueError(f"非法端口：{self.port}")
+        if self.pool_size < 1:
+            raise ValueError(f"连接池大小必须为正：{self.pool_size}")
+
+    def dsn(self) -> str:
+        """生成连接字符串（隐藏密码）。"""
+        return f"postgresql://{self.username}:***@{self.host}:{self.port}/{self.database}"
+
+
+@dataclass
+class RedisConfig:
+    host: str = "localhost"
+    port: int = 6379
+    db: int = 0
+    password: str = field(default="", repr=False)
+
+    def __post_init__(self) -> None:
+        if not (1 <= self.port <= 65535):
+            raise ValueError(f"非法端口：{self.port}")
+        if not (0 <= self.db <= 15):
+            raise ValueError(f"Redis db 必须在 0~15：{self.db}")
+
+
+@dataclass
+class AppConfig:
+    """应用配置：聚合数据库、Redis 等子配置。"""
+    app_name: str = "MyApp"
+    debug: bool = False
+    db: DatabaseConfig = field(default_factory=DatabaseConfig)
+    redis: RedisConfig = field(default_factory=RedisConfig)
+    # 允许的额外特性开关
+    features: dict[str, bool] = field(default_factory=lambda: {"cache": True, "metrics": False})
+
+    def __post_init__(self) -> None:
+        if not self.app_name:
+            raise ValueError("app_name 不能为空")
+
+    def to_json(self, indent: int = 2) -> str:
+        """序列化为 JSON 字符串。"""
+        return json.dumps(asdict(self), ensure_ascii=False, indent=indent)
+
+    @classmethod
+    def from_env(cls) -> "AppConfig":
+        """从环境变量加载配置（演示工厂方法）。"""
+        db = DatabaseConfig(
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            username=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            database=os.getenv("DB_NAME", "app"),
+        )
+        redis = RedisConfig(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+        )
+        return cls(
+            app_name=os.getenv("APP_NAME", "MyApp"),
+            debug=os.getenv("DEBUG", "").lower() in ("1", "true", "yes"),
+            db=db,
+            redis=redis,
+        )
+
+    def with_overrides(self, **changes: Any) -> "AppConfig":
+        """返回一份修改后的副本（不可变风格）。"""
+        return replace(self, **changes)
+
+
+# ===== 使用示例 =====
+
+# 1. 默认配置
+config = AppConfig()
+print("--- 默认配置 ---")
+print(config)
+print(config.db.dsn())
+# 输出：
+# AppConfig(app_name='MyApp', debug=False, db=DatabaseConfig(host='localhost', ...), ...)
+# postgresql://root:***@localhost:5432/app
+
+# 2. 自定义配置
+custom = AppConfig(
+    app_name="生产环境",
+    debug=False,
+    db=DatabaseConfig(host="db.prod", port=5432, username="admin", password="secret", pool_size=20),
+    redis=RedisConfig(host="redis.prod", port=6380, db=1, password="rds-pwd"),
+)
+print("\n--- 自定义配置 ---")
+print(custom.db.dsn())
+print(custom.redis)
+
+# 3. 序列化
+print("\n--- JSON 序列化 ---")
+print(custom.to_json())
+# 输出：完整的 JSON 字符串（含嵌套结构）
+
+# 4. 校验
+print("\n--- 校验 ---")
+try:
+    bad = DatabaseConfig(port=99999)
+except ValueError as e:
+    print(f"拦截：{e}")  # 输出：拦截：非法端口：99999
+
+# 5. 不可变风格的修改：replace
+print("\n--- 不可变修改（replace）---")
+dev_config = custom.with_overrides(debug=True, app_name="开发环境")
+print(f"原配置：debug={custom.debug}, name={custom.app_name}")
+print(f"新配置：debug={dev_config.debug}, name={dev_config.app_name}")
+# replace 返回新对象，原对象不变
+
+# 6. 从环境变量加载
+print("\n--- 环境变量加载 ---")
+os.environ["DB_HOST"] = "staging.db"
+os.environ["DB_PORT"] = "6543"
+os.environ["DEBUG"] = "true"
+env_config = AppConfig.from_env()
+print(env_config.db.host, env_config.db.port)  # 输出：staging.db 6543
+print(env_config.debug)  # 输出：True
+```
+
+:::tip 常用工具函数
+- `asdict(obj)`：把数据类实例递归转为字典（适合 JSON 序列化）
+- `astuple(obj)`：转为元组
+- `replace(obj, **changes)`：返回修改部分字段后的新实例（不可变修改）
+- `fields(obj)` / `fields(Cls)`：返回字段信息列表
+- `is_dataclass(obj)`：判断是否为数据类实例或类型
+:::
+
+### frozen + slots 的现代配置
+
+```py
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True, slots=True)
+class ServerSettings:
+    """不可变 + 节省内存的现代配置。"""
+    host: str
+    port: int = 80
+    timeout: float = 30.0
+    headers: dict[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        # frozen 时不能直接 self.port = ...
+        # 需要修改要用 object.__setattr__
+        if self.port == 80:
+            object.__setattr__(self, "headers", {"X-Forwarded-Proto": "http", **self.headers})
+
+s = ServerSettings("api.example.com")
+print(s.headers)  # 输出：{'X-Forwarded-Proto': 'http'}
+# s.port = 8080  # FrozenInstanceError
+```
+
+:::note frozen 中修改字段
+`frozen=True` 时普通赋值会抛 `FrozenInstanceError`。在 `__post_init__` 中需要修改字段时，用 `object.__setattr__(self, name, value)` 绕过冻结检查（这是合法用法，标准库也这么做）。
+:::
+
+## 小结
+
+- `@dataclass` 自动生成 `__init__`/`__repr__`/`__eq__`，省去大量样板代码。
+- **字段必须有类型注解**；带默认值的字段必须放在无默认值字段后面。
+- 可变默认值必须用 `field(default_factory=callable)`，避免共享陷阱。
+- `field` 参数：`init`、`repr`、`compare`、`hash`、`metadata`、`kw_only` 灵活控制字段行为。
+- `@dataclass` 关键参数：
+  - `frozen=True`：实例不可变，可哈希
+  - `slots=True`（3.10+）：生成 `__slots__`，节省内存
+  - `kw_only=True`（3.10+）：字段只能用关键字参数
+  - `order=True`：自动生成比较方法
+- `__post_init__`：初始化钩子，用于派生字段、参数校验、初始化非字段属性。
+- `InitVar`：仅作为 `__init__` 参数传递，不存储为实例属性。
+- 与 `NamedTuple` 对比：NamedTuple 是不可变元组、可解包、更省内存；dataclass 更灵活、可变、可继承。
+- 实用工具：`asdict`、`astuple`、`replace`、`fields`、`is_dataclass`。
+
+至此，面向对象章节的内容告一段落。综合运用类、继承、多态、封装、魔术方法和数据类，你已经能写出结构清晰、行为地道、可维护性强的 Python 程序了。

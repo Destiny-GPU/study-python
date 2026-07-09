@@ -1,0 +1,730 @@
+---
+sidebar_position: 6
+sidebar_label: '注释与文档'
+title: 注释与文档字符串
+description: 学习 Python 注释的多种形式、文档字符串（docstring）的规范写法、Sphinx 风格，以及 __doc__ 属性与 help() 函数的使用。
+---
+
+# 注释与文档字符串
+
+注释是写给人看的"代码说明"，而文档字符串（docstring）则是 Python 中一种特殊的"内置文档"机制，能为模块、函数、类、方法生成可访问的说明文档。良好的注释与文档是高质量代码的重要标志。本节将系统讲解 Python 的注释形式、docstring 规范、Sphinx 风格，以及 `__doc__` 与 `help()` 的使用。
+
+## 单行注释
+
+Python 的单行注释以 `#` 开头，从 `#` 开始到行末的内容都会被解释器忽略：
+
+```py
+# 这是一个单行注释
+print("Hello")  # 这也是注释，行末注释
+
+# 注释可以独占一行
+# 也可以连续多行
+# 每一行都需要单独的 #
+
+x = 10  # 这是一个变量
+```
+
+:::tip 注释的使用原则
+- **解释"为什么"**，而不是"做什么"——代码本身已经说明了做什么
+- 在复杂逻辑、巧妙算法、业务规则处添加注释
+- 保持注释与代码同步更新，过时的注释比没有注释更糟糕
+- 避免无意义的注释，如 `x = 5  # 给 x 赋值为 5`
+:::
+
+### 注释的常见用法
+
+```py
+# 1. 解释业务规则：折扣规则根据用户等级计算
+def calculate_discount(level: int) -> float:
+    # 等级越高折扣越大，最高 5 级
+    if level >= 5:
+        return 0.8  # 8 折
+    elif level >= 3:
+        return 0.9  # 9 折
+    else:
+        return 1.0  # 原价
+
+# 2. 标记待办事项（TODO/FIXME/XXX 是常见约定）
+def process_data(data: list) -> None:
+    # TODO: 添加数据校验逻辑
+    # FIXME: 当 data 为空时会报错
+    # XXX: 这里可能有性能问题，待优化
+    for item in data:
+        print(item)
+
+# 3. 解释"魔法数字"
+TIMEOUT = 30  # 30 秒，超时断开连接
+MAX_RETRY = 3  # 失败重试次数
+
+# 4. 临时禁用代码（调试时常用）
+# print("调试信息")  # 取消注释来查看输出
+```
+
+## 多行注释
+
+Python **没有专门的多行注释语法**。三引号字符串 `"""..."""` 常被用作"多行注释"，但它在技术上是字符串字面量。如果没有赋值给变量，它会被解释器忽略，效果上等同于注释：
+
+```py
+"""
+这是一个"多行注释"
+实际上是一个字符串表达式
+没有被赋值，所以会被忽略
+
+常用于：
+- 文件开头的文件说明
+- 较长的注释块
+"""
+
+# 但要注意：如果在函数/类内部紧接 def/class 的位置使用三引号
+# 那它是 docstring，不是注释！
+
+def func():
+    """这是 docstring，不是注释"""
+    pass
+
+print(func.__doc__)  # 这是 docstring，不是注释
+```
+
+:::warning 三引号字符串 vs 真正的注释
+三引号字符串 `"""..."""` 在不被赋值时会被解释器**实际执行**（创建字符串对象然后立即丢弃），而 `#` 注释则被词法分析器完全忽略。虽然性能差异可忽略不计，但在以下场景需要注意：
+- 在函数/类/模块开头的三引号字符串会被识别为 **docstring**，可通过 `__doc__` 访问
+- 普通位置的"多行注释"只是被立即丢弃的字符串表达式
+:::
+
+## 文档字符串（docstring）
+
+文档字符串（docstring）是 Python 的一种**内置文档机制**：在模块、函数、类、方法定义的开头（紧接 `def` / `class` 之后）使用三引号字符串，就会被自动赋值给对象的 `__doc__` 属性。
+
+### 模块级 docstring
+
+```py
+"""用户管理模块
+
+本模块提供用户注册、登录、权限管理等功能。
+
+使用示例：
+    from user import UserManager
+    mgr = UserManager()
+    mgr.register("Alice", "password123")
+"""
+
+# 模块代码开始
+class UserManager:
+    pass
+```
+
+### 函数 docstring
+
+```py
+def calculate_bmi(weight: float, height: float) -> float:
+    """计算身体质量指数（BMI）
+
+    :param weight: 体重（公斤）
+    :param height: 身高（米）
+    :return: BMI 值，保留一位小数
+    :raises ValueError: 当身高或体重为负数时
+
+    示例：
+        >>> calculate_bmi(70, 1.75)
+        22.9
+    """
+    if weight <= 0 or height <= 0:
+        raise ValueError("体重和身高必须为正数")
+    bmi = weight / (height ** 2)
+    return round(bmi, 1)
+```
+
+### 类与方法 docstring
+
+```py
+class BankAccount:
+    """银行账户类
+
+    用于管理账户余额、存款、取款等操作。
+
+    :param owner: 账户持有人姓名
+    :param balance: 初始余额，默认为 0
+    """
+
+    def __init__(self, owner: str, balance: float = 0):
+        self.owner = owner
+        self.balance = balance
+
+    def deposit(self, amount: float) -> None:
+        """存入金额
+
+        :param amount: 存入金额，必须为正数
+        :raises ValueError: 当金额非正时
+        """
+        if amount <= 0:
+            raise ValueError("存入金额必须为正数")
+        self.balance += amount
+
+    def withdraw(self, amount: float) -> float:
+        """取出金额
+
+        :param amount: 取出金额
+        :return: 取款后的余额
+        :raises ValueError: 当余额不足时
+        """
+        if amount > self.balance:
+            raise ValueError("余额不足")
+        self.balance -= amount
+        return self.balance
+```
+
+:::info docstring 的位置规则
+docstring 必须位于模块、函数、类、方法定义的**第一行**（紧接 `def` / `class` 声明之后），并且是字符串字面量（单行或三引号）。一旦放在其他位置，就只是普通字符串，不会被识别为文档。
+:::
+
+## docstring 风格规范
+
+Python 社区有多种 docstring 风格，下面介绍三种主流风格。
+
+### 1. reStructuredText 风格（Sphinx 默认）
+
+这是 [PEP 287](https://peps.python.org/pep-0287/) 推荐的格式，也是 Sphinx 文档生成工具的默认风格：
+
+```py
+def fetch_data(url: str, timeout: int = 30) -> dict:
+    """从指定 URL 获取数据
+
+    :param url: 数据源 URL
+    :param timeout: 超时时间（秒），默认 30
+    :return: 解析后的数据字典
+    :raises ConnectionError: 当连接失败时
+    :raises TimeoutError: 当请求超时时
+
+    示例::
+
+        >>> data = fetch_data("https://api.example.com/data")
+        >>> print(data["status"])
+        ok
+    """
+    ...
+```
+
+### 2. Google 风格
+
+Google 风格更简洁直观，被许多团队采用：
+
+```py
+def fetch_data(url: str, timeout: int = 30) -> dict:
+    """从指定 URL 获取数据
+
+    Args:
+        url: 数据源 URL
+        timeout: 超时时间（秒），默认 30
+
+    Returns:
+        解析后的数据字典
+
+    Raises:
+        ConnectionError: 当连接失败时
+        TimeoutError: 当请求超时时
+
+    Example:
+        >>> data = fetch_data("https://api.example.com/data")
+        >>> print(data["status"])
+        ok
+    """
+    ...
+```
+
+### 3. NumPy 风格
+
+NumPy 风格适合长篇文档，使用下划线分隔：
+
+```py
+def fetch_data(url: str, timeout: int = 30) -> dict:
+    """从指定 URL 获取数据
+
+    Parameters
+    ----------
+    url : str
+        数据源 URL
+    timeout : int, optional
+        超时时间（秒），默认 30
+
+    Returns
+    -------
+    dict
+        解析后的数据字典
+
+    Raises
+    ------
+    ConnectionError
+        当连接失败时
+    TimeoutError
+        当请求超时时
+
+    Examples
+    --------
+    >>> data = fetch_data("https://api.example.com/data")
+    >>> print(data["status"])
+    ok
+    """
+    ...
+```
+
+:::tip 如何选择 docstring 风格？
+- **个人/小项目**：Google 风格可读性最好，推荐入门使用
+- **科学计算/数据处理**：NumPy 风格是行业标准
+- **需要 Sphinx 生成文档**：reStructuredText 风格原生支持
+- **关键原则**：团队内**保持一致**比选择哪种风格更重要
+:::
+
+## __doc__ 属性
+
+每个模块、函数、类、方法都有 `__doc__` 属性，存储其 docstring：
+
+```py
+def greet(name: str) -> str:
+    """返回问候语
+
+    :param name: 姓名
+    :return: 问候字符串
+    """
+    return f"Hello, {name}"
+
+
+# 访问函数的 docstring
+print(greet.__doc__)
+# 返回问候语
+#
+# :param name: 姓名
+# :return: 问候字符串
+
+# 类的 docstring
+class Calculator:
+    """简易计算器"""
+
+    def add(self, a: int, b: int) -> int:
+        """两数相加"""
+        return a + b
+
+
+print(Calculator.__doc__)              # 简易计算器
+print(Calculator.add.__doc__)          # 两数相加
+```
+
+### 通过 __doc__ 自动生成文档
+
+```py
+def show_docs(*objects) -> None:
+    """打印多个对象的 docstring"""
+    for obj in objects:
+        name = obj.__name__
+        doc = obj.__doc__ or "(无文档)"
+        print(f"=== {name} ===")
+        print(doc)
+        print()
+
+
+def add(a: int, b: int) -> int:
+    """两数相加"""
+    return a + b
+
+
+def subtract(a: int, b: int) -> int:
+    """两数相减"""
+    return a - b
+
+
+show_docs(add, subtract)
+```
+
+运行结果：
+
+```text
+=== add ===
+两数相加
+
+=== subtract ===
+两数相减
+```
+
+## help() 函数
+
+`help()` 是 Python 内置的帮助函数，能基于 docstring 生成格式化的帮助信息：
+
+```py
+def calculate_bmi(weight: float, height: float) -> float:
+    """计算身体质量指数（BMI）
+
+    :param weight: 体重（公斤）
+    :param height: 身高（米）
+    :return: BMI 值
+    """
+    return weight / (height ** 2)
+
+
+# 在交互式环境中使用 help
+# help(calculate_bmi)
+# 输出：
+# Help on function calculate_bmi in module __main__:
+#
+# calculate_bmi(weight: float, height: float) -> float
+#     计算身体质量指数（BMI）
+#
+#     :param weight: 体重（公斤）
+#     :param height: 身高（米）
+#     :return: BMI 值
+
+# 查看内置函数的帮助
+# help(print)
+# help(len)
+# help(str.split)
+
+# 查看模块的帮助
+import math
+# help(math)
+```
+
+:::info help() 与 __doc__ 的区别
+- `__doc__` 返回原始的 docstring 字符串，需要自己格式化
+- `help()` 自动格式化输出，包含函数签名、模块信息等，更适合交互式查询
+- 在交互式 Python 解释器（REPL）中，`help()` 是学习未知对象的最佳工具
+:::
+
+## Sphinx 风格详解
+
+[Sphinx](https://www.sphinx-doc.org/) 是 Python 社区最流行的文档生成工具，广泛用于生成官方文档（如 Python 文档本身）。它默认使用 reStructuredText 标记语言。
+
+### 常用 Sphinx 标记
+
+```py
+"""用户管理模块
+
+本模块提供用户管理功能。
+
+.. versionadded:: 1.0
+    在 1.0 版本中新增
+
+.. versionchanged:: 1.5
+    在 1.5 版本中重构了权限系统
+
+.. deprecated:: 2.0
+    将在 3.0 版本移除，请使用 :mod:`new_user` 模块替代
+"""
+
+from typing import Any
+
+
+class User:
+    """用户类
+
+    表示一个用户实体。
+
+    :param name: 用户名
+    :param age: 年龄
+    :ivar name: 用户名
+    :ivar age: 年龄
+
+    示例::
+
+        >>> user = User("Alice", 25)
+        >>> print(user.name)
+        Alice
+
+    .. seealso::
+        :class:`Admin` 管理员类
+    """
+
+    def __init__(self, name: str, age: int) -> None:
+        self.name = name
+        self.age = age
+
+    def to_dict(self) -> dict[str, Any]:
+        """转换为字典
+
+        :return: 包含用户信息的字典
+        :rtype: dict[str, Any]
+        """
+        return {"name": self.name, "age": self.age}
+```
+
+### Sphinx 常用指令
+
+| 指令                 | 含义           | 示例                          |
+| -------------------- | -------------- | ----------------------------- |
+| `:param x:`          | 参数说明       | `:param name: 用户名`         |
+| `:type x:`           | 参数类型       | `:type name: str`             |
+| `:returns:`          | 返回值说明     | `:returns: 用户字典`           |
+| `:rtype:`            | 返回类型       | `:rtype: dict`                |
+| `:raises X:`         | 抛出异常       | `:raises ValueError: 参数错误` |
+| `:ivar x:`           | 实例属性       | `:ivar name: 用户名`          |
+| `:cvar x:`           | 类属性         | `:cvar count: 用户总数`       |
+| `.. seealso::`       | 参见           | `.. seealso:: :class:`User``  |
+| `.. note::`          | 注释           | `.. note:: 需要 Python 3.10+` |
+| `.. warning::`       | 警告           | `.. warning:: 不向后兼容`     |
+| `.. versionadded::`  | 版本新增       | `.. versionadded:: 2.0`       |
+| `.. deprecated::`    | 已废弃         | `.. deprecated:: 3.0`         |
+
+:::tip 在 Docusaurus 中使用 Admonition
+Docusaurus 不直接支持 Sphinx 的 `.. note::` 等指令，但提供了类似的 Admonition 语法：`:::note`、`:::tip`、`:::warning`、`:::info`。在写 Docusaurus 文档时优先使用 Admonition。
+:::
+
+## 注释与文档的最佳实践
+
+### 1. 注释要解释"为什么"，而非"是什么"
+
+```py
+# 不好的注释：解释做什么（代码已经说明了）
+x = x + 1  # x 加 1
+
+# 好的注释：解释为什么
+x = x + 1  # 补偿边界条件：列表索引从 0 开始
+
+# 不好的注释：翻译代码
+for item in items:  # 遍历 items
+    process(item)
+
+# 好的注释：解释业务逻辑
+for item in items:  # 按优先级顺序处理任务
+    process(item)
+```
+
+### 2. 让代码自解释
+
+```py
+# 不好的写法：依赖注释解释
+def calc(a, b, c):
+    """计算"""
+    return a * 0.7 + b * 0.3 - c  # 加权平均减去惩罚
+
+# 好的写法：用有意义的名字让代码自解释
+def calculate_weighted_score(homework: float, exam: float, penalty: float) -> float:
+    """计算加权分数：作业占 70%，考试占 30%，减去扣分"""
+    HOMEWORK_WEIGHT = 0.7
+    EXAM_WEIGHT = 0.3
+    return homework * HOMEWORK_WEIGHT + exam * EXAM_WEIGHT - penalty
+```
+
+### 3. 函数文档应包含关键信息
+
+```py
+def find_users(
+    age_min: int | None = None,
+    age_max: int | None = None,
+    city: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """根据条件查找用户
+
+    支持按年龄范围和城市筛选用户，结果按注册时间倒序排列。
+
+    :param age_min: 最小年龄（包含），None 表示不限制
+    :param age_max: 最大年龄（包含），None 表示不限制
+    :param city: 城市名（精确匹配），None 表示所有城市
+    :param limit: 返回结果上限，默认 100
+    :return: 用户字典列表，每个字典含 id, name, age, city 字段
+    :raises ValueError: 当 limit 为负数时
+
+    示例::
+
+        >>> users = find_users(age_min=18, age_max=30, city="Beijing")
+        >>> print(len(users))
+        42
+    """
+    if limit < 0:
+        raise ValueError("limit 必须非负")
+    # ...实现略
+    return []
+```
+
+### 4. 保持注释与代码同步
+
+```py
+# 危险：注释与代码不一致
+def get_discount(level):
+    """返回 9 折"""  # 注释说 9 折
+    return 0.8  # 实际是 8 折！
+
+# 正确：注释随代码更新
+def get_discount(level: int) -> float:
+    """根据用户等级返回折扣率
+
+    - 5 级及以上：8 折
+    - 3-4 级：9 折
+    - 其他：原价
+    """
+    if level >= 5:
+        return 0.8
+    elif level >= 3:
+        return 0.9
+    return 1.0
+```
+
+:::warning 过时注释的危害
+过时的注释比没有注释更糟糕——它会误导读者，让人花费大量时间调试"看似有问题但实际正确"的代码。修改代码时，**同步更新相关注释**。在代码审查（code review）中，过时注释是常见的 review 意见。
+:::
+
+### 5. 合理使用 TODO 标记
+
+```py
+def process_payment(amount: float) -> bool:
+    # TODO: 添加支付渠道选择逻辑（@zhang, 2024-01-15）
+    # FIXME: 大额支付时偶发超时（issue #123）
+    # HACK: 临时绕过第三方 API 限制，待官方修复后移除
+    # NOTE: 此处使用同步方式，异步版本见 process_payment_async
+    # XXX: 性能瓶颈，建议改用批量处理
+    return True
+```
+
+:::tip 常用注释标记约定
+- `TODO`: 待完成的功能或优化
+- `FIXME`: 已知的 bug 或问题
+- `HACK`: 临时解决方案（绕过问题）
+- `NOTE`: 重要提示
+- `XXX`: 需要改进或注意的地方
+- `BUG`: 已知 bug
+- `OPTIMIZE`: 性能优化点
+
+许多 IDE 和工具能识别这些标记并在 TODO 列表中显示。
+:::
+
+## 实战：带完整文档的工具函数
+
+下面用一个完整示例展示良好文档的写法：
+
+```py
+"""字符串处理工具模块
+
+提供常用的字符串处理函数，包括统计、转换、清洗等功能。
+
+.. versionadded:: 1.0
+
+示例::
+
+    from string_utils import word_count, slugify
+    print(word_count("Hello World"))  # 2
+    print(slugify("Hello, World!"))   # hello-world
+"""
+
+import re
+from collections import Counter
+
+
+def word_count(text: str, language: str = "en") -> dict[str, int]:
+    """统计文本中每个单词的出现次数
+
+    支持中英文分词。英文按空格和标点分词，中文按字符分词。
+
+    :param text: 待统计的文本
+    :param language: 语言类型，"en" 英文，"zh" 中文，默认 "en"
+    :return: 单词到出现次数的映射字典，按出现次数降序排列
+    :rtype: dict[str, int]
+    :raises ValueError: 当 text 为空字符串时
+
+    示例::
+
+        >>> word_count("hello world hello")
+        {'hello': 2, 'world': 1}
+
+        >>> word_count("你好世界你好", language="zh")
+        {'你': 2, '好': 2, '世': 1, '界': 1}
+    """
+    if not text:
+        raise ValueError("text 不能为空")
+
+    if language == "en":
+        # 英文：按非字母字符分割
+        words = re.findall(r"[a-zA-Z]+", text.lower())
+    elif language == "zh":
+        # 中文：按字符切分（简单实现）
+        words = [c for c in text if c.strip()]
+    else:
+        raise ValueError(f"不支持的语言: {language}")
+
+    # 统计并按次数降序排序
+    counter = Counter(words)
+    return dict(counter.most_common())
+
+
+def slugify(text: str, separator: str = "-") -> str:
+    """将文本转换为 URL 友好的 slug
+
+    移除特殊字符，空格转为分隔符，字母转小写。
+
+    :param text: 原始文本
+    :param separator: 单词分隔符，默认 "-"
+    :return: 处理后的 slug 字符串
+
+    示例::
+
+        >>> slugify("Hello, World!")
+        'hello-world'
+
+        >>> slugify("Python 3 教程")
+        'python-3-教程'
+    """
+    # 移除标点符号
+    cleaned = re.sub(r"[^\w\s]", "", text)
+    # 转小写并用分隔符连接
+    return separator.join(cleaned.lower().split())
+
+
+def truncate(text: str, max_length: int = 50, suffix: str = "...") -> str:
+    """截断文本到指定长度
+
+    如果文本超过 max_length，截断并添加后缀。
+
+    :param text: 原始文本
+    :param max_length: 最大长度（包含后缀），默认 50
+    :param suffix: 截断后缀，默认 "..."
+    :return: 截断后的文本
+
+    .. note::
+        max_length 包含后缀长度，例如 max_length=10，suffix="..."，
+        原文 "Hello World" 会变成 "HelloW..."（共 10 字符）。
+
+    示例::
+
+        >>> truncate("Hello World", max_length=8)
+        'Hello...'
+    """
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - len(suffix)] + suffix
+
+
+# 模块自测
+if __name__ == "__main__":
+    # 演示用法
+    text = "The quick brown fox jumps over the lazy dog. The fox was clever."
+    print("词频统计:")
+    for word, count in word_count(text).items():
+        print(f"  {word}: {count}")
+
+    print(f"\nSlug: {slugify('Hello, World! 我是 Alice')}")
+    print(f"截断: {truncate('这是一个非常非常长的字符串需要被截断处理', max_length=15)}")
+```
+
+运行结果：
+
+```text
+词频统计:
+  the: 3
+  fox: 2
+  quick: 1
+  brown: 1
+  jumps: 1
+  over: 1
+  lazy: 1
+  dog: 1
+  was: 1
+  clever: 1
+
+Slug: hello-world-我是-alice
+截断: 这是一个非常非常...
+```
+
+## 小结
+
+- **单行注释**用 `#`，Python 没有真正的多行注释，三引号字符串只是被丢弃的字符串表达式。
+- **文档字符串（docstring）** 是 Python 的内置文档机制，位于模块、函数、类、方法定义的第一行，自动赋值给 `__doc__` 属性。
+- 主流 docstring 风格有三种：**reStructuredText（Sphinx 默认）**、**Google 风格**（简洁易读）、**NumPy 风格**（适合科学计算）。
+- `__doc__` 属性存储原始 docstring，`help()` 函数格式化输出帮助信息，是交互式学习的利器。
+- **Sphinx** 是 Python 最流行的文档生成工具，支持 `:param:`、`:returns:`、`:raises:` 等丰富的指令。
+- 注释的最佳实践：解释"为什么"而非"是什么"，让代码自解释，保持注释与代码同步，合理使用 TODO/FIXME 等标记。
