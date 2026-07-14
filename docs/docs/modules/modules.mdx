@@ -1,0 +1,560 @@
+---
+sidebar_position: 1
+sidebar_label: '模块'
+title: 🧩 模块
+description: 掌握 import 语句、from...import、别名导入、__name__ == '__main__'、__all__、模块搜索路径 sys.path 与 __pycache__，编写可复用的工具模块。
+---
+
+# 🧩 模块
+
+随着代码量增长，把所有逻辑塞进一个 `.py` 文件会变得难以维护。Python 通过**模块（module）**机制，将代码按文件拆分、组织、复用。一个 `.py` 文件就是一个模块，文件名即模块名（去掉 `.py` 后缀）。模块让代码具备了**复用、隔离、命名空间**三大能力——这是从中型项目走向大型项目的第一步。
+
+:::tip 🎯 本节要点
+- 一个 `.py` 文件就是一个模块，文件名即模块名
+- `import module` 引入完整模块，`from module import name` 引入部分名称
+- `__name__ == "__main__"` 让模块既能直接运行，又能被导入而不产生副作用
+- `__all__` 显式声明公开 API，控制 `from module import *` 行为
+- `sys.path` 决定模块查找顺序，优先使用包结构和 `pip install -e .` 而非手动修改
+- `__pycache__` 缓存字节码加快启动，可放心删除
+- 模块导入时会执行顶层代码一次，后续导入命中缓存
+:::
+
+## import 语句
+
+最基础的导入方式是 `import 模块名`。导入后，通过 `模块名.属性` 访问其中的函数、类、变量：
+
+```py title="Python"
+# 标准库 math 模块
+import math
+
+print(math.pi)            # 输出：3.141592653589793
+print(math.sqrt(16))      # 输出：4.0
+print(math.factorial(5))  # 输出：120
+```
+
+导入时会完整执行模块顶层代码一次，后续再次 `import` 同一模块直接命中缓存（见 `sys.modules`），不会重复执行。
+
+```py title="Python"
+import math
+import math  # 第二次不会重新执行 math 模块
+
+import sys
+print("math" in sys.modules)  # 输出：True
+```
+
+## from...import
+
+如果只需要模块中的部分内容，使用 `from 模块名 import 名称`，可以直接用名称，免去模块名前缀：
+
+```py title="Python"
+from math import pi, sqrt, factorial
+
+print(pi)            # 输出：3.141592653589793
+print(sqrt(16))      # 输出：4.0
+print(factorial(5))  # 输出：120
+```
+
+:::warning 谨慎使用 from ... import *
+`from math import *` 会把模块所有公开名称导入当前命名空间，容易**覆盖同名变量**且难以追溯来源，PEP 8 明确不推荐在生产代码中使用。
+
+```py title="Python"
+from math import *
+from os import *  # 危险：os.open 会覆盖内置 open
+
+# 不要这样写！
+```
+:::
+
+## import as 别名
+
+当模块名较长或与本地变量冲突时，使用 `as` 起别名：
+
+```py title="Python"
+import numpy as np           # 第三方库常用别名（约定俗成）
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 也适用于 from...import
+from math import factorial as fact
+
+print(fact(5))  # 输出：120
+```
+
+:::tip 主流库的别名约定
+数据科学生态有一套事实上的命名约定，遵守它们能让代码更易读：
+- `import numpy as np`
+- `import pandas as pd`
+- `import matplotlib.pyplot as plt`
+- `import seaborn as sns`
+- `import tensorflow as tf`
+:::
+
+## __name__ == '__main__'
+
+每个模块都有一个特殊属性 `__name__`：
+- 当模块被**直接运行**时，`__name__` 等于 `"__main__"`
+- 当模块被**导入**时，`__name__` 等于模块名
+
+这一机制常用于在文件中编写"既能作为脚本执行，又能作为模块导入"的代码：
+
+```py title="Python"
+# greeter.py
+def greet(name: str) -> str:
+    return f"你好，{name}！"
+
+
+def main() -> None:
+    name = input("请输入姓名：")
+    print(greet(name))
+
+
+if __name__ == "__main__":
+    # 只有直接运行 greeter.py 才会执行
+    # 被 import 时不执行，避免副作用
+    main()
+```
+
+```bash title="Shell"
+python greeter.py
+# 请输入姓名：Alice
+# 你好，Alice！
+```
+
+```py title="Python"
+# 在另一个文件中
+import greeter
+print(greeter.greet("Bob"))  # 输出：你好，Bob！
+# 不会触发 input()，因为 __name__ != "__main__"
+```
+
+:::info 何时使用 __name__ 守卫
+- 模块既作为脚本运行，又作为库被导入
+- 包含**示例代码**、**自测代码**、**CLI 入口**
+- 避免导入时产生副作用（如启动服务、写入文件、连接数据库）
+:::
+
+## __all__ 控制导出
+
+`__all__` 是一个列表，明确声明模块的**公开 API**。它影响两件事：
+1. `from module import *` 时只会导入 `__all__` 中的名称
+2. 文档工具（如 Sphinx）据此生成 API 文档
+
+```py title="Python"
+# string_utils.py
+__all__ = ["capitalize_words", "reverse_string"]
+
+
+def capitalize_words(text: str) -> str:
+    """将每个单词首字母大写。"""
+    return " ".join(w.capitalize() for w in text.split())
+
+
+def reverse_string(text: str) -> str:
+    """反转字符串。"""
+    return text[::-1]
+
+
+def _internal_helper(text: str) -> str:
+    """内部辅助函数，不希望被外部使用。"""
+    return text.strip().lower()
+
+
+# 使用示例
+if __name__ == "__main__":
+    print(capitalize_words("hello world"))  # 输出：Hello World
+    print(reverse_string("Python"))         # 输出：nohtyP
+```
+
+```py title="Python"
+from string_utils import *
+
+print(capitalize_words("hi there"))  # 输出：Hi There
+print(reverse_string("abc"))         # 输出：cba
+# print(_internal_helper("X"))  # NameError: 未导出
+```
+
+:::tip 单下划线约定
+即便没有 `__all__`，以单下划线开头的名称（如 `_internal_helper`）也被视为"模块私有"，`from module import *` 不会导入它们。这是约定，不是强制——你仍可以显式 `from string_utils import _internal_helper`。
+:::
+
+## 标准库模块示例
+
+Python 标准库提供了 200+ 个模块，覆盖了日常开发的绝大部分需求。
+
+### os — 操作系统接口
+
+```py title="Python"
+import os
+
+# 当前工作目录
+print(os.getcwd())  # 输出示例：/home/user/project
+
+# 环境变量
+print(os.environ.get("HOME", "/home/user"))
+
+# 拼接路径（跨平台安全）
+config_path = os.path.join("config", "settings.json")
+print(config_path)  # Linux: config/settings.json  Windows: config\settings.json
+
+# 列出目录内容
+for entry in os.listdir("."):
+    print(entry)
+```
+
+### pathlib — 现代路径操作（推荐）
+
+```py title="Python"
+from pathlib import Path
+
+# 比 os.path 更优雅
+home = Path.home()
+print(home)  # 输出示例：/home/user
+
+config = home / "config" / "settings.json"
+print(config)  # 输出示例：/home/user/config/settings.json
+
+# 递归查找所有 Python 文件
+for py_file in Path(".").rglob("*.py"):
+    print(py_file)
+```
+
+### datetime — 日期与时间
+
+```py title="Python"
+from datetime import datetime, date, timedelta
+
+now = datetime.now()
+print(now.strftime("%Y-%m-%d %H:%M:%S"))  # 输出示例：2026-07-10 14:30:00
+
+today = date.today()
+yesterday = today - timedelta(days=1)
+print(yesterday)  # 输出示例：2026-07-09
+```
+
+### collections — 高级容器
+
+```py title="Python"
+from collections import Counter, defaultdict, deque
+
+# 计数
+words = "the quick brown fox jumps over the lazy dog the".split()
+counter = Counter(words)
+print(counter.most_common(2))
+# 输出：[('the', 3), ('quick', 1)]
+
+# 默认值字典
+word_len = defaultdict(list)
+for w in words:
+    word_len[len(w)].append(w)
+print(word_len[3])  # 输出：['the', 'fox', 'the', 'dog', 'the']
+
+# 双端队列
+queue = deque([1, 2, 3], maxlen=5)
+queue.appendleft(0)
+queue.append(4)
+print(queue)  # 输出：deque([0, 1, 2, 3, 4], maxlen=5)
+```
+
+### itertools — 迭代器工具
+
+```py title="Python"
+from itertools import chain, combinations, islice
+
+# 拼接多个迭代器
+for item in chain([1, 2], ["a", "b"], (True, False)):
+    print(item, end=" ")
+# 输出：1 2 a b True False
+
+# 所有组合
+for combo in combinations("ABC", 2):
+    print(combo)
+# 输出：('A', 'B') / ('A', 'C') / ('B', 'C')
+
+# 切片迭代器
+first_three = list(islice(range(100), 3))
+print(first_three)  # 输出：[0, 1, 2]
+```
+
+## 模块搜索路径 sys.path
+
+当执行 `import foo` 时，Python 解释器按以下顺序查找 `foo` 模块：
+
+1. **内置模块**（如 `sys`、`builtins`）
+2. 当前脚本所在目录（或交互式解释器的当前目录）
+3. `PYTHONPATH` 环境变量中的目录
+4. 标准库目录
+5. 第三方包目录（`site-packages`）
+
+这些路径存储在 `sys.path` 列表中：
+
+```py title="Python"
+import sys
+
+for i, path in enumerate(sys.path):
+    print(f"{i}: {path}")
+```
+
+输出示例：
+
+```text title="输出"
+0: /home/user/project
+1: /usr/lib/python312.zip
+2: /usr/lib/python3.12
+3: /usr/lib/python3.12/lib-dynload
+4: /home/user/.venv/lib/python3.12/site-packages
+```
+
+### 临时添加搜索路径
+
+```py title="Python"
+import sys
+from pathlib import Path
+
+# 在程序中动态添加（不推荐作为长期方案）
+sys.path.insert(0, str(Path(__file__).parent / "libs"))
+
+import my_custom_module  # 现在可以找到 libs/my_custom_module.py
+```
+
+:::warning 不要滥用 sys.path 修改
+直接修改 `sys.path` 会让项目难以维护和部署。更好的方式：
+- 把代码组织成**包**（下一节会讲）
+- 用 `pip install -e .` 以可编辑模式安装项目
+- 使用 `pyproject.toml` 声明项目结构
+:::
+
+### 模块缓存 sys.modules
+
+Python 维护一个全局字典 `sys.modules`，记录所有已加载的模块。再次 `import` 同一模块时直接从这里取，避免重复执行：
+
+```py title="Python"
+import sys
+import math
+
+print(id(sys.modules["math"]))  # 模块对象的内存地址
+
+# 再次 import 不会重新加载
+import math
+print(id(math))  # 与上面相同
+
+# 强制重新加载（开发调试用）
+import importlib
+importlib.reload(math)  # 注意：不会更新已 from...import 的引用
+```
+
+## __pycache__ 与字节码
+
+首次导入模块时，Python 会将源码编译为字节码（`.pyc` 文件）缓存到 `__pycache__` 目录，下次导入若源码未修改则直接加载字节码，加快启动速度。
+
+```text title="输出"
+project/
+├── greeter.py
+└── __pycache__/
+    └── greeter.cpython-312.pyc
+```
+
+文件名格式：`模块名.cpython-版本号.pyc`。
+
+```py title="Python"
+# 查看字节码
+import dis
+
+def add(a: int, b: int) -> int:
+    return a + b
+
+dis.dis(add)
+```
+
+输出示例：
+
+```text title="输出"
+  1           RESUME                   0
+  2           LOAD_FAST                0 (a)
+              LOAD_FAST                1 (b)
+              BINARY_OP                0 (+)
+              RETURN_VALUE
+```
+
+:::note 关于 __pycache__
+- 可以随时删除 `__pycache__` 目录，Python 会在下次运行时重新生成
+- 在 `.gitignore` 中加入 `__pycache__/` 和 `*.pyc`
+- 发布到生产环境时通常不需要 `.pyc`，部署时会重新生成
+- 设置环境变量 `PYTHONDONTWRITEBYTECODE=1` 可禁止生成
+:::
+
+## 实战：自定义工具模块
+
+下面我们创建一个完整的字符串处理工具模块，包含导出控制、文档字符串、`__main__` 自测：
+
+```py title="Python"
+# string_kit.py
+"""字符串处理工具箱。
+
+提供常用字符串操作，遵循 Python 3.12+ 类型注解规范。
+"""
+
+from __future__ import annotations
+
+__version__ = "1.0.0"
+__author__ = "study-python"
+
+__all__ = [
+    "slugify",
+    "truncate",
+    "count_words",
+    "camel_to_snake",
+]
+
+
+def slugify(text: str, separator: str = "-") -> str:
+    """将文本转为 URL 友好的 slug。
+
+    >>> slugify("Hello World!")
+    'hello-world'
+    """
+    import re
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_-]+", separator, text)
+    return text.strip(separator)
+
+
+def truncate(text: str, max_len: int, suffix: str = "...") -> str:
+    """截断字符串到指定长度，超出部分用 suffix 替代。
+
+    >>> truncate("Hello World", 8)
+    'Hello...'
+    """
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - len(suffix)] + suffix
+
+
+def count_words(text: str) -> dict[str, int]:
+    """统计每个单词出现次数。
+
+    >>> count_words("a a b")
+    {'a': 2, 'b': 1}
+    """
+    from collections import Counter
+    return dict(Counter(text.split()))
+
+
+def camel_to_snake(name: str) -> str:
+    """驼峰命名转蛇形命名。
+
+    >>> camel_to_snake("camelCaseName")
+    'camel_case_name'
+    """
+    import re
+    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+
+def _internal_debug(text: str) -> str:
+    """内部调试函数，不会通过 from ... import * 导出。"""
+    return repr(text)
+
+
+if __name__ == "__main__":
+    # 模块自测：python -m string_kit 或 python string_kit.py
+    import doctest
+    failures, tests = doctest.testmod(verbose=True)
+    if failures == 0:
+        print(f"\n✓ 所有 {tests} 个测试通过")
+```
+
+运行自测：
+
+```bash title="Shell"
+python string_kit.py
+```
+
+输出示例：
+
+```text title="输出"
+Trying:
+    slugify("Hello World!")
+Expecting:
+    'hello-world'
+ok
+Trying:
+    truncate("Hello World", 8)
+Expecting:
+    'Hello...'
+ok
+...
+2 items passed all tests:
+   4 tests in __main__
+4 tests in 2 items.
+4 passed and 0 failed.
+Test passed.
+✓ 所有 4 个测试通过
+```
+
+在其他文件中使用：
+
+```py title="Python"
+# main.py
+import string_kit
+from string_kit import slugify, camel_to_snake
+
+print(string_kit.__version__)  # 输出：1.0.0
+print(slugify("Hello World! 你好"))  # 输出：hello-world-你好
+print(camel_to_snake("getUserById"))  # 输出：get_user_by_id
+```
+
+:::tip 模块自测三件套
+- 文档字符串中写 `>>>` 测试用例
+- `if __name__ == "__main__"` 块中调用 `doctest.testmod()`
+- 用 `python -m 模块名` 形式运行（推荐，等价于直接运行）
+:::
+
+## 🎯 动手练习
+
+1. **工具模块**：创建 `math_utils.py`，包含 `factorial`、`fibonacci`、`is_prime` 函数，添加 `__all__` 控制导出
+2. **模块自测**：为每个函数编写 doctest，使用 `if __name__ == "__main__"` 运行自测
+3. **导入实验**：尝试 `import`、`from...import`、`import as` 三种方式，观察 `sys.modules` 缓存
+4. **路径探索**：打印 `sys.path`，理解模块搜索顺序，尝试临时添加路径导入自定义模块
+
+## 📚 延伸阅读
+
+- **包（package）**：把多个模块组织成层级化的目录结构
+- **相对导入**：包内模块使用 `from . import module` 导入
+- **命名空间包**：跨多个目录分布的同名包
+- **importlib**：动态导入模块，`importlib.import_module()` 运行时导入
+
+## 📊 速查表
+
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 导入模块 | `import module` | `import math` |
+| 导入名称 | `from module import name` | `from math import pi` |
+| 别名导入 | `import module as alias` | `import numpy as np` |
+| 多名称导入 | `from module import a, b` | `from math import pi, sqrt` |
+| 全部导入 | `from module import *` | ❌ 不推荐 |
+| 公开 API | `__all__ = ["func1"]` | 控制 `import *` 行为 |
+| 模块名 | `__name__` | 直接运行时为 `"__main__"` |
+| 入口守卫 | `if __name__ == "__main__":` | 避免导入副作用 |
+| 模块缓存 | `sys.modules` | 记录已加载模块 |
+| 搜索路径 | `sys.path` | 模块查找顺序 |
+| 重新加载 | `importlib.reload(mod)` | 开发调试用 |
+| 模块版本 | `module.__version__` | 查看版本号 |
+| 模块路径 | `module.__file__` | 查看文件位置 |
+| 运行模块 | `python -m module` | 推荐方式 |
+| 模块自测 | `doctest.testmod()` | 文档字符串测试 |
+
+## 📝 本节总结
+
+本节我们学习了 Python 模块机制，核心要点包括：
+
+- **模块即文件**：一个 `.py` 文件就是一个模块，文件名即模块名
+- **导入方式**：`import module` 引入完整模块，`from module import name` 引入部分名称
+- **别名**：`import module as alias` 简化长模块名，遵循主流库约定
+- **入口守卫**：`if __name__ == "__main__":` 让模块既能运行又能被导入
+- **导出控制**：`__all__` 声明公开 API，单下划线 `_name` 约定为私有
+- **模块缓存**：首次导入执行顶层代码，后续导入命中 `sys.modules`
+- **搜索路径**：`sys.path` 决定查找顺序，优先用包结构而非手动修改
+- **字节码缓存**：`__pycache__` 加快启动，可随时删除
+
+下一节将介绍**包（package）**——把多个模块组织成层级化的目录结构，进一步管理大型项目的代码。

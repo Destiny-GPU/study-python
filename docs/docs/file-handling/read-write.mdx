@@ -1,0 +1,508 @@
+---
+sidebar_position: 1
+sidebar_label: '读写文件'
+title: 📂 读写文件
+description: 掌握 Python 中文件读写的基础操作，包括 open 函数、with 上下文管理器、各种读写模式与编码处理。
+---
+
+# 📂 读写文件
+
+文件读写是编程中最常见的操作之一。Python 提供了内置的 `open()` 函数和一套简洁优雅的文件对象 API，配合 `with` 语句可以安全、高效地处理各类文件。本章将从最基础的打开文件讲起，逐步深入到模式、编码、大文件迭代等实用技巧。
+
+:::tip 🎯 本节要点
+- **with 语句**：上下文管理器，自动关闭文件，异常安全
+- **encoding='utf-8'**：永远显式指定编码，避免跨平台问题
+- **文件模式**：`r` 读、`w` 覆盖写、`a` 追加、`x` 独占创建、`b` 二进制、`+` 读写
+- **大文件处理**：直接迭代文件对象 `for line in f`，内存友好
+- **分块读取**：`while chunk := f.read(n)` 用海象运算符控制内存占用
+- **errors 参数**：`replace` 容忍坏字节，`ignore` 跳过，`strict` 抛异常
+:::
+
+## 打开文件：open 函数
+
+`open()` 是 Python 内置函数，用于打开文件并返回一个文件对象。它的完整签名如下：
+
+```py title="Python"
+open(
+    file,
+    mode='r',
+    encoding=None,
+    errors=None,
+    newline=None,
+    buffering=-1,
+    closefd=True,
+    opener=None,
+)
+```
+
+最常用的参数是 `file`（路径）、`mode`（打开模式）和 `encoding`（文本编码）。
+
+```py title="Python"
+# 最基础的打开方式（不推荐，忘记关闭会泄漏资源）
+f = open('hello.txt', 'r', encoding='utf-8')
+content = f.read()
+f.close()  # 必须手动关闭
+
+# 推荐使用 with 语句，自动管理资源
+with open('hello.txt', 'r', encoding='utf-8') as f:
+    content = f.read()
+# 离开 with 块后文件自动关闭
+```
+
+:::warning 编码一定要显式指定
+在 Windows 上，`open()` 的默认编码不是 UTF-8（通常是 GBK），这会导致跨平台读取含中文的文件时出现 `UnicodeDecodeError`。**永远显式传 `encoding='utf-8'`**，除非你有特殊需求。
+:::
+
+## with 语句：上下文管理器
+
+`with` 语句会在代码块执行完毕后自动调用文件对象的 `__exit__` 方法，即使中间抛出异常也会正确关闭文件。这是处理文件资源的最佳实践。
+
+```py title="Python"
+# 即使中间抛出异常，文件也会被正确关闭
+with open('data.txt', 'r', encoding='utf-8') as f:
+    line = f.readline()
+    raise ValueError('故意抛出异常')
+# 此时 f 仍然被关闭
+```
+
+可以同时打开多个文件：
+
+```py title="Python"
+with (
+    open('input.txt', encoding='utf-8') as fin,
+    open('output.txt', 'w', encoding='utf-8') as fout,
+):
+    for line in fin:
+        fout.write(line.upper())
+```
+
+:::tip 多文件 with 语句
+可以用括号包裹多个 `open()`，一次管理多个文件句柄：
+:::
+
+## 文件模式
+
+`mode` 参数决定了文件以何种方式打开，可以是单个字符或字符组合：
+
+| 模式 | 含义 | 文件不存在时 | 文件已存在时 |
+| --- | --- | --- | --- |
+| `'r'` | 只读（默认） | 抛出 `FileNotFoundError` | 从头读 |
+| `'w'` | 只写（覆盖） | 创建新文件 | 清空原内容 |
+| `'a'` | 追加写 | 创建新文件 | 在末尾追加 |
+| `'x'` | 独占创建 | 创建新文件 | 抛出 `FileExistsError` |
+| `'b'` | 二进制模式 | 与上述组合，如 `'rb'` | — |
+| `'+'` | 读写模式 | 与上述组合，如 `'r+'` | — |
+
+```py title="Python"
+# 只读模式（默认）
+with open('data.txt', encoding='utf-8') as f:
+    print(f.read())
+
+# 写模式：文件不存在则创建，存在则清空
+with open('log.txt', 'w', encoding='utf-8') as f:
+    f.write('新的日志\n')
+
+# 追加模式
+with open('log.txt', 'a', encoding='utf-8') as f:
+    f.write('追加的一行\n')
+
+# 独占创建：避免意外覆盖已有文件
+try:
+    with open('unique.txt', 'x', encoding='utf-8') as f:
+        f.write('只能创建一次')
+except FileExistsError:
+    print('文件已存在，拒绝覆盖')
+
+# 二进制模式：处理图片、压缩包等
+with open('image.png', 'rb') as fin, open('copy.png', 'wb') as fout:
+    fout.write(fin.read())
+```
+
+:::note 文本模式 vs 二进制模式
+- 文本模式（`'r'`、`'w'` 等）：返回 `str`，会做换行符转换（Windows 上 `\r\n` → `\n`），需要指定 `encoding`。
+- 二进制模式（`'rb'`、`'wb'` 等）：返回 `bytes`，不做任何转换，不能指定 `encoding`。
+:::
+
+## 读取文件
+
+文件对象提供三种读取方式：
+
+### read()：一次读完
+
+```py title="Python"
+with open('article.txt', encoding='utf-8') as f:
+    text = f.read()       # 读取整个文件为一个字符串
+    text_100 = f.read(100)  # 读取 100 个字符
+```
+
+### readline()：逐行读取
+
+```py title="Python"
+with open('article.txt', encoding='utf-8') as f:
+    first_line = f.readline()   # 第一行
+    second_line = f.readline()   # 第二行
+```
+
+### readlines()：读取所有行为列表
+
+```py title="Python"
+with open('article.txt', encoding='utf-8') as f:
+    lines = f.readlines()  # ['第一行\n', '第二行\n', ...]
+```
+
+:::warning readlines 不适合大文件
+`readlines()` 会一次性把所有行加载到内存。对于几个 GB 的日志文件，这会直接撑爆内存。大文件请用下面的「迭代」方式。
+:::
+
+### 推荐做法：直接迭代文件对象
+
+文件对象本身是可迭代的，每次迭代返回一行，**这是处理大文件的最佳方式**：
+
+```py title="Python"
+with open('big.log', encoding='utf-8', errors='replace') as f:
+    for line in f:
+        if 'ERROR' in line:
+            print(line.rstrip())
+```
+
+这种方式是惰性的，内存中始终只有一行内容。
+
+## 写入文件
+
+### write()：写字符串
+
+```py title="Python"
+with open('output.txt', 'w', encoding='utf-8') as f:
+    f.write('第一行\n')
+    f.write('第二行\n')
+```
+
+### writelines()：写入可迭代对象
+
+```py title="Python"
+lines = ['苹果\n', '香蕉\n', '橙子\n']
+with open('fruits.txt', 'w', encoding='utf-8') as f:
+    f.writelines(lines)
+```
+
+:::warning writelines 不会自动换行
+`writelines()` 不会在元素之间插入换行符，需要自己在每个字符串末尾加上 `\n`。
+:::
+
+### print 写入文件
+
+`print()` 函数支持 `file` 参数，可以直接写入文件：
+
+```py title="Python"
+with open('greeting.txt', 'w', encoding='utf-8') as f:
+    print('你好，世界', file=f)
+    print('第二行', file=f)
+```
+
+这种方式的好处是 `print` 会自动处理换行和类型转换。
+
+## 文件指针与 seek
+
+文件对象内部维护一个「指针」，指示当前读取/写入的位置。`tell()` 返回当前位置，`seek()` 移动指针：
+
+```py title="Python"
+with open('data.txt', 'w+', encoding='utf-8') as f:
+    f.write('Hello, World')
+    print(f.tell())  # 12，刚写完，指针在末尾
+
+    f.seek(0)         # 移动到开头
+    print(f.read())   # 'Hello, World'
+```
+
+:::note 二进制模式下的 seek
+在二进制模式下，`seek(offset, whence)` 可以使用参考点：
+- `0`：文件开头（默认）
+- `1`：当前位置
+- `2`：文件末尾
+
+文本模式下只能用 `seek(0)` 或 `seek(pos, 0)`，且 `pos` 必须是 `tell()` 返回的值。
+:::
+
+## 大文件迭代技巧
+
+### 按块读取
+
+对于二进制大文件，按固定大小的块读取更高效：
+
+```py title="Python"
+def read_in_chunks(path: str, chunk_size: int = 8192):
+    """按块读取二进制文件，避免一次性加载到内存。"""
+    with open(path, 'rb') as f:
+        while chunk := f.read(chunk_size):
+            yield chunk
+
+
+for block in read_in_chunks('large_video.mp4'):
+    process(block)  # 每次处理 8KB
+```
+
+:::tip 海象运算符 :=
+`while chunk := f.read(chunk_size)` 使用海象运算符，把赋值和判断合并成一行，非常优雅。
+:::
+
+### 文件过滤与统计
+
+```py title="Python"
+def count_lines(path: str, keyword: str) -> int:
+    """统计文件中包含关键字的行数。"""
+    count = 0
+    with open(path, encoding='utf-8', errors='replace') as f:
+        for line in f:
+            if keyword in line:
+                count += 1
+    return count
+```
+
+## 实战：日志文件分析
+
+假设有一份 Nginx 访问日志 `access.log`，每行格式如下：
+
+```
+192.168.1.1 - - [10/Jul/2026:12:00:00 +0800] "GET /api/users HTTP/1.1" 200 1234
+```
+
+我们来统计每个接口被访问的次数和总流量：
+
+```py title="Python"
+from collections import defaultdict
+from pathlib import Path
+
+
+def analyze_access_log(log_path: str) -> dict[str, dict]:
+    """
+    分析访问日志，返回每个路径的访问次数与总流量。
+
+    :param log_path: 日志文件路径
+    :return: {'/api/users': {'count': 10, 'bytes': 12345}, ...}
+    """
+    stats: dict[str, dict] = defaultdict(lambda: {'count': 0, 'bytes': 0})
+
+    with open(log_path, encoding='utf-8', errors='replace') as f:
+        for line in f:
+            # 简化解析：提取路径和状态码、字节数
+            parts = line.split()
+            if len(parts) < 10:
+                continue
+
+            # parts[5] 形如 "GET
+            # parts[6] 形如 /api/users"
+            method = parts[5].strip('"')
+            path = parts[6].rstrip('"')
+            status = int(parts[8])
+            size = int(parts[9]) if parts[9] != '-' else 0
+
+            if status == 200:
+                stats[path]['count'] += 1
+                stats[path]['bytes'] += size
+
+    return dict(stats)
+
+
+if __name__ == '__main__':
+    # 先准备一个示例日志文件
+    sample_log = Path('access.log')
+    sample_log.write_text(
+        '192.168.1.1 - - [10/Jul/2026:12:00:00 +0800] "GET /api/users HTTP/1.1" 200 1234\n'
+        '192.168.1.2 - - [10/Jul/2026:12:00:01 +0800] "POST /api/login HTTP/1.1" 200 567\n'
+        '192.168.1.1 - - [10/Jul/2026:12:00:02 +0800] "GET /api/users HTTP/1.1" 200 2345\n'
+        '192.168.1.3 - - [10/Jul/2026:12:00:03 +0800] "GET /index.html HTTP/1.1" 404 0\n',
+        encoding='utf-8',
+    )
+
+    result = analyze_access_log('access.log')
+    for path, info in sorted(result.items(), key=lambda x: -x[1]['count']):
+        print(f'{path}: 访问 {info["count"]} 次，总流量 {info["bytes"]} 字节')
+```
+
+运行结果：
+
+```text title="输出"
+/api/users": 访问 2 次，总流量 3579 字节
+/api/login": 访问 1 次，总流量 567 字节
+```
+
+:::info 关于 errors 参数
+`errors='replace'` 会让解码失败的字节被替换为 `�`，避免程序因个别坏字节而崩溃。其他常用值还有 `'ignore'`（忽略坏字节）和 `'strict'`（默认，抛出异常）。
+:::
+
+## 高级文件操作技巧
+
+### 文件编码检测
+
+处理未知编码的文件时，使用 `chardet` 或 `cchardet` 库进行自动检测：
+
+```py title="Python"
+import chardet
+
+def detect_encoding(file_path: str) -> str:
+    with open(file_path, 'rb') as f:
+        raw_data = f.read(1024)
+    result = chardet.detect(raw_data)
+    return result['encoding'] or 'utf-8'
+
+encoding = detect_encoding('unknown.txt')
+with open('unknown.txt', 'r', encoding=encoding) as f:
+    content = f.read()
+```
+
+### 文件锁定
+
+使用 `fcntl`（Unix）或 `msvcrt`（Windows）防止多个进程同时写入文件：
+
+```py title="Python"
+import fcntl
+
+with open('shared.lock', 'w') as f:
+    fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+    try:
+        with open('data.txt', 'a') as data:
+            data.write('new entry\n')
+    finally:
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+```
+
+### 临时文件与目录
+
+使用 `tempfile` 模块创建临时文件和目录：
+
+```py title="Python"
+import tempfile
+
+with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+    f.write('临时数据')
+    temp_path = f.name
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    temp_file = Path(tmpdir) / 'data.txt'
+    temp_file.write_text('临时内容')
+```
+
+### 文件校验和
+
+计算文件的 MD5/SHA256 校验和用于完整性验证：
+
+```py title="Python"
+import hashlib
+
+def compute_checksum(file_path: str, hash_type: str = 'sha256') -> str:
+    h = hashlib.new(hash_type)
+    with open(file_path, 'rb') as f:
+        while chunk := f.read(8192):
+            h.update(chunk)
+    return h.hexdigest()
+
+print(compute_checksum('data.bin'))  # 输出 SHA256 哈希值
+```
+
+### 二进制文件处理
+
+处理二进制文件时，使用 `struct` 模块解析固定格式的数据：
+
+```py title="Python"
+import struct
+
+with open('binary.dat', 'rb') as f:
+    header = f.read(16)
+    magic, version, count = struct.unpack('<4sII', header)
+    
+    for _ in range(count):
+        record = f.read(24)
+        id_, timestamp, value = struct.unpack('<QdI', record)
+        print(f"ID: {id_}, Time: {timestamp}, Value: {value}")
+```
+
+### 文本加密解密实战
+
+使用单表替换加密算法保护敏感文本数据：
+
+```py title="Python"
+import random
+from functools import lru_cache
+
+@lru_cache(maxsize=None)
+def _build_table(key: int) -> tuple[dict[str, str], dict[str, str]]:
+    rng = random.Random(key)
+    enc, dec = {}, {}
+    for base in (65, 97):
+        letters = [chr(base + i) for i in range(26)]
+        shuffled = letters[:]
+        rng.shuffle(shuffled)
+        for src, dst in zip(letters, shuffled):
+            enc[src] = dst
+            dec[dst] = src
+    return enc, dec
+
+def encrypt(source: str, key: int = 3) -> str:
+    enc, _ = _build_table(key)
+    return source.translate(str.maketrans(enc))
+
+def decrypt(source: str, key: int = 3) -> str:
+    _, dec = _build_table(key)
+    return source.translate(str.maketrans(dec))
+
+text = "Hello, World!"
+encrypted = encrypt(text, key=42)
+decrypted = decrypt(encrypted, key=42)
+
+print(f"原文: {text}")
+print(f"密文: {encrypted}")
+print(f"解密: {decrypted}")
+```
+
+**技术要点**：
+1. 使用 `random.Random(key)` 基于种子生成可复现的随机置换表
+2. `@lru_cache` 缓存加密/解密表，避免重复计算
+3. `str.translate()` + `str.maketrans()` 实现高效字符替换
+4. 大小写独立处理，保持非字母字符不变
+
+## 🎯 动手练习
+
+1. **文件复制**：实现一个函数，用分块读取复制任意大小的文件，显示进度
+2. **行号添加**：读取文本文件，每行前添加行号后写入新文件
+3. **日志过滤**：读取日志文件，过滤出包含 "ERROR" 的行并输出
+4. **编码转换**：将 GBK 编码的文件转换为 UTF-8 编码
+
+## 📊 速查表
+
+| 操作 | 方法 | 说明 |
+|------|------|------|
+| 打开文件 | `open(path, mode, encoding)` | 永远指定 encoding |
+| 安全打开 | `with open(...) as f:` | 自动关闭，异常安全 |
+| 读取全部 | `f.read()` | 适合小文件 |
+| 读取一行 | `f.readline()` | 返回含换行符的字符串 |
+| 读取所有行 | `f.readlines()` | 返回列表，占内存 |
+| 逐行迭代 | `for line in f:` | 大文件推荐 |
+| 写入字符串 | `f.write(text)` | 不自动换行 |
+| 写入多行 | `f.writelines(lines)` | 不自动换行 |
+| 分块读取 | `f.read(chunk_size)` | 控制内存占用 |
+| 文件指针 | `f.seek(pos)` / `f.tell()` | 移动/获取指针位置 |
+| 刷新缓冲 | `f.flush()` | 强制写入磁盘 |
+| 文本模式 | `'r'` / `'w'` / `'a'` / `'x'` | 默认模式 |
+| 二进制模式 | `'rb'` / `'wb'` / `'ab'` | 图片、音频等 |
+| 读写模式 | `'r+'` / `'w+'` / `'a+'` | 同时读写 |
+| 错误处理 | `errors='replace'` | 替换坏字节为 `` |
+| 错误处理 | `errors='ignore'` | 跳过坏字节 |
+| 换行控制 | `newline=''` | CSV 文件推荐 |
+
+## 📚 延伸阅读
+
+- **[open() 官方文档](https://docs.python.org/zh-cn/3/library/functions.html#open)** - 完整参数说明
+- **[io 模块](https://docs.python.org/zh-cn/3/library/io.html)** - 底层 I/O 流
+- **[编码类型](https://docs.python.org/zh-cn/3/library/codecs.html#standard-encodings)** - 支持的编码列表
+- **[上下文管理器](https://docs.python.org/zh-cn/3/library/stdtypes.html#typecontextmanager)** - with 语句原理
+
+## 📝 本节总结
+
+- **使用 `with open(...) as f:` 管理文件资源**，永远显式指定 `encoding='utf-8'`
+- **模式**：`r` 读、`w` 覆盖写、`a` 追加、`x` 独占创建；`b` 二进制、`+` 读写
+- **读**：`read()` 一次读完、`readline()` 逐行、`readlines()` 全部到列表；**大文件直接迭代文件对象**
+- **写**：`write()` 写字符串、`writelines()` 写可迭代对象（不自动换行）、`print(..., file=f)` 也很方便
+- **大文件处理用 `for line in f` 或 `while chunk := f.read(n)`**，保持内存占用恒定
+- **用 `errors='replace'` 容忍日志类文件中的少量坏字节**
+
+掌握了基础的文件读写后，下一章我们学习更现代的路径处理工具 `pathlib`。

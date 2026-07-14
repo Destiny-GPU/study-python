@@ -1,0 +1,905 @@
+---
+sidebar_position: 3
+sidebar_label: '异步编程'
+title: 🚀 异步编程
+description: 学习 Python 异步编程，掌握 async/await 语法、asyncio 事件循环、TaskGroup 并发与异步上下文管理器。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🚀 异步编程
+
+异步编程（asynchronous programming）是一种**并发**模型，特别适合 I/O 密集型任务——网络请求、数据库查询、文件读写。与多线程相比，异步通过单线程事件循环切换任务，避免了线程切换开销和锁竞争，能用更少的资源处理大量并发连接。Python 的 `asyncio` 库 + `async`/`await` 语法，是编写高性能 I/O 程序的标准方案。
+
+:::tip 🎯 本节要点
+- **async def**：定义协程函数，调用返回协程对象，必须用 `await` 或事件循环驱动
+- **asyncio.run()**：程序入口，创建并关闭事件循环
+- **await**：串行等待；**asyncio.create_task()**：让任务并发执行
+- **asyncio.gather()**：并发收集多个协程结果，`return_exceptions=True` 保留异常
+- **asyncio.TaskGroup**（3.11+）：结构化并发的现代写法，配合 `except*` 处理异常组
+- **async with / async for**：异步上下文管理器和异步迭代器
+- **异步适合 I/O 密集型**，CPU 密集型应使用多进程
+:::
+
+:::info 何时用异步
+异步并非银弹，它适合"I/O 多、CPU 少"的场景：
+- ✅ 网络爬虫、API 客户端、WebSocket 服务
+- ✅ 数据库连接池、消息队列消费者
+- ❌ CPU 密集型计算（用多进程）
+- ❌ 简单脚本（异步增加复杂度，得不偿失）
+
+如果你的程序大部分时间在"等待"——等网络、等磁盘，异步能让它在等待时去做别的事。
+:::
+
+<PyodideRunner title="异步编程快速体验">
+
+```python
+import asyncio
+
+# 定义协程函数
+async def greet(name, delay):
+    await asyncio.sleep(delay)  # 模拟异步操作
+    return f"你好, {name}!"
+
+# 顺序执行
+async def sequential():
+    result1 = await greet("张三", 0.1)
+    result2 = await greet("李四", 0.1)
+    return [result1, result2]
+
+# 并发执行
+async def concurrent():
+    task1 = asyncio.create_task(greet("王五", 0.1))
+    task2 = asyncio.create_task(greet("赵六", 0.1))
+    return [await task1, await task2]
+
+# 运行
+results = asyncio.run(sequential())
+print(f"顺序执行: {results}")
+
+results = asyncio.run(concurrent())
+print(f"并发执行: {results}")
+```
+
+</PyodideRunner>
+
+## 协程与 async/await
+
+`async def` 定义的函数叫**协程函数**，调用它返回一个**协程对象**（coroutine），而非直接执行：
+
+```py title="Python"
+import asyncio
+
+
+async def hello():
+    print("Hello")
+    return "done"
+
+
+# 直接调用不会执行，只返回协程对象
+coro = hello()
+print(coro)  # <coroutine object hello at 0x...>
+
+# 必须用 await 或 asyncio.run 驱动
+# await hello()  # 只能在 async 函数里
+```
+
+:::warning 协程不调用就不会执行
+协程函数调用后返回协程对象，但**不会自动执行**。必须有 `await` 或事件循环驱动它。如果你写了 `async def` 却没 `await`，会看到 "coroutine was never awaited" 警告。
+:::
+
+### await 暂停与恢复
+
+`await` 暂停当前协程，等待另一个协程或 Future 完成，期间事件循环可以执行其他任务：
+
+```py title="Python"
+import asyncio
+
+
+async def fetch_data():
+    print("开始获取数据...")
+    await asyncio.sleep(1)  # 模拟 I/O 等待 1 秒
+    print("数据获取完成")
+    return {"id": 1, "name": "Alice"}
+
+
+async def main():
+    print("调用 fetch_data 之前")
+    result = await fetch_data()  # 暂停，等 fetch_data 完成
+    print(f"拿到结果：{result}")
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+调用 fetch_data 之前
+开始获取数据...
+数据获取完成
+拿到结果：{'id': 1, 'name': 'Alice'}
+```
+
+## asyncio.run 启动事件循环
+
+`asyncio.run()` 是程序的入口，创建事件循环、运行协程、关闭循环。它是 Python 3.7+ 推荐的启动方式：
+
+```py title="Python"
+import asyncio
+
+
+async def main():
+    print("主协程开始")
+    await asyncio.sleep(0.5)
+    print("主协程结束")
+
+
+# 整个程序只能有一个 asyncio.run
+asyncio.run(main())
+```
+
+:::note asyncio.run 的规则
+- 每个程序只应在**最外层**调用一次 `asyncio.run`
+- 它会创建新的事件循环，结束时自动关闭
+- **不能**在已有事件循环内调用 `asyncio.run`（嵌套会报错）
+- 应在 `main()` 里编排所有子任务
+:::
+
+## asyncio.sleep 模拟 I/O
+
+`asyncio.sleep(seconds)` 是异步版的 `time.sleep`——它**不阻塞线程**，而是让出控制权给事件循环：
+
+```py title="Python"
+import asyncio
+import time
+
+
+async def task(name: str, delay: float) -> None:
+    print(f"[{name}] 开始，等待 {delay}s")
+    await asyncio.sleep(delay)  # 不阻塞，让出 CPU
+    print(f"[{name}] 完成")
+
+
+async def main():
+    start = time.perf_counter()
+    # 顺序 await：总时间 = 1 + 2 = 3 秒
+    await task("A", 1)
+    await task("B", 2)
+    print(f"顺序耗时：{time.perf_counter() - start:.2f}s")
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+[A] 开始，等待 1.0s
+[A] 完成
+[B] 开始，等待 2.0s
+[B] 完成
+顺序耗时：3.00s
+```
+
+顺序 `await` 等同于同步执行——`A` 完成才执行 `B`。要并发，需要 `create_task` 或 `gather`。
+
+## asyncio.create_task 并发
+
+`asyncio.create_task(coro)` 把协程包装成 **Task**，立即调度执行，不阻塞当前协程：
+
+```py title="Python"
+import asyncio
+import time
+
+
+async def task(name: str, delay: float) -> str:
+    print(f"[{name}] 开始")
+    await asyncio.sleep(delay)
+    print(f"[{name}] 完成")
+    return f"{name} 的结果"
+
+
+async def main():
+    start = time.perf_counter()
+    # 创建任务后立即返回，不等执行完
+    t1 = asyncio.create_task(task("A", 1))
+    t2 = asyncio.create_task(task("B", 2))
+
+    # 现在两个任务在并发跑
+    # 可以做别的事
+    print("任务已创建，主协程继续...")
+
+    # 等待所有任务完成
+    r1 = await t1
+    r2 = await t2
+    print(f"结果：{r1}, {r2}")
+    print(f"并发耗时：{time.perf_counter() - start:.2f}s")  # 约 2s 而非 3s
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+[A] 开始
+[B] 开始
+任务已创建，主协程继续...
+[A] 完成
+[B] 完成
+结果：A 的结果, B 的结果
+并发耗时：2.00s
+```
+
+:::tip create_task vs await
+- `await coro()`：等这个协程完成才继续——**串行**
+- `task = create_task(coro()); await task`：任务立即开始跑，你可以稍后再等——**并发**
+
+关键区别：`create_task` 让协程"在后台"立即开始执行，主协程不阻塞。
+:::
+
+## asyncio.gather 并发收集
+
+`asyncio.gather(*coros)` 并发运行多个协程，按顺序返回结果列表：
+
+```py title="Python"
+import asyncio
+import time
+
+
+async def fetch(url: str, delay: float) -> str:
+    await asyncio.sleep(delay)
+    return f"来自 {url} 的数据（耗时 {delay}s）"
+
+
+async def main():
+    start = time.perf_counter()
+    # 并发请求 3 个 URL
+    results = await asyncio.gather(
+        fetch("api/users", 1.5),
+        fetch("api/posts", 1.0),
+        fetch("api/comments", 0.5),
+    )
+    print(results)
+    print(f"总耗时：{time.perf_counter() - start:.2f}s")  # 约 1.5s（取最长的）
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+['来自 api/users 的数据（耗时 1.5s）', '来自 api/posts 的数据（耗时 1.0s）', '来自 api/comments 的数据（耗时 0.5s）']
+总耗时：1.50s
+```
+
+### gather 的异常处理
+
+默认情况下，`gather` 中任一协程抛异常会导致整个 gather 失败。`return_exceptions=True` 让异常作为结果返回：
+
+```py title="Python"
+import asyncio
+
+
+async def good():
+    return "成功"
+
+
+async def bad():
+    raise ValueError("出错了")
+
+
+async def main():
+    # 默认：bad 抛异常，整个 gather 抛出
+    # results = await asyncio.gather(good(), bad())  # 抛 ValueError
+
+    # return_exceptions=True：异常作为结果返回
+    results = await asyncio.gather(good(), bad(), return_exceptions=True)
+    for r in results:
+        if isinstance(r, Exception):
+            print(f"出错：{r}")
+        else:
+            print(f"成功：{r}")
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+成功：成功
+出错：出错了
+```
+
+## TaskGroup（Python 3.11+）
+
+`asyncio.TaskGroup`（PEP 654）是 Python 3.11 引入的现代并发原语，比 `gather` 更安全：
+
+```py title="Python"
+import asyncio
+import time
+
+
+async def fetch(url: str, delay: float) -> str:
+    await asyncio.sleep(delay)
+    return f"来自 {url} 的数据"
+
+
+async def main():
+    start = time.perf_counter()
+    async with asyncio.TaskGroup() as tg:
+        t1 = tg.create_task(fetch("api/users", 1.5))
+        t2 = tg.create_task(fetch("api/posts", 1.0))
+        t3 = tg.create_task(fetch("api/comments", 0.5))
+
+    # 退出 async with 时，所有任务已确保完成
+    print(t1.result())
+    print(t2.result())
+    print(t3.result())
+    print(f"耗时：{time.perf_counter() - start:.2f}s")
+
+
+asyncio.run(main())
+```
+
+:::tip TaskGroup vs gather
+`TaskGroup`（Python 3.11+）相比 `gather` 的优势：
+1. **异常组（ExceptionGroup）**：多个任务同时失败时，会抛出 `ExceptionGroup`，包含所有异常，不会丢失
+2. **结构化并发**：`async with` 块结束时，所有任务必定完成或取消，避免任务泄漏
+3. **取消更安全**：一个任务失败会自动取消其他任务
+
+新代码应优先使用 `TaskGroup`，`gather` 适合简单场景。
+:::
+
+### 异常组处理
+
+```py title="Python"
+import asyncio
+
+
+async def task_ok():
+    await asyncio.sleep(0.1)
+    return "ok"
+
+
+async def task_fail():
+    await asyncio.sleep(0.2)
+    raise ValueError("失败了")
+
+
+async def task_also_fail():
+    await asyncio.sleep(0.3)
+    raise RuntimeError("也失败了")
+
+
+async def main():
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(task_ok())
+            tg.create_task(task_fail())
+            tg.create_task(task_also_fail())
+    except* ValueError as eg:  # Python 3.11+ except* 语法
+        print(f"捕获 ValueError 组：{eg.exceptions}")
+    except* RuntimeError as eg:
+        print(f"捕获 RuntimeError 组：{eg.exceptions}")
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+捕获 ValueError 组：(ValueError('失败了'),)
+捕获 RuntimeError 组：(RuntimeError('也失败了'),)
+```
+
+:::info except* 语法
+Python 3.11 引入了 `except*` 语法（PEP 654），用于处理 `ExceptionGroup`。`except* ValueError` 会从异常组中**筛选**出 `ValueError` 类型的异常，其他类型继续向上传播。这让多个不同类型的异常可以被分别处理。
+:::
+
+## 超时控制
+
+### asyncio.wait_for
+
+`asyncio.wait_for(coro, timeout)` 设置超时，超时抛 `TimeoutError`：
+
+```py title="Python"
+import asyncio
+
+
+async def slow_task():
+    await asyncio.sleep(10)
+    return "完成"
+
+
+async def main():
+    try:
+        result = await asyncio.wait_for(slow_task(), timeout=1.0)
+        print(result)
+    except asyncio.TimeoutError:
+        print("任务超时！")  # 1 秒后触发
+
+
+asyncio.run(main())
+```
+
+### asyncio.timeout（Python 3.11+）
+
+`asyncio.timeout()` 是更现代的超时上下文管理器：
+
+```py title="Python"
+import asyncio
+
+
+async def slow_task():
+    await asyncio.sleep(10)
+    return "完成"
+
+
+async def main():
+    try:
+        async with asyncio.timeout(1.0):
+            result = await slow_task()
+            print(result)
+    except TimeoutError:
+        print("超时！")
+
+
+asyncio.run(main())
+```
+
+## 异步上下文管理器
+
+`async with` 配合 `__aenter__`/`__aexit__` 实现异步上下文管理器，常用于资源获取与释放：
+
+```py title="Python"
+import asyncio
+
+
+class AsyncDatabaseConnection:
+    def __init__(self, db_url: str) -> None:
+        self.db_url = db_url
+        self.connected = False
+
+    async def __aenter__(self) -> "AsyncDatabaseConnection":
+        print(f"连接数据库 {self.db_url}...")
+        await asyncio.sleep(0.5)  # 模拟连接耗时
+        self.connected = True
+        print("连接成功")
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        print("关闭数据库连接...")
+        await asyncio.sleep(0.2)  # 模拟关闭耗时
+        self.connected = False
+        print("连接已关闭")
+
+    async def query(self, sql: str) -> list[str]:
+        if not self.connected:
+            raise RuntimeError("未连接数据库")
+        await asyncio.sleep(0.3)  # 模拟查询
+        return [f"row_{i}" for i in range(3)]
+
+
+async def main():
+    async with AsyncDatabaseConnection("postgresql://localhost/mydb") as db:
+        rows = await db.query("SELECT * FROM users")
+        print(f"查询结果：{rows}")
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+连接数据库 postgresql://localhost/mydb...
+连接成功
+查询结果：['row_0', 'row_1', 'row_2']
+关闭数据库连接...
+连接已关闭
+```
+
+:::tip async with vs with
+- `with`：同步上下文管理器，`__enter__`/`__exit__`
+- `async with`：异步上下文管理器，`__aenter__`/`__aexit__`
+
+异步上下文管理器的进入/退出可以是协程，能在其中 `await`，适合异步资源的获取与释放。
+:::
+
+## async for 异步迭代
+
+`async for` 配合 `__aiter__`/`__anext__` 实现异步迭代器：
+
+```py title="Python"
+import asyncio
+
+
+class AsyncCounter:
+    """异步计数器，每秒产生一个数字。"""
+    def __init__(self, stop: int) -> None:
+        self.current = 0
+        self.stop = stop
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self) -> int:
+        if self.current >= self.stop:
+            raise StopAsyncIteration
+        await asyncio.sleep(0.3)  # 模拟异步获取
+        self.current += 1
+        return self.current
+
+
+async def main():
+    async for num in AsyncCounter(5):
+        print(f"收到：{num}")
+
+
+asyncio.run(main())
+```
+
+输出（每 0.3 秒一行）：
+
+```text title="输出"
+收到：1
+收到：2
+收到：3
+收到：4
+收到：5
+```
+
+### 异步生成器
+
+`async def` + `yield` 定义异步生成器，更简洁：
+
+```py title="Python"
+import asyncio
+
+
+async def async_range(start: int, stop: int, step: float = 1.0):
+    current = float(start)
+    while current < stop:
+        await asyncio.sleep(0.2)
+        yield int(current)
+        current += step
+
+
+async def main():
+    async for n in async_range(0, 5):
+        print(f"值：{n}")
+
+
+asyncio.run(main())
+```
+
+## aiohttp 与 httpx 简介
+
+标准库 `urllib` 是同步的，不适合异步。常用异步 HTTP 客户端：
+
+- **aiohttp**：异步 HTTP 客户端/服务端，老牌且生态成熟
+- **httpx**：支持同步和异步，API 与 `requests` 兼容，更现代
+
+:::note 安装
+这两个库需要单独安装，不在标准库中：
+```bash title="Shell"
+pip install aiohttp httpx
+```
+:::
+
+### httpx 异步示例
+
+```py title="Python"
+import asyncio
+import httpx
+import time
+
+
+async def fetch(client: httpx.AsyncClient, url: str) -> str:
+    response = await client.get(url, timeout=10)
+    response.raise_for_status()
+    return f"{url}: {len(response.text)} 字节"
+
+
+async def main():
+    start = time.perf_counter()
+    urls = [
+        "https://httpbin.org/delay/1",
+        "https://httpbin.org/delay/1",
+        "https://httpbin.org/delay/1",
+    ]
+
+    async with httpx.AsyncClient() as client:
+        # 并发请求
+        results = await asyncio.gather(
+            *[fetch(client, url) for url in urls],
+            return_exceptions=True
+        )
+
+    for r in results:
+        if isinstance(r, Exception):
+            print(f"失败：{r}")
+        else:
+            print(r)
+
+    print(f"总耗时：{time.perf_counter() - start:.2f}s")
+
+
+# asyncio.run(main())  # 取消注释运行（需要联网）
+```
+
+:::tip 复用 AsyncClient
+`httpx.AsyncClient` 内部维护连接池，复用它能避免每次请求重新建立连接，大幅提升性能。应在 `async with` 中复用同一个 client 实例，而非每次请求都新建。
+:::
+
+## 实战：并发请求多个 URL
+
+下面实现一个完整的并发 URL 抓取器，综合运用 `TaskGroup`、超时控制、异常处理：
+
+```py title="Python"
+import asyncio
+import time
+from dataclasses import dataclass
+
+
+# 模拟网络请求（无需联网即可运行）
+async def fake_fetch(url: str, latency: float, fail: bool = False) -> str:
+    """模拟一个会延迟并可能失败的网络请求。"""
+    await asyncio.sleep(latency)
+    if fail:
+        raise ConnectionError(f"无法连接 {url}")
+    return f"<html>{url} 的内容</html>"
+
+
+@dataclass
+class FetchResult:
+    url: str
+    content: str | None = None
+    error: str | None = None
+    elapsed: float = 0.0
+
+    @property
+    def success(self) -> bool:
+        return self.error is None
+
+
+async def fetch_with_timeout(
+    url: str,
+    latency: float,
+    timeout: float = 2.0,
+    fail: bool = False,
+) -> FetchResult:
+    """带超时的请求封装，返回 FetchResult。"""
+    start = time.perf_counter()
+    try:
+        async with asyncio.timeout(timeout):
+            content = await fake_fetch(url, latency, fail)
+            return FetchResult(url=url, content=content, elapsed=time.perf_counter() - start)
+    except TimeoutError:
+        return FetchResult(url=url, error="超时", elapsed=time.perf_counter() - start)
+    except Exception as e:
+        return FetchResult(url=url, error=str(e), elapsed=time.perf_counter() - start)
+
+
+async def fetch_all(urls: list[tuple[str, float, bool]]) -> list[FetchResult]:
+    """并发抓取所有 URL，使用 TaskGroup 确保结构化并发。"""
+    tasks = []
+    async with asyncio.TaskGroup() as tg:
+        for url, latency, fail in urls:
+            task = tg.create_task(fetch_with_timeout(url, latency, fail))
+            tasks.append(task)
+    return [t.result() for t in tasks]
+
+
+async def main():
+    start = time.perf_counter()
+
+    # (url, 模拟延迟, 是否失败)
+    urls = [
+        ("https://api.com/users", 0.5, False),
+        ("https://api.com/posts", 1.0, False),
+        ("https://api.com/comments", 1.5, False),
+        ("https://api.com/slow", 3.0, False),  # 会超时
+        ("https://api.com/broken", 0.3, True),  # 会失败
+    ]
+
+    print(f"开始并发抓取 {len(urls)} 个 URL...\n")
+    results = await fetch_all(urls)
+
+    # 汇总结果
+    successes = [r for r in results if r.success]
+    failures = [r for r in results if not r.success]
+
+    for r in results:
+        status = "✓" if r.success else "✗"
+        detail = r.content[:30] if r.success else r.error
+        print(f"{status} {r.url:35} ({r.elapsed:.2f}s) {detail}")
+
+    print(f"\n成功 {len(successes)} / 失败 {len(failures)}")
+    print(f"总耗时：{time.perf_counter() - start:.2f}s（最长任务的延迟）")
+
+
+asyncio.run(main())
+```
+
+输出：
+
+```text title="输出"
+开始并发抓取 5 个 URL...
+
+✓ https://api.com/users                 (0.50s) <html>https://api.com/users
+✓ https://api.com/posts                  (1.00s) <html>https://api.com/posts 的内容
+✓ https://api.com/comments               (1.50s) <html>https://api.com/comments
+✗ https://api.com/slow                   (2.00s) 超时
+✗ https://api.com/broken                 (0.30s) 无法连接 https://api.com/broken
+
+成功 3 / 失败 2
+总耗时：2.00s（最长任务的延迟）
+```
+
+:::tip 并发的本质
+注意总耗时约 2 秒——这是最长任务（超时任务被 `asyncio.timeout(2.0)` 限制在 2 秒）的耗时。如果串行执行，总耗时会是 0.5+1.0+1.5+3.0+0.3 = 6.3 秒。并发让"等待"重叠，是异步编程的核心价值。
+
+关键点：
+- `TaskGroup` 确保所有任务在退出 `async with` 时已完成
+- `asyncio.timeout` 防止慢请求拖垮整体
+- 每个任务独立捕获异常，不影响其他任务
+:::
+
+## 异步编程的常见陷阱
+
+### 陷阱一：忘记 await
+
+最常见的错误是调用协程函数后忘记 `await`：
+
+```py title="Python"
+async def fetch(url: str) -> str:
+    await asyncio.sleep(1)
+    return f"content of {url}"
+
+# ❌ 错误：没有 await，返回的是协程对象，不会执行
+result = fetch("https://example.com")
+print(result)  # <coroutine object fetch at 0x...>
+
+# ✅ 正确：必须 await
+result = await fetch("https://example.com")
+```
+
+### 陷阱二：在同步函数中调用异步代码
+
+同步函数不能直接 `await`，会抛出 `RuntimeError`：
+
+```py title="Python"
+def sync_func():
+    # ❌ 错误：在非异步函数中调用 await
+    await asyncio.sleep(1)  # RuntimeError
+
+# ✅ 正确：使用 asyncio.run 桥接
+def sync_func():
+    asyncio.run(asyncio.sleep(1))
+```
+
+### 陷阱三：阻塞事件循环
+
+在异步代码中调用同步阻塞操作会导致整个事件循环卡住：
+
+```py title="Python"
+async def bad_async():
+    # ❌ 错误：time.sleep 是同步阻塞，会冻结事件循环
+    time.sleep(5)
+
+async def good_async():
+    # ✅ 正确：使用 asyncio.sleep
+    await asyncio.sleep(5)
+```
+
+对于必须调用的同步阻塞函数，使用 `asyncio.to_thread`：
+
+```py title="Python"
+async def safe_call_sync():
+    result = await asyncio.to_thread(some_blocking_sync_function)
+```
+
+### 陷阱四：共享状态竞争
+
+多个任务并发访问共享状态时需要锁保护：
+
+```py title="Python"
+async def increment_counter(counter: list[int], lock: asyncio.Lock):
+    async with lock:
+        counter[0] += 1
+```
+
+## 最佳实践
+
+### 结构化并发与 TaskGroup
+
+优先使用 `asyncio.TaskGroup` 而非 `create_task` + `gather`，它能确保：
+- 异常传播时自动取消所有子任务
+- 资源在作用域退出时必定释放
+
+```py title="Python"
+async with asyncio.TaskGroup() as tg:
+    tg.create_task(task1())
+    tg.create_task(task2())
+```
+
+### 超时控制
+
+所有外部 I/O 操作都应设置超时：
+
+```py title="Python"
+async with asyncio.timeout(5):
+    result = await fetch(url)
+```
+
+### 异步上下文管理器
+
+数据库连接、HTTP 客户端等资源应使用 `async with`：
+
+```py title="Python"
+async with httpx.AsyncClient() as client:
+    resp = await client.get(url)
+```
+
+### 日志与调试
+
+使用 `logging` 而非 `print`，并设置 `LOG_LEVEL=DEBUG` 查看事件循环状态：
+
+```py title="Python"
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+## 🎯 动手练习
+
+1. **并发下载**：用 `aiohttp` 并发下载多个 URL，对比串行与并行的耗时差异
+2. **超时控制**：用 `asyncio.wait_for` 为网络请求设置超时，处理超时异常
+3. **生产者-消费者**：用 `asyncio.Queue` 实现异步生产者-消费者模式
+4. **TaskGroup 实践**：用 `TaskGroup` 管理多个并发任务，处理异常组
+
+## 📊 速查表
+
+| 操作 | 方法 | 说明 |
+|------|------|------|
+| 定义协程 | `async def func():` | 返回协程对象 |
+| 运行入口 | `asyncio.run(main())` | 创建并关闭事件循环 |
+| 串行等待 | `await coro` | 等待单个协程完成 |
+| 并发任务 | `asyncio.create_task(coro)` | 后台并发执行 |
+| 收集结果 | `asyncio.gather(*coros)` | 并发执行多个协程 |
+| 保留异常 | `gather(..., return_exceptions=True)` | 异常不中断 |
+| TaskGroup | `async with asyncio.TaskGroup()` | 3.11+ 结构化并发 |
+| 超时控制 | `asyncio.wait_for(coro, timeout)` | 超时抛 TimeoutError |
+| 超时上下文 | `async with asyncio.timeout(sec)` | 3.11+ 上下文超时 |
+| 睡眠 | `await asyncio.sleep(sec)` | 非阻塞睡眠 |
+| 异步上下文 | `async with ctx:` | 异步上下文管理器 |
+| 异步迭代 | `async for item in aiter:` | 异步迭代器 |
+| 异步 HTTP | `aiohttp` / `httpx` | 第三方异步库 |
+| 异常组 | `except* Exception:` | 3.11+ 处理多个异常 |
+
+## 📚 延伸阅读
+
+- **[asyncio 官方文档](https://docs.python.org/zh-cn/3/library/asyncio.html)** - 完整 API 参考
+- **[PEP 492](https://peps.python.org/pep-0492/)** - async/await 语法规范
+- **[PEP 654](https://peps.python.org/pep-0654/)** - 异常组与 except* 规范
+- **[aiohttp 文档](https://docs.aiohttp.org/)** - 异步 HTTP 客户端/服务器
+- **[httpx 文档](https://www.python-httpx.org/)** - 支持同步/异步的 HTTP 客户端
+
+## 📝 本节总结
+
+- **`async def` 定义协程函数**，调用返回协程对象，必须用 `await` 或事件循环驱动
+- **`asyncio.run(main())` 是程序的入口**，创建并关闭事件循环
+- **`await coro` 串行等待**；`asyncio.create_task(coro)` 让任务并发执行
+- **`asyncio.gather(*coros)` 并发收集多个协程结果**；`return_exceptions=True` 保留异常
+- **`asyncio.TaskGroup`（3.11+）是结构化并发的现代写法**，配合 `except*` 处理异常组
+- **`asyncio.wait_for` / `asyncio.timeout`（3.11+）控制超时**
+- **`async with` / `async for` 配合异步上下文管理器和异步迭代器**
+- **常用异步 HTTP 库**：aiohttp、httpx；复用 `AsyncClient` 提升性能
+- **异步适合 I/O 密集型任务**，CPU 密集型应使用多进程
+
+下一节将深入模式匹配——序列/映射/类模式、守卫、AST 处理等进阶用法。

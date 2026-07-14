@@ -1,0 +1,105 @@
+.codeAnimation {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.codeWindow {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  max-width: 380px;
+  width: 100%;
+  text-align: left;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.codeWindowBar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.codeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.codeDot:nth-child(1) { background: rgba(255, 95, 86, 0.7); }
+.codeDot:nth-child(2) { background: rgba(255, 189, 46, 0.7); }
+.codeDot:nth-child(3) { background: rgba(39, 201, 63, 0.7); }
+
+.codeBlock {
+  margin: 0;
+  padding: 1.25rem 1.5rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #e0e0e0;
+  overflow: hidden;
+  white-space: pre;
+}
+
+.codeLine {
+  min-height: 1.8em;
+  white-space: pre;
+}
+
+/* Cursor */
+.cursor {
+  color: #82aaff;
+  animation: blink 1s step-end infinite;
+  font-weight: 300;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Syntax highlighting tokens */
+.codeKeyword { color: #c792ea; }
+.codeBuiltin { color: #82aaff; }
+.codeString { color: #c3e88d; }
+.codeFunc { color: #82aaff; }
+.codeDecorator { color: #ffcb6b; }
+.codeNumber { color: #f78c6c; }
+.codeParam { color: #f78c6c; }
+.codeIdent { color: #e0e0e0; }
+.codeComment { color: #546e7a; font-style: italic; }
+
+/* Light mode: keep dark for contrast */
+[data-theme='light'] .codeWindow {
+  background: rgba(30, 30, 46, 0.85);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* 移动端代码窗口 */
+@media (max-width: 768px) {
+  .codeWindow {
+    max-width: 340px;
+  }
+
+  .codeBlock {
+    font-size: 0.9rem;
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .codeWindow {
+    max-width: 300px;
+  }
+
+  .codeBlock {
+    font-size: 0.8rem;
+    padding: 0.875rem 1rem;
+  }
+}

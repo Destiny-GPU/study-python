@@ -1,0 +1,571 @@
+---
+sidebar_position: 1
+sidebar_label: 'os 与 sys'
+title: 🧰 os 与 sys 模块
+description: 掌握 os 与 sys 模块，进行环境变量、目录、进程、平台判断等系统级操作，并对比 os.path 与 pathlib、os.system 与 subprocess。
+---
+
+# 🧰 os 与 sys 模块
+
+`os` 与 `sys` 是 Python 与操作系统、解释器交互的两个核心模块。`os` 提供"与操作系统对话"的能力——访问环境变量、目录、文件权限、进程信息；`sys` 提供"与解释器对话"的能力——命令行参数、模块搜索路径、标准流、退出码等。本章将系统讲解这两个模块，并对比现代写法与传统写法的取舍。
+
+:::tip 🎯 本节要点
+- **os.environ**：环境变量字典，修改仅影响当前进程及子进程
+- **os.scandir**：高效迭代目录，比 `listdir` + `stat` 快数倍
+- **subprocess.run**：执行外部命令的唯一推荐方式，`os.system` 有注入风险
+- **sys.argv**：命令行参数列表，复杂 CLI 用 `argparse`
+- **sys.path**：模块搜索路径，运行时修改仅影响当前进程
+- **sys.exit**：退出程序，0 正常退出，非 0 异常退出
+- **平台判断**：`os.name` / `sys.platform` / `platform.system()` 三者配合
+- **pathlib 优先**：路径操作首选 `pathlib`，`os.path` 仅用于维护老代码
+:::
+
+:::info 与 pathlib 的分工
+路径拼接、属性访问等"纯路径操作"现代项目首选 `pathlib`（见后续章节）。`os` 仍负责路径之外的部分：环境变量、进程、权限、文件描述符等。两者并不冲突，常配合使用。
+:::
+
+## os.path 与 pathlib 对比
+
+`os.path` 是字符串风格的路径工具，`pathlib` 是面向对象的现代替代。新代码应优先用 `pathlib`，但阅读现有代码时仍需了解 `os.path`：
+
+```py title="Python"
+import os
+from pathlib import Path
+
+target = "/home/tom/project/readme.md"
+
+# os.path 写法：函数式，返回字符串
+print(os.path.basename(target))   # readme.md
+print(os.path.dirname(target))    # /home/tom/project
+print(os.path.splitext(target))   # ('/home/tom/project/readme', '.md')
+print(os.path.join("/a", "b", "c"))  # /a/b/c
+print(os.path.exists(target))     # False 或 True
+
+# pathlib 写法：面向对象，返回 Path
+p = Path(target)
+print(p.name)        # readme.md
+print(p.parent)      # /home/tom/project
+print(p.suffix)      # .md
+print(Path("/a") / "b" / "c")  # /a/b/c
+print(p.exists())    # False 或 True
+```
+
+:::tip 何时仍需 os.path
+- 维护老代码或第三方库接口要求字符串路径
+- 需要 `os.path.expandvars` 展开 `$VAR` 这种环境变量替换
+- 与 C 扩展交互时字符串更直接
+
+其余场景一律推荐 `pathlib`。
+:::
+
+## 环境变量：os.environ
+
+`os.environ` 是一个类似字典的对象，保存当前进程的所有环境变量：
+
+```py title="Python"
+import os
+
+# 读取
+print(os.environ.get("HOME", "/tmp"))   # /home/tom
+print(os.environ["PATH"])               # 不存在会抛 KeyError
+
+# 安全读取（推荐）
+home = os.environ.get("HOME")
+if home is not None:
+    print("用户主目录：", home)
+
+# 设置（仅当前进程及其子进程可见）
+os.environ["MY_APP_DEBUG"] = "1"
+print(os.environ["MY_APP_DEBUG"])  # 1
+
+# 删除
+del os.environ["MY_APP_DEBUG"]
+
+# 判断是否存在
+print("HOME" in os.environ)  # True
+```
+
+### getenv 与 getenvb
+
+```py title="Python"
+import os
+
+# getenv 是 environ.get 的便捷别名
+lang = os.getenv("LANG", "en_US.UTF-8")
+print(lang)
+
+# getenvb 返回 bytes，处理二进制环境变量
+path_bytes = os.getenvb(b"PATH")
+print(type(path_bytes))  # <class 'bytes'> 或 None
+```
+
+:::warning environ 修改不会影响父进程
+`os.environ` 的修改只对当前进程及其通过 `subprocess` 启动的子进程生效。Python 退出后，父 shell 的环境变量不会被改变——这由操作系统决定，并非 Python 的限制。
+:::
+
+## 工作目录：getcwd / chdir
+
+```py title="Python"
+import os
+
+# 获取当前工作目录
+cwd = os.getcwd()
+print("当前目录：", cwd)
+
+# 切换工作目录
+os.chdir("/tmp")
+print("切换后：", os.getcwd())
+
+# 切回原目录
+os.chdir(cwd)
+```
+
+:::warning 谨慎使用 chdir
+`os.chdir` 会影响进程全局状态，包括所有相对路径的解析。多线程程序中切换工作目录极易引发竞态条件，建议用绝对路径代替切换目录。
+:::
+
+## 目录列举：listdir 与 scandir
+
+### listdir：简单列表
+
+```py title="Python"
+import os
+
+# 返回目录下条目名称（不含路径）
+entries = os.listdir("/tmp")
+print(f"共 {len(entries)} 个条目")
+print(entries[:5])
+```
+
+### scandir：高效迭代
+
+`scandir` 返回 `DirEntry` 对象，迭代时一次性获取名称和类型信息，性能优于 `listdir` + `stat`：
+
+```py title="Python"
+import os
+
+with os.scandir("/tmp") as it:
+    for entry in it:
+        if entry.is_file():
+            print(f"文件：{entry.name}，大小 {entry.stat().st_size}")
+        elif entry.is_dir():
+            print(f"目录：{entry.name}")
+        elif entry.is_symlink():
+            print(f"链接：{entry.name} -> {os.readlink(entry.path)}")
+```
+
+:::tip scandir 比 listdir 快
+`scandir` 在迭代时由系统直接返回条目类型，`is_dir()` / `is_file()` 不必再发起 `stat` 系统调用。遍历大目录时性能可提升数倍，应优先使用。
+:::
+
+## 创建目录：makedirs
+
+```py title="Python"
+import os
+
+# 单层目录
+os.mkdir("single_dir")
+
+# 递归创建（类似 mkdir -p）
+os.makedirs("a/b/c/d", exist_ok=True)
+# exist_ok=True：目录已存在时不抛异常（Python 3.2+）
+
+# 设置权限模式
+os.makedirs("secure_dir", mode=0o700, exist_ok=True)
+```
+
+:::note mode 与 umask
+`mode` 参数会被当前进程的 `umask` 修饰，实际权限为 `mode & ~umask`。要精确控制权限需先调用 `os.umask(0)`。
+:::
+
+## 执行外部命令：os.system vs subprocess
+
+```py title="Python"
+import os
+import subprocess
+
+# os.system：简单但功能有限，返回退出码
+ret = os.system("echo hello")
+print(f"退出码：{ret}")  # 0
+
+# subprocess.run：现代推荐写法
+result = subprocess.run(
+    ["echo", "hello"],
+    capture_output=True,
+    text=True,
+    check=True,
+)
+print("stdout:", result.stdout.strip())  # hello
+print("returncode:", result.returncode)  # 0
+```
+
+:::warning 永远不要用 os.system 处理用户输入
+`os.system` 通过 shell 执行命令，存在命令注入风险：
+
+```py title="Python"
+# 危险！filename 来自用户输入
+filename = "foo; rm -rf /"
+os.system(f"cat {filename}")  # 灾难
+```
+
+正确做法是用 `subprocess.run([...], shell=False)`，参数以列表形式传递，不经过 shell 解析：
+
+```py title="Python"
+subprocess.run(["cat", filename], check=True)
+```
+
+`os.system` 仅适合写脚本快速验证，**生产代码一律用 subprocess**。
+:::
+
+### 捕获输出与错误
+
+```py title="Python"
+import subprocess
+
+result = subprocess.run(
+    ["ls", "/nonexistent"],
+    capture_output=True,
+    text=True,
+)
+print("returncode:", result.returncode)  # 非 0
+print("stderr:", result.stderr)         # ls: cannot access ...
+```
+
+## sys 模块基础
+
+### sys.argv：命令行参数
+
+```py title="Python"
+import sys
+
+# argv[0] 是脚本名，argv[1:] 是真正的参数
+print("脚本名：", sys.argv[0])
+print("参数列表：", sys.argv[1:])
+
+if len(sys.argv) < 2:
+    print("用法：python script.py <name>")
+    sys.exit(1)
+
+name = sys.argv[1]
+print(f"Hello, {name}!")
+```
+
+:::tip 复杂 CLI 用 argparse
+超过两三个参数的命令行程序，建议直接用 `argparse` 或第三方 `typer` / `click`，能自动生成帮助、校验类型、支持子命令。
+:::
+
+### sys.exit：退出程序
+
+```py title="Python"
+import sys
+
+def main() -> None:
+    if not check_something():
+        print("检查失败", file=sys.stderr)
+        sys.exit(1)  # 非 0 表示异常退出
+    sys.exit(0)      # 0 表示正常退出
+
+# 也可传字符串，会打印到 stderr 并以 1 退出
+# sys.exit("错误信息")
+```
+
+### sys.path：模块搜索路径
+
+```py title="Python"
+import sys
+
+# 查看模块搜索路径
+for i, p in enumerate(sys.path):
+    print(f"[{i}] {p}")
+
+# 临时添加搜索路径
+sys.path.insert(0, "/home/tom/my_libs")
+
+# 查找已加载的模块
+print("json" in sys.modules)
+```
+
+:::info sys.path 的构成
+`sys.path` 一般包含：
+1. 脚本所在目录（或交互模式下的当前目录）
+2. `PYTHONPATH` 环境变量中的目录
+3. 安装依赖的 site-packages 目录
+4. 标准库目录
+
+运行时修改 `sys.path` 只影响当前进程，永久添加路径应使用 `pip install` 或 `PYTHONPATH`。
+:::
+
+### 标准流：stdin / stdout / stderr
+
+```py title="Python"
+import sys
+
+# 写到标准错误
+print("这是一条错误信息", file=sys.stderr)
+
+# 从标准输入读取一行
+# line = sys.stdin.readline()
+# print("你输入了：", line.strip())
+
+# 重定向输出
+original = sys.stdout
+with open("output.log", "w", encoding="utf-8") as f:
+    sys.stdout = f
+    print("这行会写入文件")
+sys.stdout = original
+print("这行会打印到屏幕")
+```
+
+:::warning 重定向 sys.stdout 的风险
+直接替换 `sys.stdout` 容易在异常路径上忘记还原，导致后续输出全部丢失。更安全的方式是用 `contextlib.redirect_stdout` 上下文管理器，它在退出时自动还原。
+:::
+
+## 平台与版本判断
+
+```py title="Python"
+import os
+import sys
+import platform
+
+# os.name：'posix'（Linux/macOS）或 'nt'（Windows）
+print("os.name:", os.name)
+
+# sys.platform：更具体的平台标识
+print("sys.platform:", sys.platform)
+# linux / darwin / win32 / cygwin
+
+# 详细平台信息
+print("platform.system():", platform.system())   # Linux / Darwin / Windows
+print("platform.release():", platform.release())  # 内核版本
+print("platform.machine():", platform.machine())  # x86_64 / arm64
+
+# Python 版本
+print("sys.version:", sys.version)
+print("sys.version_info:", sys.version_info)
+print("major.minor:", f"{sys.version_info.major}.{sys.version_info.minor}")
+```
+
+### 跨平台代码模式
+
+```py title="Python"
+import os
+import sys
+
+def default_config_dir() -> str:
+    """返回跨平台的用户配置目录。"""
+    if sys.platform == "win32":
+        # Windows: %APPDATA%
+        base = os.environ.get("APPDATA", os.path.expanduser("~"))
+        return os.path.join(base, "MyApp")
+    if sys.platform == "darwin":
+        # macOS: ~/Library/Application Support
+        home = os.path.expanduser("~")
+        return os.path.join(home, "Library", "Application Support", "MyApp")
+    # Linux/Unix: 遵循 XDG 规范
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    if xdg:
+        return os.path.join(xdg, "myapp")
+    return os.path.join(os.path.expanduser("~"), ".config", "myapp")
+
+
+print("配置目录：", default_config_dir())
+```
+
+## 常用 os 函数速查
+
+```py title="Python"
+import os
+
+# 路径相关
+os.getcwd()                # 当前工作目录
+os.chdir(path)             # 切换目录
+os.listdir(path)           # 列举目录
+os.scandir(path)           # 高效迭代目录
+os.makedirs(path, exist_ok=True)  # 递归创建
+os.mkdir(path)             # 创建单层目录
+os.rmdir(path)             # 删除空目录
+os.remove(path)            # 删除文件
+os.rename(src, dst)        # 重命名/移动
+os.replace(src, dst)       # 原子重命名（跨平台）
+
+# 环境与进程
+os.environ                 # 环境变量字典
+os.getenv(key, default)   # 读取环境变量
+os.getpid()                # 当前进程 ID
+os.getppid()               # 父进程 ID
+os.getuid()                # 用户 ID（仅 Unix）
+os.getlogin()              # 登录用户名
+
+# 文件描述符
+os.open(path, flags)       # 底层打开
+os.read(fd, n)             # 底层读
+os.write(fd, data)         # 底层写
+os.close(fd)              # 关闭
+```
+
+## 实战：跨平台项目清理脚本
+
+下面实现一个跨平台、可配置的项目清理脚本，综合运用 `os`、`sys`、`platform`，扫描并清理 Python 项目中的临时文件：
+
+```py title="Python"
+import os
+import sys
+import shutil
+from pathlib import Path
+
+
+# 跨平台识别需要清理的目录名
+JUNK_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+JUNK_EXTENSIONS = {".pyc", ".pyo", ".log"}
+JUNK_FILES = {".DS_Store", "Thumbs.db"}
+
+
+def human_size(num: int) -> str:
+    """把字节数转换为人类可读的字符串。"""
+    for unit in ("B", "KB", "MB", "GB"):
+        if num < 1024:
+            return f"{num:.1f} {unit}"
+        num /= 1024
+    return f"{num:.1f} TB"
+
+
+def scan_junk(root: Path) -> list[Path]:
+    """递归扫描目录，找出所有垃圾文件和目录。"""
+    junk: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        current = Path(dirpath)
+
+        # 收集垃圾目录（不进入它们内部继续扫描）
+        for d in list(dirnames):
+            if d in JUNK_DIRS:
+                junk.append(current / d)
+                dirnames.remove(d)  # 阻止 os.walk 进一步遍历
+
+        # 收集垃圾文件
+        for f in filenames:
+            full = current / f
+            if f in JUNK_FILES or full.suffix in JUNK_EXTENSIONS:
+                junk.append(full)
+    return junk
+
+
+def clean_project(root: str | Path, dry_run: bool = False) -> int:
+    """清理项目中的临时文件，返回释放的字节数。"""
+    root = Path(root)
+    if not root.is_dir():
+        print(f"错误：{root} 不是目录", file=sys.stderr)
+        return 0
+
+    print(f"扫描目录：{root}")
+    print(f"平台：{sys.platform}，dry_run={dry_run}")
+    print("-" * 50)
+
+    junk = scan_junk(root)
+    total_size = 0
+
+    for path in junk:
+        try:
+            if path.is_dir():
+                size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+                if dry_run:
+                    print(f"[DRY] 目录 {path}  ({human_size(size)})")
+                else:
+                    shutil.rmtree(path)
+                    print(f"[OK]  删除目录 {path}  ({human_size(size)})")
+                total_size += size
+            else:
+                size = path.stat().st_size
+                if dry_run:
+                    print(f"[DRY] 文件 {path}  ({human_size(size)})")
+                else:
+                    path.unlink(missing_ok=True)
+                    print(f"[OK]  删除文件 {path}  ({human_size(size)})")
+                total_size += size
+        except OSError as e:
+            print(f"[ERR] 跳过 {path}: {e}", file=sys.stderr)
+
+    print("-" * 50)
+    print(f"共处理 {len(junk)} 项，释放 {human_size(total_size)}")
+    return total_size
+
+
+if __name__ == "__main__":
+    # 从命令行读取项目目录
+    if len(sys.argv) < 2:
+        target = "."
+    else:
+        target = sys.argv[1]
+
+    # 先试运行
+    clean_project(target, dry_run=True)
+    print()
+    # 实际执行
+    # clean_project(target, dry_run=False)
+```
+
+输出示例（在示例项目下运行）：
+
+```text title="输出"
+扫描目录：.
+平台：linux，dry_run=True
+--------------------------------------------------
+[DRY] 目录 ./__pycache__  (12.3 KB)
+[DRY] 目录 ./subdir/__pycache__  (4.1 KB)
+[DRY] 文件 ./app.log  (256.0 B)
+[DRY] 文件 ./Thumbs.db  (0.0 B)
+--------------------------------------------------
+共处理 4 项，释放 16.7 KB
+```
+
+:::tip os.walk 与 Path.walk 的选择
+Python 3.12+ 可以用 `Path(root).walk()` 代替 `os.walk`，返回的目录是 `Path` 对象更顺手。但 `os.walk` 修改 `dirnames` 阻止递归的特性在两套 API 中都支持，处理"剪枝"逻辑时仍然简洁。
+:::
+
+## 🎯 动手练习
+
+1. **环境变量管理**：编写一个函数，安全读取环境变量并返回默认值，支持类型转换（如 `int`、`bool`）
+2. **目录遍历**：用 `os.scandir` 统计指定目录下各类文件的数量和总大小
+3. **命令执行**：用 `subprocess.run` 执行 `git log --oneline -5`，解析输出获取最近 5 次提交信息
+4. **跨平台配置**：实现一个跨平台的配置目录获取函数，支持 Windows、macOS、Linux
+
+## 📊 速查表
+
+| 操作 | 方法 | 说明 |
+|------|------|------|
+| 环境变量 | `os.environ.get(key, default)` | 安全读取，不存在返回默认值 |
+| 工作目录 | `os.getcwd()` / `os.chdir(path)` | 多线程慎用 `chdir` |
+| 列举目录 | `os.listdir(path)` | 返回文件名列表 |
+| 高效遍历 | `os.scandir(path)` | 返回 `DirEntry`，性能更优 |
+| 递归遍历 | `os.walk(path)` | 返回 `(dirpath, dirnames, filenames)` |
+| 创建目录 | `os.makedirs(path, exist_ok=True)` | 递归创建，类似 `mkdir -p` |
+| 删除文件 | `os.remove(path)` | 仅删除文件 |
+| 重命名 | `os.rename(src, dst)` | 可移动文件 |
+| 执行命令 | `subprocess.run([...], capture_output=True)` | 推荐方式，安全 |
+| 危险方式 | `os.system(cmd)` | 有命令注入风险，不推荐 |
+| 命令行参数 | `sys.argv` | `argv[0]` 是脚本名 |
+| 退出程序 | `sys.exit(code)` | 0 正常，非 0 异常 |
+| 模块路径 | `sys.path` | 列表，可运行时修改 |
+| 标准流 | `sys.stdin/stdout/stderr` | 重定向用 `contextlib.redirect_*` |
+| 平台判断 | `sys.platform` / `os.name` | `linux`/`darwin`/`win32` |
+| Python 版本 | `sys.version_info` | 元组 `(major, minor, micro)` |
+
+## 📚 延伸阅读
+
+- **[os 官方文档](https://docs.python.org/zh-cn/3/library/os.html)** - 完整 API 参考
+- **[sys 官方文档](https://docs.python.org/zh-cn/3/library/sys.html)** - 解释器相关接口
+- **[subprocess 官方文档](https://docs.python.org/zh-cn/3/library/subprocess.html)** - 进程管理
+- **[PEP 324](https://peps.python.org/pep-0324/)** - subprocess 模块规范
+- **[平台模块](https://docs.python.org/zh-cn/3/library/platform.html)** - 跨平台信息获取
+
+## 📝 本节总结
+
+- **路径操作优先用 `pathlib`**，`os.path` 仅用于维护老代码或需要字符串接口的场景
+- **`os.environ` 读写环境变量**，修改只影响当前进程及子进程；用 `getenv` 提供默认值更安全
+- **`os.scandir` 遍历大目录性能优于 `listdir` + `stat`**，`DirEntry` 对象自带类型判断
+- **执行外部命令一律用 `subprocess.run`**，`os.system` 有命令注入风险，仅适合快速验证
+- **`sys.argv` 读取命令行参数**，复杂 CLI 用 `argparse`/`typer`/`click`
+- **`sys.path` 控制模块搜索路径**，`sys.modules` 查看已加载模块
+- **`sys.stdin/stdout/stderr` 是三个标准流**，重定向时优先用 `contextlib.redirect_*`
+- **`os.name` / `sys.platform` / `platform.system()` 三者配合判断运行平台**
+
+下一节将学习 `pathlib` 路径库——面向对象的现代路径操作。

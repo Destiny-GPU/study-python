@@ -1,0 +1,174 @@
+.heroBanner {
+  background: #0f0f17;
+  color: #fff;
+  padding: 9rem 0 8rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 亮色模式：浅色渐变背景 + 深色文字，融入页面 */
+[data-theme='light'] .heroBanner {
+  background: linear-gradient(
+    180deg,
+    var(--ifm-background-color) 0%,
+    color-mix(in srgb, var(--ifm-color-primary) 4%, var(--ifm-background-color)) 40%,
+    color-mix(in srgb, var(--ifm-color-violet) 3%, var(--ifm-background-color)) 70%,
+    var(--ifm-background-surface-color) 100%
+  );
+  color: var(--ifm-font-color-base);
+}
+
+.heroTitle {
+  font-size: 4.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, #b8cbff 0%, #8ba4ff 40%, #6b8aff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 亮色模式标题：深色渐变文字 */
+[data-theme='light'] .heroTitle {
+  background: linear-gradient(135deg,
+    var(--ifm-font-color-base) 0%,
+    var(--ifm-color-primary-darker) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroSubtitle {
+  font-size: 1.25rem;
+  color: #9a98a8;
+  margin-bottom: 2.5rem;
+  font-weight: 400;
+}
+
+/* 亮色模式副标题 */
+[data-theme='light'] .heroSubtitle {
+  color: var(--ifm-color-emphasis-600);
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* 深色 Hero 按钮覆盖 */
+.buttons :global(.ds-btn) {
+  font-weight: 600;
+  padding: 0.75rem 1.75rem;
+  border-radius: var(--ifm-radius-md);
+  font-size: 1rem;
+}
+
+/* Primary 按钮：白色半透明背景 + 深色文字（在深色 Hero 背景上非常清晰） */
+.buttons :global(.ds-btn-primary) {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--ifm-color-primary-darker);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.buttons :global(.ds-btn-primary):hover {
+  background: #ffffff;
+  color: var(--ifm-color-primary-darker);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Secondary 按钮：边框 + 白色文字（完全透明背景） */
+.buttons :global(.ds-btn-secondary) {
+  background: transparent;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
+}
+
+.buttons :global(.ds-btn-secondary):hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: #ffffff;
+  transform: translateY(-2px);
+}
+
+/* 深色模式下保持一致 */
+[data-theme='dark'] .buttons :global(.ds-btn-primary) {
+  background: #ffffff;
+  color: var(--ifm-color-primary-darker);
+}
+
+[data-theme='dark'] .buttons :global(.ds-btn-secondary) {
+  background: transparent;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* 亮色模式：使用主题色渐变 */
+[data-theme='light'] .buttons :global(.ds-btn-primary) {
+  background: linear-gradient(135deg, var(--ifm-color-primary) 0%, var(--ifm-color-violet) 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(74, 108, 247, 0.3);
+}
+
+[data-theme='light'] .buttons :global(.ds-btn-primary):hover {
+  box-shadow: 0 6px 20px rgba(74, 108, 247, 0.4);
+}
+
+[data-theme='light'] .buttons :global(.ds-btn-secondary) {
+  background: transparent;
+  color: var(--ifm-color-emphasis-600);
+  border-color: var(--ifm-color-emphasis-300);
+  box-shadow: none;
+}
+
+[data-theme='light'] .buttons :global(.ds-btn-secondary):hover {
+  color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  background: rgba(74, 108, 247, 0.04);
+}
+
+.heroFade {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to top, var(--ifm-background-color), transparent);
+  pointer-events: none;
+}
+
+/* 亮色模式：淡入表面色而非纯背景色，过渡更自然 */
+[data-theme='light'] .heroFade {
+  background: linear-gradient(to top, var(--ifm-background-surface-color), transparent);
+}
+
+/* 响应式 */
+@media screen and (max-width: 996px) {
+  .heroBanner { padding: 6rem 1.5rem 5rem; }
+  .heroTitle { font-size: 3.25rem; }
+}
+
+@media screen and (max-width: 768px) {
+  .heroBanner { padding: 4rem 1rem 3.5rem; }
+  .heroTitle { font-size: 2.25rem; }
+  .heroSubtitle { font-size: 1rem; margin-bottom: 2rem; }
+  .buttons { flex-direction: column; align-items: stretch; }
+  .buttons :global(.ds-btn) { text-align: center; padding: 0.875rem 1.5rem; }
+}
+
+@media screen and (max-width: 480px) {
+  .heroBanner { padding: 3.5rem 1rem 3rem; }
+  .heroTitle { font-size: 1.875rem; }
+  .heroSubtitle { font-size: 0.9375rem; margin-bottom: 1.5rem; }
+}
+
+/* 减少动画偏好 — Canvas 粒子通过 JS 的 matchMedia 检测 */

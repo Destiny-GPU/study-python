@@ -1,0 +1,549 @@
+---
+sidebar_position: 2
+sidebar_label: '数字类型'
+title: 📝 数字类型
+description: 深入学习 Python 的 int、float、complex 数字类型，掌握算术运算、进制转换以及 decimal、fractions 等高级数值模块。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 📝 数字类型
+
+数字是编程中最基础的数据类型之一。Python 提供了三种内置数字类型：**整数（int）**、**浮点数（float）** 和 **复数（complex）**，并配套了强大的算术运算与标准库模块。本节将系统讲解数字类型的用法、运算规则以及高精度场景下的 `decimal` 与 `fractions` 模块。
+
+## 📌 本节要点
+- 掌握 int、float、complex 三种数字类型及其特性
+- 理解浮点数精度问题及 decimal 模块的解决方案
+- 熟练使用算术运算符、进制转换和 math 模块
+- 掌握 fractions 模块的精确分数运算
+
+## 整数 int
+
+Python 的整数没有大小限制（不同于 C/Java 的固定字节整数），可以表示任意大小的整数，自动处理"大整数"溢出问题。
+
+```py title="Python"
+# 普通整数
+a = 42
+b = -7
+c = 0
+
+# 大整数：Python 自动处理，不会溢出
+big = 10**100
+print(big)
+# 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+# 下划线分隔，提升可读性（Python 3.6+）
+population = 1_400_000_000
+print(population)  # 1400000000
+```
+
+:::tip Python 的"大整数"特性
+在 Python 中，整数运算永远不会溢出，内存会自动扩展来容纳更大的数。这意味着你可以直接计算 `2**1000` 这样的超大整数而无需任何特殊处理。这是 Python 与 C/Java 等语言在整数处理上的本质差异。
+:::
+
+## 浮点数 float
+
+浮点数用于表示带小数点的实数，基于 C 语言的 `double`（IEEE 754 双精度）实现。
+
+```py title="Python"
+pi = 3.14159
+e = 2.71828
+zero = 0.0
+negative = -0.5
+
+# 科学计数法
+speed_of_light = 3.0e8  # 3.0 × 10^8
+print(speed_of_light)   # 300000000.0
+
+avogadro = 6.022e23
+print(avogadro)  # 6.022e+23
+```
+
+:::warning 浮点数精度问题
+浮点数采用二进制存储，无法精确表示某些十进制小数（如 0.1），这会导致运算结果出现"看起来奇怪"的误差：
+
+```py title="Python"
+print(0.1 + 0.2)  # 0.30000000000000004
+print(0.1 + 0.2 == 0.3)  # False
+```
+如果需要精确的十进制运算（如财务计算），请使用后面介绍的 `decimal` 模块。
+:::
+
+## 复数 complex
+
+Python 内置支持复数，形式为 `a + bj`，其中 `a` 是实部，`b` 是虚部。
+
+```py title="Python"
+z1 = 3 + 4j
+z2 = 1 - 2j
+
+print(z1 + z2)  # (4+2j)
+print(z1 * z2)  # (11+2j)
+
+# 取实部和虚部
+print(z1.real)   # 3.0
+print(z1.imag)   # 4.0
+
+# 取共轭复数
+print(z1.conjugate())  # (3-4j)
+
+# 取模（绝对值）
+print(abs(z1))  # 5.0  (因为 √(3² + 4²) = 5)
+```
+
+:::info 复数的应用场景
+复数在科学计算、信号处理、量子物理等领域应用广泛。Python 原生支持复数运算，无需导入额外库即可使用。注意复数不能直接比较大小（不支持 `<`、`>`），只能比较相等（`==`）。
+:::
+
+## 算术运算
+
+Python 支持丰富的算术运算符：
+
+| 运算符 | 含义     | 示例          | 结果       |
+| ------ | -------- | ------------- | ---------- |
+| `+`    | 加       | `3 + 5`       | `8`        |
+| `-`    | 减       | `10 - 4`      | `6`        |
+| `*`    | 乘       | `3 * 4`       | `12`       |
+| `/`    | 除       | `10 / 4`      | `2.5`      |
+| `//`   | 整除     | `10 // 4`     | `2`        |
+| `%`    | 取模     | `10 % 3`      | `1`        |
+| `**`   | 幂       | `2 ** 10`     | `1024`     |
+
+```py title="Python"
+print(7 + 3)   # 10
+print(7 - 3)   # 4
+print(7 * 3)   # 21
+print(7 / 3)   # 2.3333333333333335
+print(7 // 3)  # 2  整除：向下取整
+print(7 % 3)   # 1  取余
+print(2 ** 8)  # 256
+```
+
+### `//` 整除的注意事项
+
+`//` 总是"向下取整"，对负数要特别注意：
+
+```py title="Python"
+print(7 // 2)    # 3
+print(-7 // 2)   # -4  (-3.5 向下取整为 -4，不是 -3)
+print(7 // -2)   # -4
+
+# 浮点数也可用 //
+print(7.5 // 2)  # 3.0
+```
+
+:::warning 负数的整除与取模
+Python 的 `//` 和 `%` 遵循"向下取整"规则，与 C/Java 的"向零取整"不同。`-7 // 2` 在 Python 中是 `-4`，而在 C 中是 `-3`。Python 的设计保证 `a = (a // b) * b + (a % b)` 恒成立，且 `a % b` 与 `b` 同号。
+:::
+
+### `**` 幂运算
+
+`**` 支持整数、浮点数、负数、分数指数：
+
+```py title="Python"
+print(2 ** 10)       # 1024
+print(2 ** 0.5)      # 1.4142135623730951 (平方根)
+print(8 ** (1/3))    # 2.0 (立方根)
+print(2 ** -2)       # 0.25
+print((-8) ** (1/3)) # 复数：(1.0000000000000002+1.7320508075688772j)
+```
+
+## divmod() 函数
+
+`divmod(a, b)` 同时返回商和余数，等价于 `(a // b, a % b)`：
+
+```py title="Python"
+q, r = divmod(17, 5)
+print(q, r)  # 3 2
+
+# 常用于进制转换、分页等场景
+total = 100
+per_page = 10
+pages, remain = divmod(total, per_page)
+print(f"共 {pages} 页，余 {remain} 条")  # 共 10 页，余 0 条
+
+# 时间换算
+total_seconds = 3661
+minutes, seconds = divmod(total_seconds, 60)
+hours, minutes = divmod(minutes, 60)
+print(f"{hours}:{minutes}:{seconds}")  # 1:1:1
+```
+
+## round() 函数
+
+`round(number, ndigits)` 用于四舍五入：
+
+```py title="Python"
+print(round(3.14159))      # 3
+print(round(3.14159, 2))   # 3.14
+print(round(2.5))          # 2 (注意：不是 3)
+print(round(3.5))          # 4
+print(round(2.675, 2))     # 2.67 (浮点精度问题)
+```
+
+:::warning Python 的"银行家舍入"
+Python 的 `round()` 采用**"四舍六入五成双"**（银行家舍入）规则，而不是"四舍五入"。当末位是 5 时，会向最近的**偶数**舍入：`round(2.5)` 得 `2`，`round(3.5)` 得 `4`。这是为了避免大量数据求和时产生系统性偏差。如果需要传统四舍五入，可使用 `decimal` 模块。
+:::
+
+## 进制转换
+
+Python 支持四种进制的整数表示与转换：
+
+| 进制     | 前缀   | 转换函数   |
+| -------- | ------ | ---------- |
+| 二进制   | `0b`   | `bin()`    |
+| 八进制   | `0o`   | `oct()`    |
+| 十进制   | 无     | `int()`    |
+| 十六进制 | `0x`   | `hex()`    |
+
+```py title="Python"
+# 不同进制字面量
+print(0b1010)  # 10  (二进制)
+print(0o12)    # 10  (八进制)
+print(10)      # 10  (十进制)
+print(0xA)     # 10  (十六进制)
+
+# 转换为字符串形式
+print(bin(10))  # 0b1010
+print(oct(10))  # 0o12
+print(hex(255)) # 0xff
+
+# 任意进制字符串转整数
+print(int("1010", 2))  # 10  (二进制字符串)
+print(int("ff", 16))   # 255 (十六进制字符串)
+print(int("777", 8))   # 511 (八进制字符串)
+print(int("z", 36))    # 35  (最大支持 36 进制)
+```
+
+### 自定义进制转换
+
+```py title="Python"
+def to_base(n: int, base: int) -> str:
+    """将十进制整数转换为指定进制的字符串（2-36）"""
+    if n == 0:
+        return "0"
+    digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+    result = ""
+    while n > 0:
+        result = digits[n % base] + result
+        n //= base
+    return result
+
+print(to_base(255, 16))  # ff
+print(to_base(255, 2))   # 11111111
+print(to_base(255, 8))   # 377
+```
+
+## math 模块
+
+`math` 模块提供了丰富的数学函数：
+
+```py title="Python"
+import math
+
+# 常量
+print(math.pi)        # 3.141592653589793
+print(math.e)         # 2.718281828459045
+print(math.tau)       # 6.283185307179586 (2π)
+
+# 取整与绝对值
+print(math.floor(3.7))  # 3  (向下取整)
+print(math.ceil(3.2))   # 4  (向上取整)
+print(math.fabs(-5))    # 5.0
+print(math.fsum([0.1] * 10))  # 1.0 (精确求和)
+
+# 幂与对数
+print(math.sqrt(16))    # 4.0
+print(math.pow(2, 10))  # 1024.0
+print(math.log(math.e)) # 1.0  (自然对数)
+print(math.log2(8))     # 3.0
+print(math.log10(1000)) # 3.0
+
+# 三角函数（弧度）
+print(math.sin(math.pi / 2))  # 1.0
+print(math.cos(0))           # 1.0
+print(math.degrees(math.pi)) # 180.0 (弧度转角度)
+print(math.radians(180))     # 3.141592653589793 (角度转弧度)
+
+# 最大公约数与最小公倍数
+print(math.gcd(12, 18))  # 6
+print(math.lcm(4, 6))    # 12 (Python 3.9+)
+```
+
+:::tip math.gcd 与 math.lcm
+`math.gcd(a, b)` 求最大公约数，`math.lcm(a, b)` 求最小公倍数（Python 3.9+）。它们都支持多参数：`math.gcd(12, 18, 24)` 返回 `6`。
+:::
+
+## decimal 模块：高精度十进制
+
+当浮点数精度无法满足需求（如财务、货币计算）时，使用 `decimal` 模块可进行精确的十进制运算：
+
+```py title="Python"
+from decimal import Decimal, getcontext
+
+# 浮点数精度问题
+print(0.1 + 0.2)  # 0.30000000000000004
+
+# 使用 Decimal 解决
+print(Decimal("0.1") + Decimal("0.2"))  # 0.3
+
+# 注意：必须用字符串创建 Decimal，否则精度已丢失
+print(Decimal(0.1))           # 0.1000000000000000055511151231257827021181583404541015625
+print(Decimal("0.1"))         # 0.1
+
+# 设置精度
+getcontext().prec = 6
+print(Decimal(1) / Decimal(7))  # 0.142857
+
+# 银行家舍入（默认）与四舍五入切换
+from decimal import ROUND_HALF_UP
+
+getcontext().rounding = ROUND_HALF_UP
+print(Decimal("2.5").quantize(Decimal("1")))  # 3 (四舍五入)
+```
+
+:::warning 一定要用字符串初始化 Decimal
+`Decimal(0.1)` 会出现精度问题，因为 `0.1` 本身已经是浮点数（精度已丢失）。**始终使用字符串** `Decimal("0.1")` 来初始化，才能保留精确的十进制值。
+:::
+
+### 实战：精确货币计算
+
+```py title="Python"
+from decimal import Decimal, ROUND_HALF_UP
+
+def calc_price(prices: list[str], tax_rate: str) -> Decimal:
+    """计算含税总价，精确到分"""
+    subtotal = sum(Decimal(p) for p in prices)
+    tax = (subtotal * Decimal(tax_rate)).quantize(Decimal("0.01"), ROUND_HALF_UP)
+    total = (subtotal + tax).quantize(Decimal("0.01"), ROUND_HALF_UP)
+    return total
+
+prices = ["19.99", "29.50", "5.75"]
+total = calc_price(prices, "0.08")
+print(f"含税总价: ¥{total}")  # 含税总价: ¥59.95
+```
+
+## fractions 模块：分数运算
+
+`fractions.Fraction` 用于精确的分数表示与运算：
+
+```py title="Python"
+from fractions import Fraction
+
+# 创建分数
+a = Fraction(1, 3)   # 1/3
+b = Fraction(2, 6)    # 自动约分为 1/3
+c = Fraction("3/7")   # 从字符串创建
+d = Fraction(0.25)    # 从浮点数创建：1/4
+
+print(a, b, c, d)  # 1/3 1/3 3/7 1/4
+
+# 分数运算（结果仍是精确分数，不会丢失精度）
+print(Fraction(1, 2) + Fraction(1, 3))  # 5/6
+print(Fraction(1, 2) - Fraction(1, 3))  # 1/6
+print(Fraction(1, 2) * Fraction(2, 3))  # 1/3
+print(Fraction(1, 2) / Fraction(2, 3))  # 3/4
+
+# 取分子和分母
+f = Fraction(355, 113)
+print(f.numerator)    # 355
+print(f.denominator)  # 113
+
+# 分数与浮点数转换
+print(float(Fraction(1, 4)))  # 0.25
+print(Fraction.from_float(0.5))  # 1/2
+
+# 限制分母，得到近似分数
+print(Fraction(3.14159).limit_denominator(100))  # 311/99
+```
+
+:::tip 分数模块的应用
+`fractions` 模块在需要精确表示有理数时非常有用，例如：
+- 解决数学问题（如分数加减乘除）
+- 表示比例关系
+- 在循环小数中识别有理数（如 `Fraction(0.3333).limit_denominator()` 得 `1/3`）
+:::
+
+## Python 3.11+ 数值改进
+
+Python 3.11+ 对数值处理做了若干改进：
+
+### 更清晰的整数字符串转换错误
+
+```py title="Python"
+# Python 3.11+：int() 转换失败时给出更精确的错误位置
+try:
+    int("123abc")
+except ValueError as e:
+    print(e)
+    # Python 3.11+: invalid literal for int() with base 10: '123abc';
+    #              the raised exception notes the exact position
+```
+
+### math 模块新增函数
+
+```py title="Python"
+import math
+
+# math.cbrt: 立方根（Python 3.11+）
+print(math.cbrt(27))   # 3.0
+print(math.cbrt(-8))   # -2.0 (比 ** (1/3) 更准确，可处理负数)
+
+# math.exp: 自然指数（已存在，3.11+ 优化精度）
+# math.sqrt 性能改进
+```
+
+### Python 3.12+ 的类型改进
+
+```py title="Python"
+# Python 3.12+ 支持 int 类型的更细粒度注解（通过 typing 模块）
+from typing import Literal
+
+def set_priority(level: Literal[0, 1, 2]) -> None:
+    print(f"优先级: {level}")
+
+set_priority(1)  # 优先级: 1
+```
+
+## 数值类型转换
+
+不同数值类型之间可以相互转换：
+
+```py title="Python"
+# int <-> float
+print(float(5))       # 5.0
+print(int(3.9))       # 3 (截断小数部分)
+print(int(-3.9))      # -3
+
+# int <-> str
+print(str(42))         # "42"
+print(int("42"))       # 42
+
+# float <-> str
+print(str(3.14))       # "3.14"
+print(float("3.14"))   # 3.14
+
+# 复数转换
+print(complex(3, 4))   # (3+4j)
+print(int.real if False else complex(3).real)  # 3.0
+```
+
+:::warning 类型转换可能丢失精度
+`int(3.9)` 直接截断小数部分得到 `3`，而不是四舍五入为 `4`。如需四舍五入请用 `round(3.9)`。此外，浮点数转字符串时可能显示一长串数字（如 `str(0.1 + 0.2)` 显示 `0.30000000000000004`）。
+:::
+
+## 实战：复利计算器
+
+下面用一个复利计算器综合演示本章知识，包含 `decimal` 高精度运算：
+
+```py title="Python"
+from decimal import Decimal, ROUND_HALF_UP
+
+
+def compound_interest(
+    principal: Decimal,
+    rate: Decimal,
+    years: int,
+    times_per_year: int = 1,
+) -> Decimal:
+    """计算复利终值
+    A = P * (1 + r/n)^(n*t)
+
+    :param principal: 本金
+    :param rate: 年化利率（如 0.05 表示 5%）
+    :param years: 投资年限
+    :param times_per_year: 每年计息次数
+    """
+    n = Decimal(times_per_year)
+    base = Decimal(1) + rate / n
+    exponent = n * years
+    amount = principal * base**exponent
+    return amount.quantize(Decimal("0.01"), ROUND_HALF_UP)
+
+
+# 投资 10000 元，年化 5%，复利 10 年，按月计息
+principal = Decimal("10000.00")
+rate = Decimal("0.05")
+final = compound_interest(principal, rate, years=10, times_per_year=12)
+print(f"10 年后余额: ¥{final}")  # 10 年后余额: ¥16470.09
+
+# 对比：单利计算
+simple = principal * (Decimal(1) + rate * 10)
+print(f"单利对比:   ¥{simple.quantize(Decimal('0.01'))}")  # 单利对比:   ¥15000.00
+```
+
+## 🎯 动手练习
+
+1. **温度转换器**：编写函数实现摄氏度、华氏度、开尔文之间的相互转换
+2. **素数判断**：编写函数判断一个数是否为素数，并找出 100 以内的所有素数
+3. **精确计算**：使用 decimal 模块计算 1/3 + 1/6，对比与 float 计算的差异
+4. **进制转换工具**：编写函数将十进制数转换为任意进制（2-36）
+
+<PyodideRunner title="数字类型与精度">
+
+```python
+# 1. 整数运算：无大小限制
+big = 2 ** 100
+print(f"2^100 = {big}")
+print(f"位数: {len(str(big))}")
+
+# 2. 浮点数精度问题
+print(f"\n0.1 + 0.2 = {0.1 + 0.2}")
+print(f"0.1 + 0.2 == 0.3? {0.1 + 0.2 == 0.3}")
+
+# 3. 进制转换
+n = 255
+print(f"\n十进制: {n}")
+print(f"二进制: {bin(n)}")
+print(f"八进制: {oct(n)}")
+print(f"十六进制: {hex(n)}")
+
+# 4. divmod 与 round
+q, r = divmod(17, 5)
+print(f"\ndivmod(17, 5) = 商{q}, 余{r}")
+print(f"round(2.5) = {round(2.5)} (银行家舍入)")
+print(f"round(3.5) = {round(3.5)}")
+
+# 5. 复数运算
+z = 3 + 4j
+print(f"\n复数: {z}")
+print(f"实部: {z.real}, 虚部: {z.imag}")
+print(f"模: {abs(z)}")
+```
+
+</PyodideRunner>
+
+## 📚 延伸阅读
+
+- [PEP 485 - 浮点数近似相等比较](https://peps.python.org/pep-0485/) - math.isclose() 的规范
+- [decimal 模块文档](https://docs.python.org/zh-cn/3/library/decimal.html) - 高精度十进制运算完整参考
+- [fractions 模块文档](https://docs.python.org/zh-cn/3/library/fractions.html) - 分数运算官方文档
+- [math 模块文档](https://docs.python.org/zh-cn/3/library/math.html) - 数学函数完整参考
+
+## 📊 速查表
+
+| 语法/函数 | 功能 | 示例 |
+|-----------|------|------|
+| `int` | 整数（无大小限制） | `10**100` |
+| `float` | 浮点数（IEEE 754） | `3.14`, `1e-5` |
+| `complex` | 复数 | `3+4j` |
+| `//` | 整除（向下取整） | `7 // 2` → `3` |
+| `%` | 取模 | `7 % 3` → `1` |
+| `**` | 幂运算 | `2 ** 10` → `1024` |
+| `divmod(a, b)` | 商和余数 | `divmod(17, 5)` → `(3, 2)` |
+| `round(x, n)` | 四舍五入（银行家舍入） | `round(2.5)` → `2` |
+| `bin(x)` | 转二进制字符串 | `bin(10)` → `'0b1010'` |
+| `Decimal("0.1")` | 精确十进制 | `Decimal("0.1") + Decimal("0.2")` → `0.3` |
+| `Fraction(1, 3)` | 精确分数 | `Fraction(1, 2) + Fraction(1, 3)` → `5/6` |
+
+## ✅ 本节总结
+
+- Python 的 `int` 没有大小限制，可自动处理大整数；`float` 基于 IEEE 754 双精度，存在精度问题
+- `complex` 原生支持复数运算，常用于科学计算
+- 算术运算符 `/`（除）、`//`（整除，向下取整）、`%`（取模）、`**`（幂）是核心
+- `divmod()` 同时返回商和余数，`round()` 采用"银行家舍入"规则（四舍六入五成双）
+- `bin()`/`oct()`/`hex()` 进行进制转换，`int(s, base)` 可解析任意进制字符串
+- `math` 模块提供丰富的数学函数与常量（`math.pi`、`math.sqrt()`、`math.gcd()` 等）
+- `decimal` 模块用于精确十进制运算（财务场景必备），必须用字符串初始化
+- `fractions` 模块用于精确分数运算，结果始终保持精确有理数
+- Python 3.11+ 新增 `math.cbrt()` 等改进，3.12+ 增强了类型注解能力

@@ -1,0 +1,772 @@
+---
+sidebar_position: 4
+sidebar_label: '虚拟环境'
+title: 🧩 虚拟环境
+description: 理解虚拟环境必要性，使用 venv 创建/激活，掌握 uv、poetry 现代工具与 pyenv 多版本管理，搭建完整 Python 项目工作流。
+---
+
+# 🧩 虚拟环境
+
+Python 的依赖默认安装到全局 `site-packages`，这意味着所有项目共享同一套包版本。当项目 A 需要 `requests==2.31`、项目 B 需要 `requests==2.32` 时，全局环境根本无法同时满足——这就是**依赖地狱**。**虚拟环境**为每个项目创建独立的 Python 沙箱，从根本上解决这个问题。本节系统介绍 `venv` 标准库方案，以及现代工具 `uv`、`poetry`、`pyenv`。
+
+:::tip 🎯 本节要点
+- **依赖隔离**：每个项目独立 `site-packages`，避免版本冲突
+- **venv**：Python 标准库方案，`python -m venv .venv` 创建，`source .venv/bin/activate` 激活
+- **uv**：Rust 编写的现代工具，速度快 10-100 倍，自动管理 Python 版本
+- **poetry**：集依赖管理、构建、发布于一体，适合"项目即包"工作流
+- **pyenv**：多版本 Python 解释器管理，新项目用 uv 通常已足够
+- **现代工作流**：`uv init` → `uv add` → `uv sync` → `uv run` → `uv build` → `uv publish`
+:::
+
+## 为什么要虚拟环境
+
+### 不用虚拟环境会遇到什么？
+
+```text title="输出"
+# 项目 A：依赖 Django 4.2
+pip install django==4.2
+
+# 项目 B：依赖 Django 5.0
+pip install django==5.0
+# 此时项目 A 已无法运行：Django 被升级了
+```
+
+更糟的情况：
+
+- 升级某个包意外破坏了系统工具（Linux 的 `apt`、`gnome-terminal` 依赖 `python3`）
+- 团队成员之间环境不一致，"在我电脑上能跑"成了常态
+- 生产环境部署时，依赖版本漂移导致行为不一致
+
+### 虚拟环境的核心价值
+
+:::info 虚拟环境三件事
+1. **隔离**：每个环境有独立的 `site-packages`，互不干扰
+2. **复现**：通过 `requirements.txt` 或 `pyproject.toml` 锁文件，团队成员/CI/生产环境完全一致
+3. **清理**：删除一个目录即可彻底卸载一个项目的所有依赖，不污染系统
+:::
+
+## venv 创建
+
+`venv` 是 Python 标准库自带的虚拟环境工具（Python 3.3+），无需额外安装：
+
+```bash title="Shell"
+# 创建虚拟环境到 .venv 目录（推荐命名）
+python -m venv .venv
+
+# 指定 Python 解释器版本（需系统已安装该版本）
+python3.12 -m venv .venv
+
+# 创建到指定路径
+python -m venv /path/to/myenv
+```
+
+创建后目录结构：
+
+```text title="输出"
+.venv/
+├── bin/                  ← Linux/macOS
+│   ├── python            ← 指向系统 Python 的符号链接
+│   ├── pip
+│   ├── activate          ← 激活脚本
+│   └── ...
+├── lib/
+│   └── python3.12/
+│       └── site-packages/  ← 第三方包装在这里
+├── include/
+└── pyvenv.cfg            ← 标识此目录是虚拟环境
+```
+
+```text title="输出"
+# Windows 的目录结构
+.venv/
+├── Scripts/
+│   ├── python.exe
+│   ├── pip.exe
+│   └── activate.bat
+├── Lib/
+│   └── site-packages/
+└── pyvenv.cfg
+```
+
+:::tip 推荐把虚拟环境命名为 .venv
+- IDE（VS Code、PyCharm）会自动识别 `.venv` 目录并提示激活
+- `.gitignore` 中加一行 `.venv/` 即可忽略
+- 名字简短，输入方便
+:::
+
+### venv 创建选项
+
+```bash title="Shell"
+# 不继承系统 site-packages（默认行为，推荐）
+python -m venv .venv
+
+# 继承系统 site-packages（不推荐，破坏隔离性）
+python -m venv --system-site-packages .venv
+
+# 不安装 pip（用于受限环境）
+python -m venv --without-pip .venv
+
+# 指定 prompt 提示符
+python -m venv --prompt=myproject .venv
+```
+
+## activate / deactivate
+
+激活虚拟环境后，`python` / `pip` 命令都会指向虚拟环境内部的版本，安装的包也只装到虚拟环境。
+
+### Linux / macOS
+
+```bash title="Shell"
+# 激活
+source .venv/bin/activate
+# 或
+. .venv/bin/activate
+
+# 激活后 shell 提示符会显示环境名
+(myproject) $ which python
+/home/user/myproject/.venv/bin/python
+
+# 退出虚拟环境
+deactivate
+```
+
+### Windows
+
+```cmd
+:: CMD
+.venv\Scripts\activate.bat
+
+:: PowerShell
+.venv\Scripts\Activate.ps1
+
+:: 退出
+deactivate
+```
+
+:::warning PowerShell 执行策略
+首次在 PowerShell 中激活虚拟环境可能报错"无法加载文件，因为在此系统上禁止运行脚本"。以管理员身份运行 PowerShell 执行：
+```powershell title="PowerShell"
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+:::
+
+### 激活后发生了什么？
+
+激活脚本主要做了两件事：
+1. 修改 `PATH` 环境变量，把 `.venv/bin` 放到最前面
+2. 设置 `VIRTUAL_ENV` 环境变量指向虚拟环境路径
+
+```bash title="Shell"
+# 验证
+echo $VIRTUAL_ENV      # 输出：/home/user/myproject/.venv
+echo $PATH | tr ':' '\n' | head -3
+# 输出：
+# /home/user/myproject/.venv/bin
+# /usr/local/bin
+# /usr/bin
+
+# python 指向虚拟环境
+which python           # 输出：/home/user/myproject/.venv/bin/python
+python -c "import sys; print(sys.prefix)"
+# 输出：/home/user/myproject/.venv
+```
+
+:::info 不激活也能用
+即使不激活，直接调用虚拟环境的解释器也能用其依赖：
+```bash title="Shell"
+.venv/bin/python script.py
+.venv/bin/pip install requests
+```
+这在 CI/CD 脚本中常用，避免修改 shell 状态。
+:::
+
+### 完整工作流示例
+
+```bash title="Shell"
+# 1. 创建项目目录
+mkdir my-project && cd my-project
+
+# 2. 创建虚拟环境
+python -m venv .venv
+
+# 3. 激活
+source .venv/bin/activate
+
+# 4. 安装依赖
+pip install requests rich
+
+# 5. 生成依赖清单
+pip freeze > requirements.txt
+
+# 6. 开发...
+python main.py
+
+# 7. 退出
+deactivate
+
+# 重新进入只需
+source .venv/bin/activate
+pip install -r requirements.txt  # 已存在则跳过
+```
+
+## uv 现代工具
+
+[`uv`](https://docs.astral.sh/uv/) 是 [Astral](https://astral.sh/)（ruff 的作者）用 Rust 编写的现代 Python 包管理器，**比 pip 快 10-100 倍**，提供从解释器管理到依赖锁定的全套能力。强烈推荐在 Python 3.12+ 项目中使用。
+
+### 安装 uv
+
+```bash title="Shell"
+# 推荐方式
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 或通过 pip
+pip install uv
+
+# 或通过 pipx
+pipx install uv
+
+# 验证
+uv --version
+```
+
+### uv venv 创建虚拟环境
+
+```bash title="Shell"
+# 创建 .venv（默认用系统 Python）
+uv venv
+
+# 指定 Python 版本（uv 会自动下载安装！）
+uv venv --python 3.12
+uv venv --python 3.13
+
+# 指定路径
+uv venv myenv
+
+# 激活方式与 venv 相同
+source .venv/bin/activate
+```
+
+:::tip uv 自动管理 Python 版本
+`uv venv --python 3.13` 如果系统没装 Python 3.13，uv 会**自动从官方源下载**对应版本，无需 pyenv。这是 uv 的一大杀手锏。
+:::
+
+### uv pip 管理依赖
+
+`uv pip` 是 pip 的快速替代品，命令几乎一一对应：
+
+```bash title="Shell"
+# 安装包（速度比 pip 快 10-100 倍）
+uv pip install requests
+uv pip install -r requirements.txt
+uv pip install -e ".[dev]"
+
+# 卸载
+uv pip uninstall requests
+
+# 列出已安装包
+uv pip list
+uv pip freeze
+
+# 同步到 requirements.txt（卸载多余、安装缺失）
+uv pip sync requirements.txt
+```
+
+```bash title="Shell"
+# 速度对比示例
+time pip install pandas    # 约 8-15 秒
+time uv pip install pandas  # 约 1-2 秒
+```
+
+### uv 项目管理
+
+uv 不只是替代 pip，还能管理整个项目（类似 poetry）：
+
+```bash title="Shell"
+# 初始化新项目（生成 pyproject.toml）
+uv init my-project
+cd my-project
+
+# 添加依赖（自动创建 .venv、更新 pyproject.toml、生成 uv.lock）
+uv add requests
+uv add "fastapi[all]"
+uv add pytest --dev          # 添加开发依赖
+
+# 移除依赖
+uv remove requests
+
+# 同步依赖到环境（按 uv.lock 精确安装）
+uv sync
+
+# 运行命令（自动激活虚拟环境）
+uv run python main.py
+uv run pytest
+uv run ruff check
+```
+
+`pyproject.toml` 示例：
+
+```toml
+[project]
+name = "my-project"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.31",
+    "fastapi[all]>=0.110",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+```
+
+:::info uv.lock 的作用
+`uv add` 会生成 `uv.lock` 文件，记录**所有传递依赖的精确版本与哈希**。提交到 Git 后，团队成员和 CI 通过 `uv sync` 即可完全复现环境，杜绝"在我电脑上能跑"。
+:::
+
+## poetry 简介
+
+[`poetry`](https://python-poetry.org/) 是另一款流行的现代包管理工具，专注于"项目即包"的工作流，集依赖管理、虚拟环境、构建、发布于一体。
+
+### 安装
+
+```bash title="Shell"
+# 推荐（隔离安装）
+pipx install poetry
+
+# 或通过 pip
+pip install poetry
+```
+
+### 基本工作流
+
+```bash title="Shell"
+# 新建项目
+poetry new my-package
+```
+
+生成的结构：
+
+```text title="输出"
+my-package/
+├── pyproject.toml
+├── README.md
+├── my_package/
+│   └── __init__.py
+└── tests/
+    └── test_my_package.py
+```
+
+```bash title="Shell"
+# 在已有项目初始化
+cd existing-project
+poetry init   # 交互式生成 pyproject.toml
+
+# 添加依赖
+poetry add requests
+poetry add pytest --group dev
+poetry add "fastapi[all]"
+
+# 移除依赖
+poetry remove requests
+
+# 安装 pyproject.toml 声明的依赖
+poetry install
+
+# 在虚拟环境中运行命令
+poetry run python main.py
+poetry run pytest
+
+# 进入虚拟环境 shell
+poetry shell
+```
+
+### poetry 的 pyproject.toml
+
+```toml
+[tool.poetry]
+name = "my-package"
+version = "0.1.0"
+description = "示例项目"
+authors = ["Your Name <you@example.com>"]
+packages = [{include = "my_package"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+requests = "^2.31"
+fastapi = {version = "^0.110", extras = ["all"]}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+ruff = "^0.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+```
+
+:::warning poetry vs uv 怎么选？
+- **poetry**：成熟稳定，生态完善，社区广泛使用。但虚拟环境管理较重，速度慢于 uv
+- **uv**：速度极快，2024 年起快速崛起，统一管理 Python 版本与依赖。截至 2026 年已成熟，**新项目推荐首选 uv**
+
+两者核心差异：poetry 用自己的 `pyproject.toml` 扩展（`[tool.poetry]`），uv 严格遵循 PEP 621 标准（`[project]`）。PEP 621 是未来方向，推荐新项目用 uv。
+:::
+
+## pyenv 多版本
+
+[`pyenv`](https://github.com/pyenv/pyenv) 让你在同一台机器上**安装和切换多个 Python 解释器版本**，是经典的多版本管理工具。
+
+### 安装 pyenv
+
+```bash title="Shell"
+# Linux（推荐使用 pyenv-installer）
+curl https://pyenv.run | bash
+```
+
+配置 shell（以 bash 为例）：
+
+```bash title="Shell"
+# ~/.bashrc 末尾添加
+export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+```
+
+### 安装与切换 Python 版本
+
+```bash title="Shell"
+# 查看可安装的版本
+pyenv install --list | grep " 3.1[2-4]"
+
+# 安装特定版本
+pyenv install 3.12.4
+pyenv install 3.13.0
+pyenv install 3.14.0
+
+# 查看已安装版本
+pyenv versions
+
+# 设置全局默认 Python
+pyenv global 3.12.4
+
+# 为某个目录设置局部 Python
+cd my-project
+pyenv local 3.13.0    # 生成 .python-version 文件
+python --version      # 输出：Python 3.13.0
+
+# 在当前 shell 临时切换
+pyenv shell 3.14.0
+```
+
+`.python-version` 文件：
+
+```text title="输出"
+3.13.0
+```
+
+提交到 Git 后，团队成员进入此目录会自动切换到对应 Python 版本。
+
+:::tip pyenv vs uv 的版本管理
+uv 内置了 Python 版本管理（`uv venv --python 3.13`），且自动下载。如果你已经在用 uv，**通常不再需要 pyenv**。pyenv 仍然适合：
+- 维护需要特定旧版本 Python 的老项目
+- 需要切换到带特定调试符号的版本
+- CI 矩阵测试多版本
+:::
+
+## 实战：用 uv 创建完整项目
+
+下面用 uv 从零搭建一个完整的 Python 项目，演示现代工作流：初始化、添加依赖、写代码、测试、格式化、构建。
+
+### 1. 初始化项目
+
+```bash title="Shell"
+# 创建项目
+uv init greeter
+cd greeter
+```
+
+生成的初始结构：
+
+```text title="输出"
+greeter/
+├── .python-version    # uv 自动写入的 Python 版本
+├── README.md
+├── main.py
+└── pyproject.toml
+```
+
+```toml
+# pyproject.toml（uv 生成）
+[project]
+name = "greeter"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = []
+```
+
+### 2. 设置 Python 版本并添加依赖
+
+```bash title="Shell"
+# 指定项目使用 Python 3.13（uv 会自动下载）
+uv python pin 3.13
+
+# 添加运行时依赖
+uv add rich
+uv add "click>=8.1"
+
+# 添加开发依赖
+uv add --dev pytest
+uv add --dev ruff
+uv add --dev mypy
+```
+
+`pyproject.toml` 自动更新：
+
+```toml
+[project]
+name = "greeter"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.13"
+dependencies = [
+    "rich>=13.7",
+    "click>=8.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+```
+
+同时生成 `uv.lock` 文件，记录所有精确版本。
+
+### 3. 调整项目结构
+
+调整为标准 src 布局：
+
+```text title="输出"
+greeter/
+├── pyproject.toml
+├── uv.lock
+├── .python-version
+├── README.md
+├── src/
+│   └── greeter/
+│       ├── __init__.py
+│       ├── __main__.py
+│       └── cli.py
+└── tests/
+    ├── __init__.py
+    └── test_cli.py
+```
+
+```py title="Python"
+# src/greeter/__init__.py
+"""greeter：基于 rich 的命令行问好工具。"""
+from .cli import greet
+
+__all__ = ["greet"]
+__version__ = "0.1.0"
+```
+
+```py title="Python"
+# src/greeter/cli.py
+"""命令行逻辑。"""
+from __future__ import annotations
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+
+
+def greet(name: str, style: str = "cyan") -> None:
+    """打印富文本问候。
+
+    Args:
+        name: 被问候者姓名。
+        style: rich 颜色名。
+    """
+    message = f"你好，[bold]{name}[/bold]！"
+    console.print(Panel(message, title="问候", border_style=style))
+```
+
+```py title="Python"
+# src/greeter/__main__.py
+"""入口：python -m greeter 或 uv run greeter"""
+import click
+from .cli import greet
+
+
+@click.command()
+@click.argument("name", default="World")
+@click.option("-s", "--style", default="cyan", help="边框颜色")
+def main(name: str, style: str) -> None:
+    """打印富文本问候。"""
+    greet(name, style)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```py title="Python"
+# tests/test_cli.py
+"""测试 cli 模块。"""
+from greeter.cli import greet
+from rich.console import Console
+
+
+def test_greet(capsys):
+    """测试 greet 函数能正常执行。"""
+    console = Console(record=True)
+    greet("Alice")
+    # rich 会打印到 stdout
+    # 这里只验证不抛异常
+```
+
+### 4. 声明 CLI 入口
+
+编辑 `pyproject.toml`，加入：
+
+```toml
+[project.scripts]
+greeter = "greeter.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/greeter"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+```
+
+### 5. 同步与运行
+
+```bash title="Shell"
+# 同步环境（创建 .venv、安装所有依赖）
+uv sync
+
+# 运行 CLI（uv 自动激活虚拟环境）
+uv run greeter Alice
+# 输出：富文本问候面板
+
+# 运行测试
+uv run pytest
+
+# 代码格式化与检查
+uv run ruff format .
+uv run ruff check .
+uv run mypy src/
+
+# 一次性运行多个工具
+uv run ruff format . && uv run ruff check . && uv run pytest
+```
+
+### 6. 添加新依赖
+
+```bash title="Shell"
+# 运行时发现需要新包
+uv add httpx
+
+# 添加到特定 group
+uv add --group test pytest-cov
+
+# 同步到环境
+uv sync
+```
+
+### 7. 构建与发布
+
+```bash title="Shell"
+# 构建分发包
+uv build
+
+# 输出在 dist/
+# dist/greeter-0.1.0-py3-none-any.whl
+# dist/greeter-0.1.0.tar.gz
+
+# 发布到 PyPI（uv 集成了 twine 功能）
+uv publish
+```
+
+:::tip uv publish 自动化
+`uv publish` 内置了上传功能，配合 `PYPI_TOKEN` 环境变量可在 CI 中一行命令发布：
+```bash title="Shell"
+UV_PUBLISH_TOKEN=pypi-xxxxx uv publish
+```
+:::
+
+### 8. 团队协作流程
+
+团队成员克隆仓库后，只需：
+
+```bash title="Shell"
+git clone https://github.com/you/greeter.git
+cd greeter
+uv sync  # 一键安装正确 Python 版本 + 所有依赖
+
+uv run pytest  # 跑测试
+uv run greeter Alice  # 跑 CLI
+```
+
+无需手动 `python -m venv`、无需 `pip install -r requirements.txt`、无需纠结 Python 版本——uv 把这些全自动化了。
+
+## 🎯 动手练习
+
+1. **venv 基础**：创建项目目录，用 `python -m venv` 创建虚拟环境，激活后安装 `requests` 和 `rich`
+2. **uv 项目**：用 `uv init` 初始化项目，`uv add` 添加依赖，`uv run` 运行脚本
+3. **poetry 工作流**：用 `poetry new` 创建项目，添加依赖，运行测试
+4. **版本管理**：用 `pyenv` 或 `uv python pin` 为项目指定 Python 版本
+
+## 📊 速查表
+
+| 操作 | venv | uv | poetry |
+|------|------|----|--------|
+| 创建环境 | `python -m venv .venv` | `uv venv` | `poetry env use 3.12` |
+| 激活 | `source .venv/bin/activate` | 同 venv | `poetry shell` |
+| 安装包 | `pip install pkg` | `uv add pkg` | `poetry add pkg` |
+| 安装 dev | `pip install -r dev.txt` | `uv add pkg --dev` | `poetry add pkg --group dev` |
+| 同步环境 | `pip install -r req.txt` | `uv sync` | `poetry install` |
+| 运行命令 | `python main.py` | `uv run main.py` | `poetry run main.py` |
+| 构建 | - | `uv build` | `poetry build` |
+| 发布 | - | `uv publish` | `poetry publish` |
+| Python 版本 | 手动安装 | `uv venv --python 3.13` | `pyenv install 3.13` |
+
+## 📚 延伸阅读
+
+- **PEP 405** - Python 虚拟环境规范
+- **[venv 官方文档](https://docs.python.org/zh-cn/3/library/venv.html)** - 标准库 venv 使用指南
+- **[uv 官方文档](https://docs.astral.sh/uv/)** - 现代 Python 包管理器
+- **[poetry 官方文档](https://python-poetry.org/docs/)** - 依赖管理与打包工具
+- **[pyenv GitHub](https://github.com/pyenv/pyenv)** - 多版本 Python 管理
+- **[Python Packaging Guide](https://packaging.python.org/en/latest/)** - Python 打包官方指南
+
+## 📝 本节总结
+
+- **虚拟环境解决"依赖地狱"**，让每个项目拥有独立 `site-packages`，避免版本冲突
+- **`python -m venv .venv` 是标准库方案**，配合 `source .venv/bin/activate` 激活，适合简单项目
+- **`uv` 是现代推荐工具**：自动管理 Python 版本、依赖锁定、项目脚手架，速度比 pip 快 10-100 倍
+- **`poetry` 适合"项目即包"工作流**，集依赖管理、构建、发布于一体，但 uv 已逐渐成为首选
+- **`pyenv` 用于多版本 Python 解释器管理**，新项目用 uv 通常已足够，pyenv 适合维护老项目
+- **现代工作流**：`uv init` → `uv add` → `uv sync` → `uv run` → `uv build` → `uv publish`，一条命令搞定全流程
+- **团队协作**：克隆仓库后只需 `uv sync`，一键安装正确 Python 版本 + 所有依赖，杜绝"在我电脑上能跑"
+
+至此，**模块与包**章节结束。回顾整个学习路径：从基础的变量、数据类型、控制流，到函数、模块、包——你已经掌握了组织 Python 代码的全部核心机制。下一步可以深入学习面向对象编程、异常处理、文件 I/O 等进阶主题。

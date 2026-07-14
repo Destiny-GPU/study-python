@@ -1,0 +1,657 @@
+---
+sidebar_position: 2
+sidebar_label: '包'
+title: 🧩 包
+description: 理解包与目录结构、__init__.py 作用、相对导入与绝对导入、命名空间包、pyproject.toml 项目结构与 src 布局，组织多模块项目。
+---
+
+# 🧩 包
+
+模块解决了"代码复用"的问题，但当项目膨胀到几十上百个模块时，平铺在一个目录里同样混乱。**包（package）** 把模块按目录层级组织起来——一个包含 `__init__.py` 的目录就是一个**普通包**。包让代码具备了**层级命名空间**，类似 Java 的 `com.company.project`、Node 的 `@scope/pkg`，是构建大型 Python 项目的骨架。
+
+:::tip 🎯 本节要点
+- **包结构**：含 `__init__.py` 的目录即为普通包，提供层级命名空间
+- **`__init__.py`**：控制公开 API、执行包级初始化、设置 `__version__`
+- **导入方式**：绝对导入（PEP 8 推荐）vs 相对导入（包内紧耦合模块）
+- **命名空间包**：无 `__init__.py`，可由多个目录拼接，适合大型框架
+- **现代项目结构**：`pyproject.toml` + src 布局是发布库的标准做法
+- **入口文件**：`__main__.py` 支持 `python -m 包名` 运行
+:::
+
+## 包与目录结构
+
+最简单的包就是一个目录里放一个 `__init__.py`（可以是空文件），再加若干模块：
+
+```text title="输出"
+myproject/
+├── main.py
+└── utils/                ← 包名：utils
+    ├── __init__.py       ← 标记这是一个包
+    ├── strings.py        ← 模块：utils.strings
+    ├── numbers.py        ← 模块：utils.numbers
+    └── io/               ← 子包：utils.io
+        ├── __init__.py
+        ├── readers.py    ← 模块：utils.io.readers
+        └── writers.py    ← 模块：utils.io.writers
+```
+
+包中的模块**全名**由点号分隔：`utils.io.readers` 对应文件 `utils/io/readers.py`。
+
+```py title="Python"
+# main.py
+from utils.strings import slugify
+from utils.numbers import clamp
+from utils.io.readers import read_json
+from utils.io.writers import write_json
+
+# 也可以导入整个子包
+from utils import io
+io.readers.read_json("config.json")
+```
+
+## __init__.py 的作用
+
+`__init__.py` 在 Python 3.3+ 已经**不再是必需的**（见"命名空间包"一节），但它仍然承担几个重要职责：
+
+### 1. 标记普通包
+
+只要目录里有 `__init__.py`，Python 就把它当作普通包处理。
+
+### 2. 控制包的公开 API
+
+在 `__init__.py` 中显式导入子模块的名称，让用户能直接 `from 包名 import 名称`：
+
+```py title="Python"
+# utils/__init__.py
+"""utils 包：常用工具集合。"""
+
+from .strings import slugify, truncate
+from .numbers import clamp, clamp_list
+
+__all__ = ["slugify", "truncate", "clamp", "clamp_list"]
+__version__ = "1.0.0"
+```
+
+```py title="Python"
+# main.py
+from utils import slugify, clamp  # 直接从包根导入
+
+# 而不需要 from utils.strings import slugify
+print(slugify("Hello World"))  # 输出：hello-world
+```
+
+### 3. 包级别初始化代码
+
+`__init__.py` 中的代码在**首次导入包**时执行一次，可用于：
+
+```py title="Python"
+# utils/__init__.py
+import logging
+import sys
+
+# 包级别日志配置
+logger = logging.getLogger("utils")
+handler = logging.StreamHandler(sys.stderr)
+handler.setFormatter(logging.Formatter("[%(name)s] %(message)s"))
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
+# 包级常量
+__version__ = "1.0.0"
+DEFAULT_TIMEOUT = 30
+
+logger.info("utils 包已加载")
+```
+
+:::warning __init__.py 中不要写重型逻辑
+`__init__.py` 中的代码在每次导入包时都会执行（首次后缓存）。**避免**在其中：
+- 连接数据库
+- 启动网络服务
+- 执行耗时操作
+- 触发大量子模块导入（除非确实是包的公开 API）
+这些应该放在显式的初始化函数中，由用户按需调用。
+:::
+
+## 相对导入
+
+在包**内部**，模块之间互相引用可以使用**相对导入**，使用 `.`（当前包）和 `..`（父包）前缀：
+
+```text title="输出"
+myproject/
+└── utils/
+    ├── __init__.py
+    ├── strings.py
+    ├── numbers.py
+    └── io/
+        ├── __init__.py
+        ├── readers.py
+        └── writers.py
+```
+
+```py title="Python"
+# utils/io/readers.py
+"""读取工具。"""
+from . import writers          # 同包内的 writers 模块
+from .. import strings         # 父包 utils 中的 strings 模块
+from ..numbers import clamp    # 父包中的 numbers.clamp
+
+def read_and_process(path: str) -> list[int]:
+    data = strings.read_lines(path)
+    return [clamp(int(x), 0, 100) for x in data]
+```
+
+`.` 的数量与层级：
+
+| 语法 | 含义 | 示例位置 |
+|------|------|----------|
+| `from . import foo` | 当前包中的 `foo` | `utils/io/readers.py` 中导入 `utils/io/writers` |
+| `from .. import foo` | 父包中的 `foo` | `utils/io/readers.py` 中导入 `utils/strings` |
+| `from ... import foo` | 祖父包中的 `foo` | `utils/io/readers.py` 中导入 `myproject` 顶层 |
+
+:::tip 相对导入只能用在包内
+相对导入**仅**适用于包内部的模块。如果你直接运行 `python utils/io/readers.py`，Python 会把它当作顶层脚本，相对导入会失败：
+
+```text title="输出"
+ImportError: attempted relative import with no known parent package
+```
+正确做法是用 `python -m utils.io.readers`，或在包外写测试脚本。
+:::
+
+## 绝对导入
+
+**绝对导入**使用完整的点分路径，从项目根开始：
+
+```py title="Python"
+# utils/io/readers.py
+"""读取工具，使用绝对导入。"""
+from utils.io import writers
+from utils import strings
+from utils.numbers import clamp
+
+def read_and_process(path: str) -> list[int]:
+    data = strings.read_lines(path)
+    return [clamp(int(x), 0, 100) for x in data]
+```
+
+### 相对导入 vs 绝对导入
+
+:::info 何时用哪个？
+- **绝对导入**：PEP 8 推荐的默认方式。清晰、可读、IDE 跳转友好。重构移动包时路径要全部更新。
+- **相对导入**：适合包**内部**深度耦合的模块互引。包整体移动时无需修改，但可读性略差。
+
+实际项目中，**优先使用绝对导入**，相对导入仅在包内模块频繁重构时使用。
+:::
+
+## 命名空间包
+
+**命名空间包（namespace package）**：一个包可以**由多个目录拼接而成**，这些目录甚至可以分布在不同的位置（不同项目、不同 site-packages）。
+
+只要目录里**没有** `__init__.py`，Python 就把它当作命名空间包：
+
+```text title="输出"
+project_a/
+└── mycompany/
+    └── tools/
+        └── a.py
+
+project_b/
+└── mycompany/
+    └── tools/
+        └── b.py
+```
+
+如果 `project_a` 和 `project_b` 都在 `sys.path` 中：
+
+```py title="Python"
+from mycompany.tools.a import func_a
+from mycompany.tools.b import func_b
+```
+
+两个分布在不同目录的子模块被"合并"到同一个命名空间下。
+
+### 显式声明命名空间包
+
+PEP 420（隐式命名空间包）是最常用的方式。但若需要更明确，可以用 PEP 420 兼容的显式声明：
+
+```py title="Python"
+# mycompany/__init__.py
+__path__ = __import__("pkgutil").extend_path(__path__, __name__)
+```
+
+或更现代的 PEP 420 风格——直接**不写** `__init__.py`。
+
+:::warning 命名空间包的陷阱
+- 命名空间包中**没有** `__init__.py`，因此无法在包级别放初始化代码
+- 容易与其他包命名冲突，建议用组织前缀（如 `mycompany_`）
+- 适合大型框架拆分多个子包（如 `google.cloud.*`、`azure.*`），不适合普通项目
+:::
+
+## pyproject.toml 项目结构
+
+现代 Python 项目使用 `pyproject.toml` 作为项目元数据与构建配置的标准（PEP 517/518/621）。一个完整的项目结构如下：
+
+```text title="输出"
+my_project/
+├── pyproject.toml          ← 项目元数据 + 构建 + 工具配置
+├── README.md
+├── LICENSE
+├── .gitignore
+├── src/                    ← 推荐使用 src 布局
+│   └── my_project/
+│       ├── __init__.py
+│       ├── __main__.py     ← python -m my_project 的入口
+│       ├── core.py
+│       └── utils/
+│           ├── __init__.py
+│           └── helpers.py
+└── tests/
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_core.py
+    └── test_utils.py
+```
+
+### pyproject.toml 示例
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "my-project"
+version = "1.0.0"
+description = "示例项目：演示现代 Python 项目结构"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [
+    { name = "Your Name", email = "you@example.com" }
+]
+keywords = ["example", "tutorial"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "requests>=2.31",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+my-project = "my_project.__main__:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+```
+
+### __main__.py 入口
+
+在包根放置 `__main__.py`，可以用 `python -m 包名` 运行：
+
+```py title="Python"
+# src/my_project/__main__.py
+"""命令行入口：python -m my_project"""
+import sys
+from .core import run
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args:
+        print("用法：python -m my_project <input>")
+        return 1
+    run(args[0])
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+```bash title="Shell"
+# 用 -m 标志运行
+python -m my_project input.txt
+
+# 或安装后使用声明的命令
+my-project input.txt
+```
+
+## src 布局
+
+把源码放在 `src/` 目录下是现代 Python 项目的**推荐做法**，对应 `pyproject.toml` 中的：
+
+```toml
+[tool.hatch.build.targets.wheel]
+packages = ["src/my_project"]
+```
+
+### 为什么用 src 布局？
+
+:::info src 布局三大优势
+1. **强制安装后测试**：直接运行 `python tests/test_xxx.py` 时找不到 `src/my_project`，必须 `pip install -e .` 安装后才能跑测试。这能发现"打包配置错误"这类隐藏问题。
+2. **避免误导入**：测试时不会意外从项目根目录导入，而是从 site-packages 导入，保证测试的是"真正安装的版本"。
+3. **更干净的项目根**：源码、测试、构建产物分目录管理，目录结构更清晰。
+:::
+
+### 平铺布局 vs src 布局对比
+
+```text title="输出"
+# 平铺布局（不推荐用于发布的包）
+my_project/
+├── pyproject.toml
+├── my_project/        ← 源码在根
+│   └── ...
+└── tests/
+
+# src 布局（推荐）
+my_project/
+├── pyproject.toml
+├── src/
+│   └── my_project/    ← 源码在 src 下
+└── tests/
+```
+
+平铺布局适合**纯应用**（不发布、不需要安装的项目），src 布局适合**库**（要打包发布的项目）。
+
+## 实战：多模块项目结构
+
+下面我们搭建一个完整的"日志分析器"项目，演示包结构、相对/绝对导入、`__main__.py`、`pyproject.toml` 的实际组织：
+
+```text title="输出"
+loganalyzer/
+├── pyproject.toml
+├── README.md
+├── src/
+│   └── loganalyzer/
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── parser.py
+│       ├── filters.py
+│       ├── reporters/
+│       │   ├── __init__.py
+│       │   ├── base.py
+│       │   ├── text.py
+│       │   └── json_reporter.py
+│       └── utils/
+│           ├── __init__.py
+│           └── time.py
+└── tests/
+    ├── test_parser.py
+    └── test_filters.py
+```
+
+```toml
+# pyproject.toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "loganalyzer"
+version = "0.1.0"
+description = "简单的日志分析工具"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+loganalyzer = "loganalyzer.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/loganalyzer"]
+```
+
+```py title="Python"
+# src/loganalyzer/__init__.py
+"""loganalyzer 包入口。"""
+from .parser import LogEntry, parse_line
+
+__all__ = ["LogEntry", "parse_line"]
+__version__ = "0.1.0"
+```
+
+```py title="Python"
+# src/loganalyzer/parser.py
+"""日志解析模块。"""
+from __future__ import annotations
+from dataclasses import dataclass
+from datetime import datetime
+import re
+
+
+@dataclass
+class LogEntry:
+    """一条日志记录。"""
+    timestamp: datetime
+    level: str
+    message: str
+
+
+_LINE_RE = re.compile(r"\[(?P<ts>[^\]]+)\] (?P<level>\w+): (?P<msg>.*)")
+
+
+def parse_line(line: str) -> LogEntry | None:
+    """解析单行日志。"""
+    m = _LINE_RE.match(line.strip())
+    if not m:
+        return None
+    ts = datetime.fromisoformat(m["ts"])
+    return LogEntry(ts=ts, level=m["level"], message=m["msg"])
+```
+
+```py title="Python"
+# src/loganalyzer/filters.py
+"""日志过滤器。"""
+from .parser import LogEntry
+
+
+def by_level(entries: list[LogEntry], level: str) -> list[LogEntry]:
+    """按日志级别过滤。"""
+    level = level.upper()
+    return [e for e in entries if e.level.upper() == level]
+
+
+def by_keyword(entries: list[LogEntry], keyword: str) -> list[LogEntry]:
+    """按关键字过滤。"""
+    kw = keyword.lower()
+    return [e for e in entries if kw in e.message.lower()]
+```
+
+```py title="Python"
+# src/loganalyzer/reporters/__init__.py
+"""报告器子包。"""
+from .base import Reporter
+from .text import TextReporter
+from .json_reporter import JsonReporter
+
+__all__ = ["Reporter", "TextReporter", "JsonReporter"]
+```
+
+```py title="Python"
+# src/loganalyzer/reporters/base.py
+"""报告器基类。"""
+from abc import ABC, abstractmethod
+from ..parser import LogEntry
+
+
+class Reporter(ABC):
+    """报告器抽象基类。"""
+
+    @abstractmethod
+    def render(self, entries: list[LogEntry]) -> str:
+        """渲染日志条目为字符串。"""
+        ...
+```
+
+```py title="Python"
+# src/loganalyzer/reporters/text.py
+"""文本格式报告器。"""
+from .base import Reporter
+from ..parser import LogEntry
+
+
+class TextReporter(Reporter):
+    """把日志渲染为纯文本表格。"""
+
+    def render(self, entries: list[LogEntry]) -> str:
+        lines = [f"{'时间':<20} {'级别':<6} 消息"]
+        lines.append("-" * 60)
+        for e in entries:
+            lines.append(f"{e.timestamp:%Y-%m-%d %H:%M:%S}  {e.level:<6} {e.message}")
+        return "\n".join(lines)
+```
+
+```py title="Python"
+# src/loganalyzer/reporters/json_reporter.py
+"""JSON 格式报告器。"""
+import json
+from .base import Reporter
+from ..parser import LogEntry
+
+
+class JsonReporter(Reporter):
+    """把日志渲染为 JSON 数组。"""
+
+    def render(self, entries: list[LogEntry]) -> str:
+        data = [
+            {
+                "timestamp": e.timestamp.isoformat(),
+                "level": e.level,
+                "message": e.message,
+            }
+            for e in entries
+        ]
+        return json.dumps(data, ensure_ascii=False, indent=2)
+```
+
+```py title="Python"
+# src/loganalyzer/utils/__init__.py
+"""工具子包。"""
+from .time import format_duration
+
+__all__ = ["format_duration"]
+```
+
+```py title="Python"
+# src/loganalyzer/utils/time.py
+"""时间相关工具。"""
+from datetime import timedelta
+
+
+def format_duration(d: timedelta) -> str:
+    """把时间差格式化为 'Xh Ym Zs'。"""
+    total = int(d.total_seconds())
+    h, rem = divmod(total, 3600)
+    m, s = divmod(rem, 60)
+    parts = []
+    if h: parts.append(f"{h}h")
+    if m: parts.append(f"{m}m")
+    parts.append(f"{s}s")
+    return " ".join(parts)
+```
+
+```py title="Python"
+# src/loganalyzer/__main__.py
+"""命令行入口。"""
+import sys
+from pathlib import Path
+from .parser import parse_line
+from .filters import by_level
+from .reporters import TextReporter, JsonReporter
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("用法：loganalyzer <log-file> [--level LEVEL] [--json]")
+        return 1
+
+    log_file = Path(sys.argv[1])
+    if not log_file.exists():
+        print(f"文件不存在：{log_file}")
+        return 1
+
+    entries = [e for line in log_file.read_text().splitlines()
+               if (e := parse_line(line))]
+
+    args = sys.argv[2:]
+    if "--level" in args:
+        idx = args.index("--level")
+        entries = by_level(entries, args[idx + 1])
+
+    reporter = JsonReporter() if "--json" in args else TextReporter()
+    print(reporter.render(entries))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+安装并以可编辑模式开发：
+
+```bash title="Shell"
+# 在项目根目录
+pip install -e .
+
+# 使用 CLI
+loganalyzer app.log --level ERROR --json
+```
+
+:::tip -e 可编辑安装
+`pip install -e .` 把项目以"可编辑模式"安装到当前环境，源码改动**立即生效**无需重新安装。这是开发期间最常用的工作流。打包发布到 PyPI 时则用 `pip install .` 或 `python -m build`。
+:::
+
+## 🎯 动手练习
+
+1. **创建工具包**：搭建 `my_utils` 包，包含 `strings.py`、`numbers.py` 模块，在 `__init__.py` 中导出公开 API
+2. **相对导入实验**：在子包内使用 `.` 和 `..` 导入模块，观察 `ImportError` 错误场景
+3. **命名空间包**：创建两个独立目录，都包含 `mycompany/tools/`，验证命名空间包合并行为
+4. **完整项目**：用 src 布局 + `pyproject.toml` 搭建一个 CLI 工具，支持 `python -m` 运行
+
+## 📊 速查表
+
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 普通包 | 含 `__init__.py` 的目录 | `mypackage/__init__.py` |
+| 子包 | 包内的子目录 | `mypackage/sub/__init__.py` |
+| 公开 API | `__all__` 列表 | `__all__ = ["func1", "Class1"]` |
+| 包版本 | `__version__` | `__version__ = "1.0.0"` |
+| 当前包导入 | `from . import module` | 同包内模块互引 |
+| 父包导入 | `from .. import module` | 导入上一级包的模块 |
+| 绝对导入 | `from pkg.sub import name` | PEP 8 推荐方式 |
+| 命名空间包 | 无 `__init__.py` | 多目录拼接同一命名空间 |
+| 项目入口 | `__main__.py` | `python -m mypackage` |
+| 可编辑安装 | `pip install -e .` | 开发期间源码改动立即生效 |
+| 构建配置 | `pyproject.toml` | 现代 Python 项目元数据标准 |
+| src 布局 | `src/pkgname/` | 推荐用于发布库的结构 |
+
+## 📚 延伸阅读
+
+- **PEP 328** - 导入语法与相对导入规范
+- **PEP 366** - 显式相对导入的主模块支持
+- **PEP 420** - 隐式命名空间包（Python 3.3+）
+- **PEP 517/518/621** - `pyproject.toml` 构建系统与元数据标准
+- **[Python 官方文档 - 包](https://docs.python.org/zh-cn/3/tutorial/modules.html#packages)** - 包的官方教程
+- **[Python 官方文档 - pyproject.toml](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/)** - 现代项目配置指南
+
+## 📝 本节总结
+
+- **包是含 `__init__.py` 的目录**，提供层级化命名空间，让大型项目结构清晰
+- **`__init__.py` 控制公开 API**，通过 `__all__` 限制 `import *` 行为，设置 `__version__` 版本号
+- **相对导入（`.` `..`）适合包内部紧耦合模块**，绝对导入更清晰、PEP 8 推荐作为默认方式
+- **命名空间包（无 `__init__.py`）可由多个目录拼接**，适合大型框架拆分（如 `google.cloud.*`）
+- **`pyproject.toml` 是现代项目元数据标准**，声明依赖、构建后端、CLI 入口，替代 `setup.py`
+- **src 布局强制安装后测试、避免误导入**，是发布库的推荐结构，平铺布局适合纯应用
+- **`python -m 包名` 通过 `__main__.py` 提供统一入口**，`pip install -e .` 是开发期间最常用工作流
+
+下一节将学习 **pip 包管理**——如何安装第三方依赖、固定版本、发布自己的包。

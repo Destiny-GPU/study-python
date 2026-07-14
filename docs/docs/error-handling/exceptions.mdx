@@ -1,0 +1,643 @@
+---
+sidebar_position: 1
+sidebar_label: '异常基础'
+title: 🛡️ 异常基础
+description: 理解什么是异常、Python 异常层次结构、常见内置异常、Traceback 阅读方法，以及异常即对象的核心思想
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🛡️ 异常基础
+
+异常（exception）是程序运行过程中发生的错误信号。当 Python 无法继续执行某段代码时，就会**抛出**（raise）一个异常对象；如果不处理这个异常，程序就会终止并打印错误信息。理解异常的工作机制是编写健壮代码的第一步——它让你能够预见错误、优雅地恢复，并给出有意义的反馈，而不是让程序崩溃。
+
+:::tip 🎯 本节要点
+- 异常是特殊的对象，描述程序运行中遇到的问题
+- 所有异常派生自 `BaseException`，普通错误继承 `Exception`
+- 异常层次结构允许按"分组"捕获（如 `LookupError` 包含 `KeyError` 和 `IndexError`）
+- 常见内置异常：`ValueError`、`TypeError`、`KeyError`、`IndexError`、`FileNotFoundError` 等
+- 阅读 Traceback：先看最后一行异常类型，再从底部往上追调用栈
+- 异常即对象，可检查属性、附加 note、重新抛出
+- `raise` 主动抛异常时，务必附带清晰的信息
+:::
+
+<PyodideRunner title="异常基础快速体验">
+
+```python
+# 异常是对象，可以捕获和检查
+try:
+    result = 10 / 0
+except ZeroDivisionError as e:
+    print(f"捕获到异常: {type(e).__name__}: {e}")
+
+# 异常继承关系
+print(f"ZeroDivisionError 的父类: {ZeroDivisionError.__mro__}")
+
+# 常见异常
+def safe_divide(a, b):
+    try:
+        return a / b
+    except ZeroDivisionError:
+        return "除数不能为零"
+    except TypeError:
+        return "参数类型错误"
+
+print(safe_divide(10, 3))
+print(safe_divide(10, 0))
+print(safe_divide("10", 3))
+
+# 异常即对象
+exc = ValueError("无效的值")
+print(f"异常类型: {type(exc).__name__}")
+print(f"异常信息: {exc}")
+print(f"异常参数: {exc.args}")
+```
+
+</PyodideRunner>
+
+## 什么是异常
+
+异常本质上是**一种特殊的对象**，它描述了程序运行中遇到的问题。当错误发生时，Python 会创建一个异常对象并中断当前执行流，沿着调用栈向上传递，直到被某个 `try` 语句捕获处理；如果一直没被捕获，程序就会终止并打印 Traceback。
+
+```py title="Python"
+# 一个未捕获的异常会让程序崩溃
+print(10 / 0)
+# ZeroDivisionError: division by zero
+```
+
+执行上面的代码，会看到类似这样的错误输出：
+
+```text title="输出"
+Traceback (most recent call last):
+  File "example.py", line 1, in <module>
+    print(10 / 0)
+           ~~~^^^
+ZeroDivisionError: division by zero
+```
+
+:::info 异常不是"坏东西"
+异常不是设计缺陷，而是 Python 与你交流错误的方式。一个好的程序应当**主动抛出**异常来标识异常情况，并**合理处理**那些预期可能发生的异常。完全消除异常既不可能也不必要。
+:::
+
+### 异常 vs 错误返回码
+
+一些语言（如 C、Go）用返回值表示错误，调用者必须检查每个返回值。Python 选择用异常来表达错误，这样做的好处是：
+
+- **正常逻辑与错误处理分离**：核心代码不会被错误检查淹没
+- **错误不会"被忽略"**：忘记处理异常会导致程序崩溃，而不是悄悄返回错误结果
+- **错误向上传递**：异常会自动沿着调用栈向上传播，不需要逐层手动转发
+
+```py title="Python"
+# 返回码风格（Go/C 风格，不 Pythonic）
+def divide_code(a, b):
+    if b == 0:
+        return None, "division by zero"
+    return a / b, None
+
+result, err = divide_code(10, 0)
+if err is not None:
+    print(f"错误：{err}")
+else:
+    print(result)
+
+# 异常风格（Pythonic）
+def divide(a, b):
+    if b == 0:
+        raise ZeroDivisionError("division by zero")
+    return a / b
+
+try:
+    print(divide(10, 0))
+except ZeroDivisionError as e:
+    print(f"错误：{e}")
+```
+
+## 异常层次结构
+
+Python 的所有异常都从一个根类 `BaseException` 派生。绝大多数用户遇到的异常都继承自 `Exception`，这是"普通错误"的基类。
+
+```text title="输出"
+BaseException
+├── SystemExit                  # sys.exit() 触发
+├── KeyboardInterrupt           # Ctrl+C 中断
+├── GeneratorExit               # 生成器被关闭
+└── Exception                   # 所有普通异常的基类
+    ├── StopIteration           # 迭代器耗尽
+    ├── StopAsyncIteration      # 异步迭代器耗尽
+    ├── ArithmeticError
+    │   ├── ZeroDivisionError
+    │   ├── OverflowError
+    │   └── FloatingPointError
+    ├── LookupError
+    │   ├── IndexError
+    │   └── KeyError
+    ├── AttributeError
+    ├── OSError
+    │   ├── FileNotFoundError
+    │   ├── FileExistsError
+    │   ├── PermissionError
+    │   ├── IsADirectoryError
+    │   └── TimeoutError
+    ├── TypeError
+    ├── ValueError
+    │   └── UnicodeError
+    ├── NameError
+    ├── RuntimeError
+    │   └── NotImplementedError
+    ├── Warning                  # 警告的基类
+    │   ├── DeprecationWarning
+    │   ├── UserWarning
+    │   └── ...
+    └── ... 还有更多
+```
+
+### BaseException 与 Exception
+
+```py title="Python"
+# 异常本身也是对象，可以查看其继承关系
+print(ZeroDivisionError.__mro__)
+# 输出：
+# (<class 'ZeroDivisionError'>, <class 'ArithmeticError'>,
+#  <class 'Exception'>, <class 'BaseException'>, <class 'object'>)
+
+print(isinstance(ZeroDivisionError(), Exception))       # 输出：True
+print(isinstance(ZeroDivisionError(), BaseException))    # 输出：True
+print(isinstance(Exception(), BaseException))            # 输出：True
+```
+
+:::warning BaseException 不要直接捕获
+`BaseException` 包含了 `KeyboardInterrupt`（用户按 Ctrl+C）和 `SystemExit`（程序主动退出）等"非错误"信号。直接捕获 `BaseException` 会把这些信号也吞掉，导致无法中断或正常退出程序。日常开发中**只捕获 `Exception` 及其子类**，让 Ctrl+C 等信号能正常穿透。
+:::
+
+### 异常的派生关系用于分组
+
+异常的层次结构让你既能精确捕获某个具体异常，也能捕获整组异常：
+
+```py title="Python"
+def safe_get(mapping, key, default=None):
+    try:
+        return mapping[key]
+    except KeyError:           # 精确捕获 KeyError
+        return default
+    except LookupError:        # 兜底捕获所有查找类错误（更宽泛）
+        return default
+
+print(safe_get({"a": 1}, "b", "默认值"))  # 输出：默认值
+```
+
+## 常见内置异常
+
+Python 内置了大量异常类型，下面是最常用的几个。
+
+### ValueError
+
+值类型正确，但内容不合法时抛出。
+
+```py title="Python"
+# 把字符串转成整数，但内容不是数字
+n = int("abc")
+# ValueError: invalid literal for int() with base 10: 'abc'
+
+# 从列表中移除不存在的元素
+nums = [1, 2, 3]
+nums.remove(5)
+# ValueError: list.remove(x): x not in list
+```
+
+### TypeError
+
+类型不匹配，对不支持该操作的对象执行了某种运算。
+
+```py title="Python"
+# 数字与字符串相加
+result = 1 + "2"
+# TypeError: unsupported operand type(s) for +: 'int' and 'str'
+
+# 对不可迭代对象做迭代
+for x in 42:
+    pass
+# TypeError: 'int' object is not iterable
+```
+
+### KeyError
+
+字典中找不到指定键。
+
+```py title="Python"
+user = {"name": "Alice", "age": 30}
+print(user["email"])
+# KeyError: 'email'
+
+# 用 .get() 或 in 检查可避免
+print(user.get("email", "未填写"))  # 输出：未填写
+```
+
+### IndexError
+
+索引超出序列范围。
+
+```py title="Python"
+nums = [10, 20, 30]
+print(nums[5])
+# IndexError: list index out of range
+```
+
+### FileNotFoundError
+
+文件不存在（属于 `OSError` 的子类，Python 3.3+）。
+
+```py title="Python"
+with open("不存在的文件.txt") as f:
+    content = f.read()
+# FileNotFoundError: [Errno 2] No such file or directory: '不存在的文件.txt'
+```
+
+### ZeroDivisionError
+
+除以零或对零取模。
+
+```py title="Python"
+print(5 / 0)    # ZeroDivisionError: division by zero
+print(5 % 0)    # ZeroDivisionError: integer division or modulo by zero
+```
+
+### AttributeError
+
+访问对象不存在的属性或方法。
+
+```py title="Python"
+name = "Alice"
+print(name.uppercase())
+# AttributeError: 'str' object has no attribute 'uppercase'
+#                 Did you mean: 'upper'?
+```
+
+:::tip 智能建议
+`AttributeError` 和 `NameError` 会自动给出"你是不是想用……"的建议，这对快速定位拼写错误非常友好。例如上面提示 `Did you mean: 'upper'?`。
+:::
+
+### NameError
+
+访问未定义的变量名。
+
+```py title="Python"
+print(undefined_var)
+# NameError: name 'undefined_var' is not defined. Did you mean: 'undefined'?
+```
+
+### RuntimeError
+
+运行时出现的一般性错误，通常不属于其他更具体的类别时使用。其子类 `NotImplementedError` 表示某功能尚未实现。
+
+```py title="Python"
+class Animal:
+    def speak(self):
+        raise NotImplementedError("子类必须实现 speak()")
+
+Animal().speak()
+# NotImplementedError: 子类必须实现 speak()
+```
+
+### 一览表
+
+| 异常名 | 触发场景 |
+| --- | --- |
+| `ValueError` | 值类型正确但内容不合法 |
+| `TypeError` | 类型不匹配 |
+| `KeyError` | 字典键不存在 |
+| `IndexError` | 索引越界 |
+| `FileNotFoundError` | 文件不存在 |
+| `PermissionError` | 权限不足 |
+| `ZeroDivisionError` | 除零 |
+| `AttributeError` | 属性不存在 |
+| `NameError` | 变量名未定义 |
+| `ImportError` | 模块导入失败 |
+| `StopIteration` | 迭代器耗尽 |
+| `RuntimeError` | 一般运行时错误 |
+| `NotImplementedError` | 功能未实现 |
+| `OSError` | 系统相关错误（基类） |
+
+## 阅读 Traceback
+
+Traceback（回溯）是程序崩溃时打印的错误堆栈。学会阅读它，是排查问题的核心技能。
+
+### Traceback 的结构
+
+```text title="输出"
+Traceback (most recent call last):        ← 1. 错误类型标记
+  File "main.py", line 10, in <module>    ← 2. 调用栈（最外层→最内层）
+    result = process(data)
+             ~~~~~~~^^^^^^^              ← 3. 出错的代码位置（3.11+ 高亮）
+  File "main.py", line 6, in process     ← 4. 更深一层的调用
+    return data["value"] / 0
+           ~~~~^^^^^^^^~~
+ZeroDivisionError: division by zero      ← 5. 最终异常类型与信息
+```
+
+阅读顺序建议：
+
+1. **从最后一行看起**：异常类型 + 错误信息，立刻知道发生了什么
+2. **从底部往上读调用栈**：每一段都告诉你"哪个文件、哪一行、哪个函数"出错
+3. **关注最顶部的调用**：那是离错误源头最近的位置
+
+:::tip Python 3.11+ 更清晰的错误信息
+Python 3.11 起大幅改进了错误信息：会用 `^` 符号精确高亮出错的表达式片段，而不是整行。例如：
+
+```text title="输出"
+  File "x.py", line 2
+    x['a']['b'] = 1
+      ^^^^^^^^
+TypeError: 'int' object is not subscriptable
+```
+
+这让你一眼就能定位到是 `x['a']` 这部分出了问题。
+:::
+
+### 一个完整的示例
+
+```py title="Python"
+def load_config(path):
+    with open(path) as f:           # ① 这里可能抛 FileNotFoundError
+        lines = f.readlines()
+    return dict(line.split("=", 1) for line in lines)
+
+def main():
+    config = load_config("missing.conf")  # ② 这里调用
+    print(config["debug"])                # ③ 可能抛 KeyError
+
+main()
+```
+
+如果 `missing.conf` 不存在，运行后会看到：
+
+```text title="输出"
+Traceback (most recent call last):
+  File "main.py", line 9, in <module>
+    main()
+  File "main.py", line 6, in main
+    config = load_config("missing.conf")
+             ~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "main.py", line 2, in load_config
+    with open(path) as f:
+         ~~~~^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'missing.conf'
+```
+
+从下往上读：最后一行告诉你"找不到文件"；再往上找到出错代码位置在 `load_config` 第 2 行的 `open(path)`；再往上看，调用来源是 `main` 函数第 6 行。
+
+## 异常即对象
+
+异常在 Python 中就是普通的类实例对象。这意味着你可以：
+
+- **检查异常的属性**：错误信息、错误码等
+- **捕获后再次抛出**：保留原始上下文
+- **创建自定义异常类**：继承 `Exception` 表达业务错误
+- **用 isinstance 判断异常类型**
+
+### 异常的属性和方法
+
+```py title="Python"
+exc = ValueError("无效的输入：负数")
+print(type(exc))              # 输出：<class 'ValueError'>
+print(str(exc))              # 输出：无效的输入：负数
+print(exc.args)              # 输出：('无效的输入：负数',)
+print(repr(exc))             # 输出：ValueError('无效的输入：负数')
+
+# 异常对象支持解包
+msg, = exc.args
+print(msg)                   # 输出：无效的输入：负数
+```
+
+### OSError 的额外属性
+
+`OSError` 及其子类（`FileNotFoundError`、`PermissionError` 等）额外携带 `errno` 和 `strerror` 属性：
+
+```py title="Python"
+import errno
+
+try:
+    with open("/root/protected.txt") as f:
+        f.read()
+except OSError as e:
+    print(f"错误码 errno: {e.errno}")        # 13 (EACCES)
+    print(f"错误信息 strerror: {e.strerror}")  # Permission denied
+    print(f"文件名 filename: {e.filename}")     # /root/protected.txt
+
+    # 对照常见错误码
+    if e.errno == errno.ENOENT:
+        print("文件不存在")
+    elif e.errno == errno.EACCES:
+        print("权限不足")
+```
+
+### 捕获后保留异常对象
+
+使用 `as` 把异常对象绑定到变量，便于进一步检查或记录日志：
+
+```py title="Python"
+def parse_age(text: str) -> int:
+    try:
+        age = int(text)
+        if age < 0 or age > 150:
+            raise ValueError(f"年龄 {age} 不在合法范围内")
+        return age
+    except ValueError as exc:
+        # exc 是异常对象，可以记录或重新抛出
+        print(f"解析失败：{exc}（参数：{exc.args}）")
+        return -1
+
+print(parse_age("25"))    # 输出：25
+print(parse_age("abc"))    # 输出：解析失败：invalid literal...（参数：...） / -1
+print(parse_age("200"))    # 输出：解析失败：年龄 200 不在合法范围内 / -1
+```
+
+:::info 异常对象的 __notes__
+Python 3.11+ 给异常增加了 `add_note()` 方法，可以在异常对象上附加额外说明信息，便于调试时记录更多上下文：
+
+```py title="Python"
+try:
+    data = {"x": 1}
+    value = data["y"]
+except KeyError as exc:
+    exc.add_note(f"当前字典内容：{data}")
+    exc.add_note("检查键名是否拼写正确")
+    raise  # 重新抛出，note 会一并打印
+```
+
+打印时这些 note 会出现在 Traceback 之后，对于复杂场景的调试极其有用。
+:::
+
+## 异常的抛出
+
+使用 `raise` 语句主动抛出异常。可以抛出内置异常，也可以抛出自定义异常类。
+
+```py title="Python"
+def withdraw(balance: float, amount: float) -> float:
+    if amount <= 0:
+        raise ValueError("取款金额必须为正数")
+    if amount > balance:
+        raise ValueError(f"余额不足：当前 {balance}，需取 {amount}")
+    return balance - amount
+
+# 抛出时可以只给类名，也可以给实例
+raise ValueError("错误描述")
+raise ValueError  # 等价于 raise ValueError()，但通常应附带说明
+```
+
+:::warning raise 一定要带信息
+不要写裸的 `raise ValueError()`——没有任何描述信息会让排查变得困难。永远提供清晰、可操作的错误信息，说明**发生了什么**以及**期望是什么**。
+:::
+
+### 重新抛出当前异常
+
+在 `except` 块中可以使用裸 `raise` 重新抛出当前捕获的异常，保留完整的原始上下文：
+
+```py title="Python"
+def process(data: dict) -> int:
+    try:
+        return int(data["value"])
+    except KeyError:
+        print("警告：缺少 value 字段")
+        raise  # 重新抛出 KeyError，让上层处理
+
+try:
+    process({})
+except KeyError:
+    print("上层捕获到 KeyError")
+# 输出：
+# 警告：缺少 value 字段
+# 上层捕获到 KeyError
+```
+
+## 实战：识别常见异常
+
+下面这段代码故意触发了多种常见异常，请尝试阅读 Traceback 并识别每种异常的类型与原因：
+
+```py title="Python"
+def buggy_pipeline(data: dict) -> str:
+    """演示多种异常的混合处理"""
+    # 1. KeyError：缺少键
+    try:
+        name = data["name"]
+    except KeyError:
+        name = "匿名"
+
+    # 2. ValueError：类型转换失败
+    try:
+        age = int(data.get("age", "未知"))
+    except (ValueError, TypeError) as exc:
+        print(f"  年龄解析失败：{exc}")
+        age = 0
+
+    # 3. TypeError：类型不匹配的运算
+    try:
+        score = data.get("score", 0)
+        normalized = score / 100  # 若 score 是 str 会 TypeError
+    except TypeError as exc:
+        print(f"  分数计算失败：{exc}")
+        normalized = 0.0
+
+    # 4. IndexError：索引越界
+    try:
+        first_tag = data["tags"][0]
+    except (KeyError, IndexError) as exc:
+        print(f"  获取标签失败：{exc}")
+        first_tag = None
+
+    return f"{name}（{age} 岁），归一化分数：{normalized:.2f}，标签：{first_tag}"
+
+
+# 故意传入不规范的数据触发各种异常
+samples = [
+    {"name": "Alice", "age": "30", "score": 85, "tags": ["vip"]},
+    {"age": "abc", "score": "九十分"},   # 缺 name、age 非数字、score 是字符串
+    {},                                    # 全空字典
+    {"name": "Bob", "age": 25, "score": 90, "tags": []},  # tags 为空列表
+]
+
+for i, sample in enumerate(samples, 1):
+    print(f"\n样本 {i}：{sample}")
+    result = buggy_pipeline(sample)
+    print(f"  → {result}")
+```
+
+输出示例：
+
+```text title="输出"
+样本 1：{'name': 'Alice', 'age': '30', 'score': 85, 'tags': ['vip']}
+  → Alice（30 岁），归一化分数：0.85，标签：vip
+
+样本 2：{'age': 'abc', 'score': '九十分'}
+  分数计算失败：unsupported operand type(s) for /: 'str' and 'int'
+  获取标签失败：'tags'
+  → 匿名（0 岁），归一化分数：0.00，标签：None
+
+样本 3：{}
+  年龄解析失败：invalid literal for int() with base 10: '未知'
+  分数计算失败：unsupported operand type(s) for /: 'NoneType' and 'int'
+  获取标签失败：'tags'
+  → 匿名（0 岁），归一化分数：0.00，标签：None
+
+样本 4：{'name': 'Bob', 'age': 25, 'score': 90, 'tags': []}
+  获取标签失败：list index out of range
+  → Bob（25 岁），归一化分数：0.90，标签：None
+```
+
+:::tip 学会"防御性编程"
+上面的代码体现了**防御性编程**的思路：在每个可能出错的位置包一层 `try`，让程序即便遇到异常数据也能继续处理后续逻辑，而不是整体崩溃。下一节我们将系统学习 `try-except` 语句的所有用法。
+:::
+
+## 🎯 动手练习
+
+1. **异常识别**：编写代码分别触发 `ValueError`、`TypeError`、`KeyError`、`IndexError`，观察 Traceback 输出
+2. **继承链验证**：使用 `__mro__` 查看 `FileNotFoundError` 的完整继承链，验证它是 `OSError` 的子类
+3. **异常属性探索**：捕获一个 `OSError`，打印 `errno`、`strerror`、`filename` 属性
+4. **Traceback 阅读**：编写三层函数调用，在最内层抛出异常，练习从底部往上读调用栈
+
+## 📚 延伸阅读
+
+- **try-except 进阶**：`else`、`finally`、链式异常、`ExceptionGroup`
+- **自定义异常**：继承 `Exception` 创建业务异常类，携带额外上下文信息
+- **日志记录**：`logging.exception()` 自动记录异常堆栈
+- **防御性编程**：EAFP（请求原谅比许可容易）vs LBYL（三思而后行）
+
+## 📊 速查表
+
+| 异常类型 | 触发场景 | 示例 |
+|----------|----------|------|
+| `ValueError` | 值类型正确但内容不合法 | `int("abc")` |
+| `TypeError` | 类型不匹配 | `1 + "2"` |
+| `KeyError` | 字典键不存在 | `d["missing"]` |
+| `IndexError` | 索引越界 | `lst[999]` |
+| `FileNotFoundError` | 文件不存在 | `open("no.txt")` |
+| `PermissionError` | 权限不足 | `open("/root/x")` |
+| `ZeroDivisionError` | 除零 | `5 / 0` |
+| `AttributeError` | 属性不存在 | `"abc".uppercase()` |
+| `NameError` | 变量名未定义 | `print(x)` |
+| `ImportError` | 模块导入失败 | `import nonexistent` |
+| `StopIteration` | 迭代器耗尽 | `next(iter([]))` |
+| `RuntimeError` | 一般运行时错误 | 自定义运行时错误 |
+| `NotImplementedError` | 功能未实现 | 抽象方法占位 |
+| `KeyboardInterrupt` | Ctrl+C 中断 | 用户主动中断 |
+| `SystemExit` | `sys.exit()` 触发 | 程序主动退出 |
+| 查看继承链 | `Exception.__mro__` | 完整继承顺序 |
+| 异常属性 | `exc.args` | 异常参数元组 |
+| OSError 属性 | `exc.errno` | 系统错误码 |
+| 附加说明 | `exc.add_note("msg")` | 3.11+ 特性 |
+
+## 📝 本节总结
+
+本节我们学习了异常的基础知识，核心要点包括：
+
+- **异常是对象**：描述程序运行中遇到的问题，可检查属性、附加 note、重新抛出
+- **异常层次结构**：`BaseException` → `Exception` → 具体异常，日常只捕获 `Exception` 及其子类
+- **分组捕获**：利用继承关系，捕获 `LookupError` 能同时处理 `KeyError` 和 `IndexError`
+- **常见内置异常**：`ValueError`（值不合法）、`TypeError`（类型不匹配）、`KeyError`（键不存在）等
+- **阅读 Traceback**：从最后一行看异常类型，从底部往上追调用栈，定位出错位置
+- **主动抛异常**：`raise` 务必附带清晰的信息，说明发生了什么以及期望是什么
+
+下一节我们将学习 `try-except` 语句，掌握捕获、传递、链式抛出等进阶用法。
+
+:::info 🔗 延伸学习
+本节介绍了异常的基础概念。如需学习如何创建自定义异常类、设计异常层次结构、实现异常链式抛出等高级技巧，请参阅 **[自定义异常](/docs/error-handling/custom-exceptions)** 章节。
+:::

@@ -1,0 +1,567 @@
+---
+sidebar_position: 3
+sidebar_label: '字典'
+title: 📦 字典（Dict）
+description: 字典是 Python 的可变键值映射，3.7+ 保证插入顺序，支持合并运算符、推导式与 defaultdict/Counter 等强大工具。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 📦 字典（Dict）
+
+字典（`dict`）是 Python 中最重要的映射类型，存储**键值对**（key-value）。它通过哈希表实现，查找、插入、删除的平均时间复杂度都是 O(1)。字典保证**按插入顺序**遍历，这让它不仅是查询利器，也常被当作有序映射使用。
+
+<PyodideRunner title="字典操作快速体验">
+
+```python
+from collections import Counter
+
+# 词频统计
+text = "Python is great Python is easy to learn Python is powerful"
+words = text.lower().split()
+
+# 使用 Counter 统计
+word_count = Counter(words)
+print("词频统计:")
+for word, count in word_count.most_common(3):
+    print(f"  {word}: {count}")
+
+# 字典推导式
+scores = {"Alice": 85, "Bob": 92, "Carol": 78, "David": 95}
+passed = {name: score for name, score in scores.items() if score >= 80}
+print(f"\n成绩 >= 80 的学生: {passed}")
+```
+
+</PyodideRunner>
+
+## 创建字典
+
+```py title="Python"
+# 1. 花括号字面量
+person = {"name": "Alice", "age": 30, "city": "北京"}
+print(person)  # {'name': 'Alice', 'age': 30, 'city': '北京'}
+
+# 2. dict() 构造器
+person2 = dict(name="Bob", age=25)        # 关键字参数
+person3 = dict([("name", "Carol"), ("age", 28)])  # 键值对列表
+print(person2, person3)
+
+# 3. 空字典
+empty: dict = {}
+also_empty = dict()
+
+# 4. 字典推导式（详见后文）
+squares = {x: x * x for x in range(4)}
+print(squares)  # {0: 0, 1: 1, 2: 4, 3: 9}
+```
+
+:::tip 键的要求
+字典的键必须是**可哈希**（hashable）对象——通常是不可变类型，如 `str`、`int`、`float`、`tuple`（其元素也要可哈希）。列表、字典、集合都不能做键。
+:::
+
+## 访问与修改
+
+```py title="Python"
+person = {"name": "Alice", "age": 30, "city": "北京"}
+
+# 通过键访问
+print(person["name"])  # Alice
+# print(person["email"])  # KeyError  键不存在会报错
+
+# 安全访问：get
+print(person.get("email"))          # None
+print(person.get("email", "未填写"))  # 未填写  提供默认值
+
+# 修改/新增
+person["age"] = 31          # 修改已存在的键
+person["email"] = "a@x.com"  # 新增键值对
+print(person)
+
+# 删除
+del person["city"]
+email = person.pop("email")  # 删除并返回值
+print(email, person)
+
+# 成员判断 in（判断键，不是值）
+print("name" in person)   # True
+print("age" not in person)  # False
+```
+
+:::warning [] vs get
+用 `[]` 访问不存在的键会抛 `KeyError`；用 `get` 则返回 `None` 或默认值。不确定键是否存在时优先用 `get`。
+:::
+
+## keys / values / items
+
+这三个方法分别返回字典的键视图、值视图、键值对视图。
+
+```py title="Python"
+scores = {"Alice": 90, "Bob": 85, "Carol": 95}
+
+# 视图对象是动态的，会随字典变化
+keys = scores.keys()
+values = scores.values()
+items = scores.items()
+
+print(list(keys))    # ['Alice', 'Bob', 'Carol']
+print(list(values))  # [90, 85, 95]
+print(list(items))   # [('Alice', 90), ('Bob', 85), ('Carol', 95)]
+
+# 遍历
+for name, score in scores.items():
+    print(f"{name}: {score}")
+
+# 视图随字典更新
+scores["David"] = 88
+print(list(keys))  # ['Alice', 'Bob', 'Carol', 'David']  自动反映新键
+```
+
+:::info 遍历顺序
+Python 3.7+ 字典保持插入顺序，因此 `keys()`/`values()`/`items()` 的遍历顺序与插入顺序一致。
+:::
+
+## get 与 setdefault
+
+`get` 用于安全读取，`setdefault` 用于"不存在则设置并返回，存在则直接返回"。
+
+```py title="Python"
+# 统计每个字母出现次数：传统写法
+text = "abracadabra"
+counts: dict[str, int] = {}
+for ch in text:
+    if ch in counts:
+        counts[ch] += 1
+    else:
+        counts[ch] = 1
+print(counts)  # {'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1}
+
+# 用 setdefault 简化
+counts2: dict[str, int] = {}
+for ch in text:
+    counts2[ch] = counts2.setdefault(ch, 0) + 1
+print(counts2)
+```
+
+:::tip 更 Pythonic 的做法
+对于"按分组累积"这种模式，`collections.defaultdict` 比 `setdefault` 更优雅，详见后文。
+:::
+
+## 字典推导式
+
+字典推导式用一行创建字典，语法与列表推导式类似。
+
+```py title="Python"
+# 1. 平方映射
+squares = {x: x * x for x in range(6)}
+print(squares)  # {0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+
+# 2. 反转键值
+original = {"a": 1, "b": 2, "c": 3}
+reversed_map = {v: k for k, v in original.items()}
+print(reversed_map)  # {1: 'a', 2: 'b', 3: 'c'}
+
+# 3. 带条件过滤
+scores = {"Alice": 90, "Bob": 55, "Carol": 95, "Dave": 48}
+passed = {name: score for name, score in scores.items() if score >= 60}
+print(passed)  # {'Alice': 90, 'Carol': 95}
+```
+
+## 嵌套字典
+
+字典的值可以是另一个字典，常用于表示树形或表格数据。
+
+```py title="Python"
+# 学生成绩表
+gradebook: dict[str, dict[str, int]] = {
+    "Alice": {"math": 90, "english": 85},
+    "Bob":   {"math": 78, "english": 92},
+    "Carol": {"math": 95, "english": 88},
+}
+
+# 访问
+print(gradebook["Alice"]["math"])  # 90
+
+# 遍历所有人所有科目
+for name, subjects in gradebook.items():
+    total = sum(subjects.values())
+    print(f"{name} 总分: {total}")
+
+# 安全访问嵌套（避免 KeyError）
+def get_score(name: str, subject: str) -> int | None:
+    return gradebook.get(name, {}).get(subject)
+
+print(get_score("Bob", "english"))  # 92
+print(get_score("Dave", "math"))    # None
+```
+
+## 合并运算符 |
+
+字典支持合并运算符 `|` 与原地合并 `|=`，比 `update` 更直观。
+
+```py title="Python"
+defaults = {"theme": "light", "font": "sans", "lang": "en"}
+user_prefs = {"theme": "dark", "font": "serif"}
+
+# | 生成新字典：右侧覆盖左侧相同键
+merged = defaults | user_prefs
+print(merged)
+# {'theme': 'dark', 'font': 'serif', 'lang': 'en'}
+
+# 原地合并
+config = {"host": "localhost"}
+config |= {"port": 8080, "host": "0.0.0.0"}
+print(config)  # {'host': '0.0.0.0', 'port': 8080}
+
+# 等价于 update
+config2 = {"host": "localhost"}
+config2.update({"port": 8080, "host": "0.0.0.0"})
+print(config2 == config)  # True
+```
+
+:::tip 字典合并的优先级
+`a | b` 中 `b` 的键优先；与 `dict(a, **b)` 行为一致，但 `|` 更通用（支持任意两个映射）。
+:::
+
+## 有序性
+
+标准字典保证**插入顺序**，无需使用 `collections.OrderedDict` 即可获得稳定的遍历顺序。
+
+```py title="Python"
+d: dict[str, int] = {}
+for key in ["banana", "apple", "cherry"]:
+    d[key] = len(key)
+
+print(list(d.keys()))  # ['banana', 'apple', 'cherry']  保持插入顺序
+
+# 删除后重新插入会移到末尾
+del d["apple"]
+d["apple"] = 5
+print(list(d.keys()))  # ['banana', 'cherry', 'apple']
+```
+
+:::info 何时仍用 OrderedDict
+普通字典已有序，但 `OrderedDict` 仍有用武之地：①需要 `move_to_end`、`popitem(last=True)` 等顺序操作（如实现 LRU 缓存）；②显式表达"顺序敏感"的语义。一般场景直接用 `dict` 即可。
+:::
+
+## collections.defaultdict
+
+`defaultdict` 在访问不存在的键时自动创建默认值，非常适合"分组累积"模式。
+
+```py title="Python"
+from collections import defaultdict
+
+# 1. 按首字母分组单词
+words = ["apple", "avocado", "banana", "apricot", "cherry", "blueberry"]
+groups: dict[str, list[str]] = defaultdict(list)
+for word in words:
+    groups[word[0]].append(word)
+
+print(dict(groups))
+# {'a': ['apple', 'avocado', 'apricot'], 'b': ['banana', 'blueberry'], 'c': ['cherry']}
+
+# 2. 计数
+counts: dict[str, int] = defaultdict(int)
+for ch in "abracadabra":
+    counts[ch] += 1
+print(dict(counts))  # {'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1}
+```
+
+:::warning defaultdict 的默认值工厂
+`defaultdict(list)` 的默认值是 `[]`，`defaultdict(int)` 的默认值是 `0`（int() 返回 0）。访问键会**真的创建**该键值对，而 `get` 不会。
+:::
+
+## collections.Counter
+
+`Counter` 专为计数设计，是统计频率的最佳工具。
+
+```py title="Python"
+from collections import Counter
+
+text = "the quick brown fox jumps over the lazy dog the quick"
+counter = Counter(text.split())
+
+print(counter)
+# Counter({'the': 3, 'quick': 2, 'brown': 1, 'fox': 1, ...})
+
+# most_common: 取出现次数最多的 N 个
+print(counter.most_common(2))  # [('the', 3), ('quick', 2)]
+
+# 支持加减运算
+c1 = Counter(a=3, b=1)
+c2 = Counter(a=1, b=2)
+print(c1 + c2)  # Counter({'a': 4, 'b': 3})  计数相加
+print(c1 - c2)  # Counter({'a': 2})  计数相减（结果为 0 的键被丢弃）
+
+# 与 defaultdict 对比：Counter 直接给可迭代对象
+words = ["apple", "banana", "apple", "cherry", "banana", "apple"]
+print(Counter(words))  # Counter({'apple': 3, 'banana': 2, 'cherry': 1})
+```
+
+## 实战：词频统计
+
+下面综合运用字典、`defaultdict`、`Counter` 与推导式，统计一篇文章的词频并排序输出 Top-N。
+
+```py title="Python"
+from __future__ import annotations
+
+import re
+from collections import Counter
+
+
+def clean_text(text: str) -> list[str]:
+    """转小写并切分出单词，去除标点。"""
+    return re.findall(r"[a-z]+", text.lower())
+
+
+def count_with_dict(words: list[str]) -> dict[str, int]:
+    """用普通字典 + setdefault 统计。"""
+    counts: dict[str, int] = {}
+    for word in words:
+        counts[word] = counts.setdefault(word, 0) + 1
+    return counts
+
+
+def count_with_counter(words: list[str]) -> Counter:
+    """用 Counter 一行搞定。"""
+    return Counter(words)
+
+
+def main() -> None:
+    text = """
+    Python is a great language. Python is easy to learn.
+    Many people love Python. Python is powerful and flexible.
+    The python community is friendly and welcoming.
+    """
+
+    words = clean_text(text)
+
+    # 方式 1：普通字典
+    counts1 = count_with_dict(words)
+    # 按频次降序排序
+    sorted1 = sorted(counts1.items(), key=lambda kv: (-kv[1], kv[0]))
+    print("普通字典 Top 5:")
+    for word, count in sorted1[:5]:
+        print(f"  {word}: {count}")
+
+    # 方式 2：Counter
+    counts2 = count_with_counter(words)
+    print("\nCounter Top 5:")
+    for word, count in counts2.most_common(5):
+        print(f"  {word}: {count}")
+
+    # 用推导式筛选频次 >= 2 的词
+    frequent = {w: c for w, c in counts2.items() if c >= 2}
+    print(f"\n频次 >= 2 的词: {frequent}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+输出示意：
+
+```
+普通字典 Top 5:
+  python: 5
+  is: 5
+  and: 2
+  friendly: 1
+  flexible: 1
+
+Counter Top 5:
+  python: 5
+  is: 5
+  and: 2
+  flexible: 1
+  friendly: 1
+
+频次 >= 2 的词: {'python': 5, 'is': 5, 'and': 2}
+```
+
+:::tip Counter 的优势
+对于"统计频次"这种典型场景，`Counter` 比手写字典循环更简洁、更可读，且自带 `most_common` 等实用方法，应作为首选。
+:::
+
+### 实战：词频统计工具
+
+结合 `Counter` 和正则表达式，实现一个高效的词频统计工具：
+
+```py title="Python"
+import re
+from collections import Counter
+from pathlib import Path
+
+_WORD_PATTERN = re.compile(r"[a-z]+")
+
+def word_frequency(filepath: str | Path) -> Counter[str]:
+    """统计文本文件中的词频。"""
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read().lower()
+    
+    words = _WORD_PATTERN.findall(content)
+    return Counter(words)
+
+counter = word_frequency("document.txt")
+
+print("Top 10 高频词:")
+for word, freq in counter.most_common(10):
+    print(f"  {word:<12} {freq}")
+
+print(f"\n总单词数: {sum(counter.values())}")
+print(f"唯一单词数: {len(counter)}")
+```
+
+**性能优化要点**：
+1. 预编译正则表达式，避免重复编译开销
+2. 先统一转小写再匹配，减少正则匹配次数
+3. 使用 `findall()` 批量提取，避免逐行处理的开销
+
+## 工程实践：进阶技巧
+
+### 哨兵模式：区分"缺失"与"值为 None"
+
+当字典的值域可能包含 `None` 时，`get()` 的默认返回值 `None` 会产生歧义。工程上使用唯一的哨兵对象进行身份标识：
+
+```py title="Python"
+_MISSING = object()
+
+def fetch_config(key: str, config: dict) -> str:
+    val = config.get(key, _MISSING)
+    if val is _MISSING:
+        raise ValueError(f"缺失必需配置: {key}")
+    return val
+```
+
+### 字典视图的集合运算
+
+`d.keys()` 和 `d.items()` 返回的视图对象实现了 `collections.abc.Set` 接口，支持高效的集合运算：
+
+```py title="Python"
+old_state = {"a": 1, "b": 2, "c": 3}
+new_state = {"b": 2, "c": 99, "d": 4}
+
+added = new_state.keys() - old_state.keys()       # {'d'}
+removed = old_state.keys() - new_state.keys()     # {'a'}
+changed = old_state.items() ^ new_state.items()   # {('a', 1), ('c', 3), ('c', 99), ('d', 4)}
+```
+
+### 极值查找与排序优化
+
+利用 `max()` / `min()` 的 `key` 参数直接在字典上进行基于值的极值查找：
+
+```py title="Python"
+metrics = {"cpu": 45.2, "mem": 82.1, "disk": 12.5}
+
+bottleneck = max(metrics, key=metrics.get)  # 'mem'
+
+import heapq
+top_2 = heapq.nlargest(2, metrics.items(), key=lambda x: x[1])
+```
+
+## 底层机制与内存考量
+
+### 紧凑字典（Compact Dict）与有序性
+
+字典采用紧凑布局并保持插入顺序。其底层将哈希表拆分为两个数组：
+
+1. **Sparse Indices Array**：稀疏数组，存储指向 entries 的索引
+2. **Dense Entries Array**：密集数组，按插入顺序紧凑存储 `(hash, key, value)` 三元组
+
+**工程影响**：
+- 内存占用减少约 20%-25%
+- 可以安全依赖字典的迭代顺序
+- 删除键会留下"哑元"，频繁增删场景下定期重建字典可回收内存
+
+### 哈希冲突与 Hash DOS
+
+Python 默认启用哈希随机化防止 Hash DOS 攻击。自定义对象作为键时，必须同时实现 `__hash__` 和 `__eq__`，且保证对象在生命周期内哈希值不可变：
+
+```py title="Python"
+class Point:
+    __slots__ = ('x', 'y')
+
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
+
+    def __hash__(self) -> int:
+        return hash((self.x, self.y))
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, Point) and self.x == other.x and self.y == other.y
+```
+
+### 隐蔽陷阱
+
+#### 遍历期间的尺寸变更
+
+CPython 在迭代字典时会检查内部版本号，若在 `for k in d:` 循环中增删键，会立即抛出 `RuntimeError`。
+
+```py title="Python"
+# 正确：迭代键的浅拷贝列表
+for k in list(d.keys()):
+    if condition(d[k]):
+        del d[k]
+```
+
+#### 布尔值与整数的哈希碰撞
+
+`bool` 是 `int` 的子类，`hash(True) == hash(1)`，它们在字典中被视为同一个键：
+
+```py title="Python"
+d = {1: "int_one", True: "bool_true"}
+# 结果: {1: 'bool_true'} - 键保留最先插入的实例，值被后续覆盖
+```
+
+**规范**：严禁在同一字典中混用布尔值和整数作为键。
+
+## 场景决策矩阵
+
+| 工程场景 | 推荐方案 | 核心考量 |
+|---------|---------|---------|
+| 稀疏数据 / 可选字段读取 | `d.get(k, default)` | 避免异常控制流，代码简洁 |
+| 高频分组 / 聚合 / 图构建 | `collections.defaultdict` | 避免冗余对象实例化，O(1) 缺失处理 |
+| 频次统计 / 词频分析 | `collections.Counter` | 提供 `most_common()`、多重集运算 |
+| 固定结构的 JSON 载荷 | `typing.TypedDict` | 启用静态类型检查，IDE 自动补全 |
+| 配置合并 / 覆盖 | `d1 | d2` (PEP 584) | 语义明确，无副作用 |
+| 需要严格控制内存的只读映射 | `types.MappingProxyType` | 零拷贝只读视图，防止意外篡改 |
+| LRU 缓存 / 顺序敏感队列 | `collections.OrderedDict` | 利用 `move_to_end()` 维护访问热度 |
+
+## 🎯 动手练习
+
+1. **词频统计**：使用 `Counter` 统计一段英文文本中每个单词的出现频率，输出 Top 5
+2. **字典合并**：使用 `|` 运算符合并两个配置字典，演示右侧覆盖左侧的行为
+3. **defaultdict 实践**：使用 `defaultdict(list)` 将一组单词按首字母分组
+4. **哨兵模式**：实现一个配置读取函数，区分"键不存在"和"值为 None"两种情况
+
+## 📚 延伸阅读
+
+- [Python 字典文档](https://docs.python.org/zh-cn/3/library/stdtypes.html#dict) - 官方字典类型详解
+- [PEP 584 - 字典合并运算符](https://peps.python.org/pep-0584/) - `|` 和 `|=` 运算符规范
+- [collections 模块文档](https://docs.python.org/zh-cn/3/library/collections.html) - defaultdict/Counter/OrderedDict 详解
+- [typing.TypedDict 文档](https://docs.python.org/zh-cn/3/library/typing.html#typing.TypedDict) - 类型化字典
+
+## 📊 速查表
+
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 创建字典 | `{"k": v}` 或 `dict()` | `d = {"a": 1}` |
+| 访问值 | `d[key]` | `d["a"]` → `1` |
+| 安全访问 | `d.get(key, default)` | `d.get("x", 0)` |
+| 设置默认值 | `d.setdefault(k, v)` | 不存在则设置并返回 |
+| 合并字典 | `d1 | d2` | 右侧覆盖左侧 |
+| 原地合并 | `d1 |= d2` | 等价于 `d1.update(d2)` |
+| 遍历键值 | `for k, v in d.items()` | 按插入顺序 |
+| 字典推导式 | `{k: v for ...}` | `{x: x**2 for x in range(5)}` |
+| 计数 | `Counter(iterable)` | `Counter("abc")` |
+| 分组 | `defaultdict(list)` | 按条件累积元素 |
+
+## ✅ 本节总结
+
+- 字典是**键值映射**，基于哈希表，平均 O(1) 查找
+- 键必须**可哈希**（通常不可变）；`[]` 访问不存在键会抛 `KeyError`，用 `get` 更安全
+- `keys()`/`values()`/`items()` 返回动态视图，遍历按插入顺序（3.7+）
+- `setdefault` 用于"无则设默认值"，`defaultdict` 是更优雅的替代
+- Python 3.9+ 的 `|` / `|=` 让字典合并更直观
+- `Counter` 是计数利器，`most_common` 直接取 Top-N
+- 嵌套字典用 `.get(key, {})` 链式访问可避免 `KeyError`

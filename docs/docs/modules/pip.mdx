@@ -1,0 +1,709 @@
+---
+sidebar_position: 3
+sidebar_label: 'pip 包管理'
+title: 🧩 pip 包管理
+description: 掌握 pip install、requirements.txt、pip freeze、pyproject.toml 依赖声明、本地/git 安装、pip-tools 与发布简单包的完整流程。
+---
+
+# 🧩 pip 包管理
+
+`pip` 是 Python 官方的包管理工具。它让你能从 [PyPI](https://pypi.org)（Python Package Index）一键安装数十万个第三方库，也可以从本地、Git、URL 安装。本节系统讲解 pip 的核心用法、依赖管理最佳实践，并带你完整走一遍"发布一个简单包"的流程。
+
+:::tip 🎯 本节要点
+- **pip install**：从 PyPI 安装包，支持版本约束、extras、预发布版本
+- **requirements.txt**：配合 `pip install -r` 复现环境，推荐用 **pip-tools** 生成可追溯锁文件
+- **pyproject.toml**：现代依赖声明标准（PEP 621），支持 PEP 508 环境标记
+- **本地/Git 安装**：`pip install .` 本地安装，`pip install git+https://...` 从 Git 安装
+- **发布包流程**：写 `pyproject.toml` → `python -m build` → `twine upload`，先 TestPyPI 后 PyPI
+- **pip-tools**：`pip-compile` 生成精确锁文件，`pip-sync` 同步环境
+:::
+
+## pip install
+
+最基础的用法是从 PyPI 安装包：
+
+```bash title="Shell"
+# 安装最新版本
+pip install requests
+
+# 指定版本
+pip install requests==2.31.0
+
+# 版本范围（PEP 440）
+pip install "requests>=2.30,<3.0"
+
+# 安装多个包
+pip install requests rich httpx
+
+# 升级到最新版
+pip install --upgrade requests
+
+# 安装时附带额外依赖（extras）
+pip install "fastapi[all]"
+pip install "pytest[testing]"
+```
+
+### 安装到用户目录
+
+不想污染系统环境时，可安装到用户目录：
+
+```bash title="Shell"
+pip install --user requests
+```
+
+:::warning 优先使用虚拟环境
+`--user` 仍然会让多个项目共享同一份依赖。**强烈推荐**为每个项目创建独立虚拟环境（见下一节），把依赖完全隔离。本节后续示例都假设你已在虚拟环境中。
+:::
+
+### 安装预发布版本
+
+默认情况下 pip 不会安装 alpha/beta/rc 版本。要安装预发布版本：
+
+```bash title="Shell"
+pip install --pre requests
+pip install "requests==2.32.0b1"
+```
+
+## requirements.txt
+
+把项目依赖写入 `requirements.txt`，配合 `pip install -r` 一键复现环境：
+
+```text title="输出"
+# requirements.txt
+requests>=2.31,<3.0
+rich>=13.7
+httpx[http2]>=0.27
+pydantic>=2.5
+```
+
+```bash title="Shell"
+# 从文件安装
+pip install -r requirements.txt
+
+# 包含额外参数
+pip install -r requirements-dev.txt
+```
+
+### 多个 requirements 文件
+
+复杂项目通常拆分多个 requirements 文件：
+
+```text title="输出"
+requirements/
+├── base.txt          ← 生产依赖
+├── dev.txt           ← 开发依赖（包含 base.txt）
+└── prod.txt          ← 生产环境（包含 base.txt + 性能监控等）
+```
+
+```text title="输出"
+# requirements/dev.txt
+-r base.txt
+pytest>=8.0
+ruff>=0.5
+mypy>=1.10
+ipython
+```
+
+```bash title="Shell"
+pip install -r requirements/dev.txt
+```
+
+## pip freeze
+
+`pip freeze` 输出当前环境中所有已安装包及其**精确版本**，是生成"锁文件"的常用方式：
+
+```bash title="Shell"
+pip freeze > requirements-lock.txt
+```
+
+输出示例：
+
+```text title="输出"
+certifi==2024.7.4
+charset-normalizer==3.3.2
+idna==3.7
+requests==2.32.3
+urllib3==2.2.2
+```
+
+:::warning pip freeze 的局限
+`pip freeze` 输出**所有传递依赖**，包括你项目根本没直接用到的。这会导致：
+- 锁文件冗长难读
+- 升级某个直接依赖时，传递依赖可能不一致
+- 难以分辨哪些是你"真正声明"的依赖
+
+推荐使用 **pip-tools**（见下文）生成精确锁文件，同时保留 `requirements.in` 声明的直接依赖。
+:::
+
+## pip show / list
+
+### pip show 查看包详情
+
+```bash title="Shell"
+pip show requests
+```
+
+输出示例：
+
+```text title="输出"
+Name: requests
+Version: 2.32.3
+Summary: Python HTTP for Humans.
+Home-page: https://requests.readthedocs.io
+Author: Kenneth Reitz
+Author-email: me@kennethreitz.org
+License: Apache 2.0
+Location: /home/user/.venv/lib/python3.12/site-packages
+Requires: certifi, charset-normalizer, idna, urllib3
+Required-by:
+```
+
+### pip list 列出所有包
+
+```bash title="Shell"
+# 列出所有已安装包
+pip list
+
+# 只列出过时的包
+pip list --outdated
+
+# 只列出有新版本的包
+pip list --outdated --format=columns
+```
+
+输出示例：
+
+```text title="输出"
+Package    Version Latest Type
+---------- ------- ------ -----
+pip        24.0    24.2  wheel
+setuptools 69.5.1  70.3  wheel
+```
+
+### pip check 检查依赖冲突
+
+```bash title="Shell"
+pip check
+```
+
+输出示例：
+
+```text title="输出"
+requests 2.32.3 requires urllib3<3,>=1.21.1, but you have urllib3 2.0.0 which is incompatible.
+```
+
+:::tip 把 pip check 加入 CI
+在 CI 流水线中加入 `pip check` 能在依赖冲突早期就发现问题。例如 GitHub Actions：
+```yaml
+- run: pip install -r requirements.txt
+- run: pip check
+```
+:::
+
+## 安装本地包
+
+### 从本地目录安装
+
+```bash title="Shell"
+# 安装当前目录的项目（需有 pyproject.toml 或 setup.py）
+pip install .
+
+# 可编辑模式：源码改动立即生效，开发必备
+pip install -e .
+
+# 指定本地路径
+pip install /path/to/some-package
+
+# 安装本地 wheel 文件
+pip install ./dist/mypackage-1.0.0-py3-none-any.whl
+```
+
+### 安装时附加 extras
+
+```bash title="Shell"
+# 安装项目声明的 dev extras
+pip install -e ".[dev]"
+
+# 多个 extras
+pip install -e ".[dev,test,docs]"
+```
+
+对应 `pyproject.toml`：
+
+```toml
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+test = ["pytest-cov>=5.0"]
+docs = ["sphinx>=7.0"]
+```
+
+## 从 Git 安装
+
+直接从 Git 仓库安装，适合使用未发布到 PyPI 的包或某个分支/提交：
+
+```bash title="Shell"
+# 安装默认分支
+pip install git+https://github.com/psf/requests.git
+
+# 指定分支
+pip install git+https://github.com/psf/requests.git@main
+
+# 指定标签
+pip install git+https://github.com/psf/requests.git@v2.32.3
+
+# 指定 commit
+pip install git+https://github.com/psf/requests.git@abc123def456
+
+# SSH 协议（私有仓库）
+pip install git+ssh://git@github.com/yourorg/yourpackage.git
+
+# 子目录（仓库根不是包根）
+pip install git+https://github.com/org/repo.git@main#subdirectory=python/pkg
+```
+
+在 `requirements.txt` 中：
+
+```text title="输出"
+# requirements.txt
+git+https://github.com/psf/requests.git@main
+git+ssh://git@github.com/yourorg/private.git@v1.0.0#egg=private
+```
+
+:::info egg 已废弃但仍可用
+旧式写法 `?egg=包名` 用于指定包名，PEP 508 之后已不强制要求，pip 会自动从 `pyproject.toml` 推断。但有时从 URL 安装时仍需要它来唯一标识。
+:::
+
+## pyproject.toml 依赖声明
+
+`pyproject.toml` 的 `[project]` 表是声明依赖的现代标准（PEP 621）：
+
+```toml
+[project]
+name = "my-project"
+version = "1.0.0"
+requires-python = ">=3.12"
+
+# 运行时必需依赖
+dependencies = [
+    "requests>=2.31,<3.0",
+    "rich>=13.7",
+    "httpx[http2]>=0.27",
+]
+
+# 可选依赖：通过 pip install ".[dev]" 安装
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+docs = [
+    "sphinx>=7.0",
+    "furo>=2024.5.6",
+]
+```
+
+### PEP 508 依赖说明符
+
+`dependencies` 中每一项遵循 PEP 508 语法：
+
+| 写法 | 含义 |
+|------|------|
+| `requests` | 任意版本 |
+| `requests==2.31.0` | 精确版本 |
+| `requests>=2.31` | 最低版本 |
+| `requests>=2.30,<3.0` | 版本范围（逗号 = AND） |
+| `requests~=2.31` | 兼容版本（≥2.31 且 &lt;3.0） |
+| `requests!=2.32.0` | 排除特定版本 |
+| `"fastapi[all]"` | 带 extras |
+| `requests; python_version<"3.13"` | 环境标记 |
+
+### 环境标记示例
+
+```toml
+dependencies = [
+    # 仅在特定平台安装
+    "pywin32>=306; sys_platform == 'win32'",
+    # 仅在特定 Python 版本
+    "tomli>=2.0; python_version < '3.11'",
+    # 版本与标记组合
+    "numpy>=1.26; python_version >= '3.12'",
+]
+```
+
+## pip-tools 简介
+
+[`pip-tools`](https://pip-tools.pypa.io/) 由两个命令组成：
+
+- `pip-compile`：从 `requirements.in` 生成**精确锁定**的 `requirements.txt`，包含所有传递依赖
+- `pip-sync`：让当前环境**完全同步**到 `requirements.txt`（卸载多余包、安装缺失包）
+
+### 工作流
+
+```bash title="Shell"
+# 安装
+pip install pip-tools
+
+# 创建 requirements.in（只声明直接依赖）
+echo "requests>=2.31" > requirements.in
+echo "rich" >> requirements.in
+```
+
+```text title="输出"
+# requirements.in
+requests>=2.31
+rich
+```
+
+```bash title="Shell"
+# 编译生成锁文件
+pip-compile
+
+# 生成 requirements.txt（精确版本 + 哈希校验）
+```
+
+```text title="输出"
+# 自动生成的 requirements.txt
+#
+# This file is autogenerated by pip-compile with Python 3.12
+# To update, run:
+#
+#    pip-compile
+#
+certifi==2024.7.4
+    # via requests
+charset-normalizer==3.3.2
+    # via requests
+idna==3.7
+    # via requests
+markdown-it-py==3.1.0
+    # via rich
+mdurl==0.1.2
+    # via markdown-it-py
+pygments==2.18.0
+    # via rich
+requests==2.32.3
+    # via -r requirements.in
+rich==13.7.1
+    # via -r requirements.in
+urllib3==2.2.2
+    # via requests
+```
+
+```bash title="Shell"
+# 同步环境到锁文件（卸载多余、安装缺失）
+pip-sync requirements.txt
+
+# 升级某个包
+pip-compile --upgrade-package requests
+
+# 升级所有包
+pip-compile --upgrade
+```
+
+:::tip pip-compile 的核心价值
+- **可追溯**：每个传递依赖都标注了"via 哪个直接依赖"
+- **可复现**：精确版本让团队成员、CI、生产环境完全一致
+- **可审计**：配合 `--generate-hashes` 还能校验下载包的完整性，防供应链攻击
+:::
+
+### pyproject.toml + pip-tools
+
+现代项目通常用 `pyproject.toml` 声明直接依赖，用 `pip-tools` 生成锁文件：
+
+```bash title="Shell"
+# 从 pyproject.toml 读取，生成 requirements.txt
+pip-compile pyproject.toml -o requirements.txt
+
+# 开发依赖单独锁定
+pip-compile --extra dev pyproject.toml -o requirements-dev.txt
+```
+
+## 实战：发布一个简单包
+
+下面我们从零创建一个简单包，打包并发布到 PyPI（或 TestPyPI）。完整流程涵盖：项目结构、`pyproject.toml`、构建、上传。
+
+### 1. 项目结构
+
+```text title="输出"
+sayhi/
+├── pyproject.toml
+├── README.md
+├── LICENSE
+└── src/
+    └── sayhi/
+        ├── __init__.py
+        └── __main__.py
+```
+
+```py title="Python"
+# src/sayhi/__init__.py
+"""sayhi：一个简单的命令行问好工具。"""
+
+__version__ = "0.1.0"
+
+
+def say_hi(name: str = "World", lang: str = "zh") -> str:
+    """用指定语言问好。
+
+    Args:
+        name: 被问候者姓名。
+        lang: 语言代码（zh/en/ja）。
+
+    Returns:
+        问候字符串。
+    """
+    messages = {
+        "zh": f"你好，{name}！",
+        "en": f"Hello, {name}!",
+        "ja": f"こんにちは、{name}さん！",
+    }
+    return messages.get(lang, messages["en"])
+```
+
+```py title="Python"
+# src/sayhi/__main__.py
+"""命令行入口。"""
+import argparse
+import sys
+from . import say_hi, __version__
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="sayhi",
+        description="简单的命令行问好工具",
+    )
+    parser.add_argument("name", nargs="?", default="World", help="姓名")
+    parser.add_argument("-l", "--lang", default="en", help="语言：zh/en/ja")
+    parser.add_argument("-V", "--version", action="version", version=f"sayhi {__version__}")
+    args = parser.parse_args()
+    print(say_hi(args.name, args.lang))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+```
+
+### 2. pyproject.toml
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sayhi-example"
+version = "0.1.0"
+description = "一个简单的命令行问好工具，用于演示 PyPI 发布流程"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [
+    { name = "Your Name", email = "you@example.com" }
+]
+keywords = ["example", "cli", "greeting"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+]
+dependencies = []
+
+[project.scripts]
+sayhi = "sayhi.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/yourname/sayhi"
+Repository = "https://github.com/yourname/sayhi"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sayhi"]
+```
+
+```markdown
+# README.md
+# sayhi
+
+简单的命令行问好工具。
+
+## 安装
+
+    pip install sayhi-example
+
+## 使用
+
+    sayhi Alice -l zh
+    # 输出：你好，Alice！
+```
+
+### 3. 本地测试
+
+```bash title="Shell"
+# 安装到当前环境
+pip install -e .
+
+# 测试 CLI
+sayhi Alice -l zh    # 输出：你好，Alice！
+sayhi Alice -l ja    # 输出：こんにちは、Aliceさん！
+sayhi -V             # 输出：sayhi 0.1.0
+
+# 测试作为库使用
+python -c "from sayhi import say_hi; print(say_hi('Bob', 'en'))"
+# 输出：Hello, Bob!
+```
+
+### 4. 构建分发包
+
+```bash title="Shell"
+# 安装 build 工具
+pip install build
+
+# 构建 sdist (.tar.gz) 和 wheel (.whl)
+python -m build
+```
+
+构建产物：
+
+```text title="输出"
+dist/
+├── sayhi_example-0.1.0-py3-none-any.whl   ← wheel：直接解压即用，推荐
+└── sayhi_example-0.1.0.tar.gz            ← sdist：源码包，作为兜底
+```
+
+:::info sdist vs wheel
+- **wheel**（`.whl`）：预构建的二进制包，安装时无需运行 `setup.py`，速度快，是默认首选
+- **sdist**（`.tar.gz`）：源码包，包含完整源码，用于无法用 wheel 安装的平台/版本
+:::
+
+### 5. 上传到 TestPyPI（推荐先试）
+
+```bash title="Shell"
+# 安装上传工具
+pip install twine
+
+# 上传到 TestPyPI（测试仓库，可重复使用）
+twine upload --repository testpypi dist/*
+```
+
+在 [test.pypi.org](https://test.pypi.org) 注册账号后，按提示输入用户名/密码或 API token。
+
+:::warning TestPyPI vs PyPI
+- **TestPyPI** 是 PyPI 的测试镜像，可以随便上传、覆盖，不会污染正式仓库
+- 首次发布**强烈推荐先发到 TestPyPI**，验证安装无误后再发到正式 PyPI
+- PyPI 一旦上传某个版本号（如 `0.1.0`）就**不能覆盖**，只能发更高版本号
+:::
+
+### 6. 验证 TestPyPI 安装
+
+```bash title="Shell"
+# 在新的虚拟环境测试
+python -m venv test-env
+source test-env/bin/activate
+
+# 从 TestPyPI 安装
+pip install -i https://test.pypi.org/simple/ sayhi-example
+
+# 验证
+sayhi Alice -l zh
+```
+
+### 7. 上传到正式 PyPI
+
+```bash title="Shell"
+# 上传到正式 PyPI
+twine upload dist/*
+```
+
+上传后访问 [pypi.org/project/sayhi-example](https://pypi.org/project/sayhi-example/) 查看项目页面，全世界都能用 `pip install sayhi-example` 安装你的包了。
+
+### 8. 后续版本发布流程
+
+```bash title="Shell"
+# 1. 修改版本号（pyproject.toml 中 version = "0.2.0"）
+# 2. 清理旧构建产物
+rm -rf dist/ build/ src/sayhi.egg-info/
+
+# 3. 重新构建并上传
+python -m build
+twine upload dist/*
+```
+
+:::tip 自动化发布
+手动发布易出错，可用 GitHub Actions 自动化：
+```yaml
+# .github/workflows/publish.yml
+name: Publish to PyPI
+on:
+  release:
+    types: [created]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build twine
+      - run: python -m build
+      - run: twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+```
+:::
+
+## 🎯 动手练习
+
+1. **基础安装**：创建虚拟环境，用 `pip install` 安装 `requests`、`rich`，指定版本范围
+2. **requirements.txt**：创建 `requirements.in`，用 `pip-compile` 生成锁文件，`pip-sync` 同步环境
+3. **本地包安装**：创建简单包，用 `pip install -e .` 可编辑模式安装，测试 CLI 入口
+4. **发布流程**：搭建 `sayhi` 包，构建 wheel/sdist，上传到 TestPyPI 验证
+
+## 📊 速查表
+
+| 操作 | 命令 | 示例 |
+|------|------|------|
+| 安装包 | `pip install pkg` | `pip install requests` |
+| 指定版本 | `pip install pkg==x.y` | `pip install requests==2.31.0` |
+| 版本范围 | `pip install "pkg>=x,<y"` | `pip install "requests>=2.30,<3.0"` |
+| 升级包 | `pip install --upgrade pkg` | `pip install --upgrade requests` |
+| 卸载包 | `pip uninstall pkg` | `pip uninstall requests` |
+| 查看信息 | `pip show pkg` | `pip show requests` |
+| 列出包 | `pip list` | `pip list --outdated` |
+| 检查冲突 | `pip check` | 检测依赖不兼容 |
+| 生成锁文件 | `pip freeze > req.txt` | 输出所有精确版本 |
+| 从文件安装 | `pip install -r req.txt` | 批量安装依赖 |
+| 本地安装 | `pip install .` | 当前目录项目 |
+| 可编辑安装 | `pip install -e .` | 开发模式，改动立即生效 |
+| Git 安装 | `pip install git+https://...` | 从 Git 仓库安装 |
+| 构建包 | `python -m build` | 生成 wheel + sdist |
+| 上传包 | `twine upload dist/*` | 发布到 PyPI |
+
+## 📚 延伸阅读
+
+- **PEP 508** - 依赖说明符规范（版本约束、环境标记）
+- **PEP 621** - `pyproject.toml` 项目元数据标准
+- **PEP 517/518** - 构建系统与 `pyproject.toml` 配置
+- **[pip 官方文档](https://pip.pypa.io/en/stable/)** - pip 完整使用指南
+- **[pip-tools 文档](https://pip-tools.pypa.io/en/stable/)** - 依赖锁定与同步工具
+- **[Python Packaging Guide](https://packaging.python.org/en/latest/)** - Python 打包官方指南
+- **[PyPI 官方](https://pypi.org)** - Python Package Index
+
+## 📝 本节总结
+
+- **`pip install` 从 PyPI 安装**，支持版本约束（`==`、`>=`、`~=`）、extras（`[all]`）、预发布版本（`--pre`）
+- **`requirements.txt` 配合 `pip install -r` 复现环境**，但推荐用 **pip-tools** 生成可追溯的锁文件
+- **`pip freeze` 输出所有已安装包**，但包含传递依赖，难以分辨直接依赖，适合快速备份
+- **`pip show / list / check` 查询与诊断依赖问题**，`pip check` 可加入 CI 早期发现冲突
+- **本地包用 `pip install .` 或可编辑模式 `pip install -e .`**，开发期间源码改动立即生效
+- **Git 安装**：`pip install git+https://...@分支#subdirectory=子目录`，适合未发布或特定分支
+- **`pyproject.toml` 的 `[project]` 表是现代依赖声明标准**，支持 PEP 508 环境标记（平台/Python 版本条件）
+- **发布包流程**：写 `pyproject.toml` → `python -m build` → `twine upload`，先 TestPyPI 验证后 PyPI 正式发布
+- **wheel（`.whl`）是预构建二进制包**，安装速度快，是默认首选；sdist（`.tar.gz`）是源码包作为兜底
+
+下一节学习**虚拟环境**——为每个项目隔离依赖，告别"依赖地狱"。

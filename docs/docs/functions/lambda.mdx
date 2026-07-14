@@ -1,0 +1,598 @@
+---
+sidebar_position: 3
+sidebar_label: 'Lambda'
+title: ⚙️ Lambda 匿名函数
+description: 学习 lambda 表达式语法、与 def 的区别、作为参数传递、operator 模块及其与列表推导式的对比
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# ⚙️ Lambda 匿名函数
+
+`lambda` 是 Python 中创建匿名函数（anonymous function）的关键字。它适合定义简单、一次性使用的函数，常用于 `sorted`、`map`、`filter` 等需要函数作为参数的场景。理解 lambda 的语法和适用范围能帮助你写出更简洁的代码。
+
+<PyodideRunner title="Lambda 函数快速体验">
+
+```python
+from operator import itemgetter
+
+# Lambda 用于排序
+students = [
+    {"name": "Alice", "score": 85, "age": 20},
+    {"name": "Bob", "score": 92, "age": 22},
+    {"name": "Carol", "score": 78, "age": 21},
+]
+
+# 按成绩排序
+by_score = sorted(students, key=lambda s: s["score"], reverse=True)
+print("按成绩降序:")
+for s in by_score:
+    print(f"  {s['name']}: {s['score']}")
+
+# 使用 itemgetter 替代 lambda
+by_name = sorted(students, key=itemgetter("name"))
+print("\n按姓名排序:")
+for s in by_name:
+    print(f"  {s['name']}")
+
+# map 和 filter
+numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# 使用 map 计算平方
+squares = list(map(lambda x: x ** 2, numbers))
+print(f"\n平方数: {squares}")
+
+# 使用 filter 筛选偶数
+evens = list(filter(lambda x: x % 2 == 0, numbers))
+print(f"偶数: {evens}")
+```
+
+</PyodideRunner>
+
+## lambda 语法
+
+lambda 表达式的语法非常简洁：
+
+```text title="输出"
+lambda 参数列表: 表达式
+```
+
+注意：lambda 主体是**单个表达式**，不能包含语句（如 `if`/`while`/`for`/`def`/`return`）。
+
+```py title="Python"
+# 等价于 def add(a, b): return a + b
+add = lambda a, b: a + b
+print(add(3, 5))  # 输出：8
+
+# 单参数：计算采样间隔
+sample_interval = lambda fs: 1.0 / fs
+print(sample_interval(1000))  # 输出：0.001（1kHz 采样间隔 1ms）
+
+# 无参数
+default_gain = lambda: 1.0
+print(default_gain())  # 输出：1.0
+
+# 多参数：信号缩放
+scale = lambda signal, gain: [x * gain for x in signal]
+print(scale([1.0, 2.0, 3.0], 2.5))  # 输出：[2.5, 5.0, 7.5]
+```
+
+带默认值的 lambda：
+
+```py title="Python"
+power = lambda x, n=2: x ** n
+print(power(3))      # 输出：9（默认 n=2）
+print(power(3, 4))   # 输出：81
+```
+
+带类型注解的 lambda（Python 3.12+ 中类型系统支持 lambda 注解，但实际很少用）：
+
+```py title="Python"
+# 一般 lambda 不加类型注解，依靠上下文判断
+format_freq = lambda f: f"{f:.2f} Hz"
+print(format_freq(440.0))  # 输出：440.00 Hz
+```
+
+## 与 def 的区别
+
+| 特性 | `def` 定义 | `lambda` 表达式 |
+| --- | --- | --- |
+| 语句 vs 表达式 | 是语句 | 是表达式 |
+| 函数体 | 多条语句，可有逻辑分支 | 单个表达式 |
+| 函数名 | 必须有名字 | 匿名（可赋给变量） |
+| 文档字符串 | 支持 `__doc__` | 不支持 |
+| 装饰器 | 支持 `@decorator` | 不支持 |
+| 可读性 | 适合复杂逻辑 | 适合简短逻辑 |
+
+```py title="Python"
+# def 版本：计算信号的 RMS 值
+def rms(signal):
+    """计算信号的均方根值（Root Mean Square）。"""
+    import math
+    return math.sqrt(sum(x**2 for x in signal) / len(signal))
+
+# lambda 版本
+rms_lambda = lambda sig: (sum(x**2 for x in sig) / len(sig)) ** 0.5
+
+print(rms([1.0, 2.0, 3.0]))           # 输出：2.1602...
+print(rms_lambda([1.0, 2.0, 3.0]))    # 输出：2.1602...
+
+# 文档字符串差异
+print(rms.__doc__)           # 输出：计算信号的均方根值（Root Mean Square）。
+print(rms_lambda.__doc__)    # 输出：None（lambda 不支持 docstring）
+```
+
+:::warning 不要滥用 lambda
+将 lambda 赋值给变量后当作普通函数使用，是一种反模式（PEP 8 不推荐）：
+```py title="Python"
+# 不推荐
+f = lambda x: x * 2
+
+# 推荐
+def f(x):
+    return x * 2
+```
+原因：`def` 版本支持文档字符串、更好的堆栈跟踪、IDE 提示更友好。lambda 真正适合的场景是**就地使用**，例如作为参数传给 `sorted`/`map`/`filter`。
+:::
+
+## 作为参数传递
+
+lambda 最大的用武之地是作为高阶函数的参数。
+
+### sorted 的 key
+
+```py title="Python"
+import numpy as np
+
+sensors = [
+    {"name": "加速度计", "sampling_rate": 1000, "noise_level": 0.02},
+    {"name": "陀螺仪", "sampling_rate": 500, "noise_level": 0.01},
+    {"name": "气压计", "sampling_rate": 50, "noise_level": 0.5},
+    {"name": "磁力计", "sampling_rate": 100, "noise_level": 0.1},
+]
+
+# 按采样率升序
+by_rate = sorted(sensors, key=lambda s: s["sampling_rate"])
+print([s["name"] for s in by_rate])
+# 输出：['气压计', '磁力计', '陀螺仪', '加速度计']
+
+# 按噪声水平降序
+by_noise = sorted(sensors, key=lambda s: s["noise_level"], reverse=True)
+print([s["name"] for s in by_noise])
+# 输出：['气压计', '磁力计', '加速度计', '陀螺仪']
+```
+
+### map 转换序列
+
+```py title="Python"
+import numpy as np
+
+# 将采样率转换为采样间隔（秒）
+sampling_rates = [1000, 500, 200, 100, 50]
+intervals = list(map(lambda fs: 1.0 / fs, sampling_rates))
+print(intervals)
+# 输出：[0.001, 0.002, 0.005, 0.01, 0.02]
+
+# 将多个传感器的噪声水平归一化到 [0, 1]
+noise_levels = [0.02, 0.01, 0.5, 0.1]
+max_noise = max(noise_levels)
+normalized = list(map(lambda n: round(n / max_noise, 3), noise_levels))
+print(normalized)
+# 输出：[0.04, 0.02, 1.0, 0.2]
+```
+
+### filter 过滤序列
+
+```py title="Python"
+import numpy as np
+
+sensors = [
+    {"name": "加速度计", "sampling_rate": 1000, "noise_level": 0.02},
+    {"name": "陀螺仪", "sampling_rate": 500, "noise_level": 0.01},
+    {"name": "气压计", "sampling_rate": 50, "noise_level": 0.5},
+    {"name": "磁力计", "sampling_rate": 100, "noise_level": 0.1},
+]
+
+# 过滤高频传感器（采样率 > 200 Hz）
+high_freq = list(filter(lambda s: s["sampling_rate"] > 200, sensors))
+print([s["name"] for s in high_freq])
+# 输出：['加速度计', '陀螺仪']
+
+# 过滤低噪声传感器（噪声 < 0.1）
+low_noise = list(filter(lambda s: s["noise_level"] < 0.1, sensors))
+print([s["name"] for s in low_noise])
+# 输出：['加速度计', '陀螺仪']
+```
+
+:::info map/filter vs 列表推导式
+虽然 `map` 和 `filter` 配合 lambda 很常见，但 Python 社区更推荐使用列表推导式，因为可读性更好：
+```py title="Python"
+# map/filter 写法
+intervals = list(map(lambda fs: 1.0 / fs, sampling_rates))
+high_freq = list(filter(lambda s: s["sampling_rate"] > 200, sensors))
+
+# 列表推导式写法（更 Pythonic）
+intervals = [1.0 / fs for fs in sampling_rates]
+high_freq = [s for s in sensors if s["sampling_rate"] > 200]
+```
+:::
+
+## 常用场景
+
+### 1. 排序 key
+
+```py title="Python"
+# 按飞行事件时间戳排序
+flight_events = [
+    {"event": "起飞", "timestamp": "14:30:05", "altitude": 0},
+    {"event": "巡航", "timestamp": "14:35:20", "altitude": 5000},
+    {"event": "降落", "timestamp": "14:55:10", "altitude": 0},
+]
+
+by_time = sorted(flight_events, key=lambda e: e["timestamp"])
+print([e["event"] for e in by_time])
+# 输出：['起飞', '巡航', '降落']
+
+# 按高度降序
+by_alt = sorted(flight_events, key=lambda e: e["altitude"], reverse=True)
+print([e["event"] for e in by_alt])
+# 输出：['巡航', '起飞', '降落']
+```
+
+### 2. 字典默认值
+
+```py title="Python"
+from collections import defaultdict
+
+# 按传感器类型分组
+sensor_readings = defaultdict(lambda: [])
+for name, stype in [("IMU_1", "惯性"), ("GPS_1", "定位"), ("IMU_2", "惯性"), ("BARO_1", "气压")]:
+    sensor_readings[stype].append(name)
+print(dict(sensor_readings))
+# 输出：{'惯性': ['IMU_1', 'IMU_2'], '定位': ['GPS_1'], '气压': ['BARO_1']}
+
+# 默认值为自定义对象：传感器矩阵
+matrix = defaultdict(lambda: defaultdict(float))
+matrix["IMU_1"]["x"] = 9.81
+matrix["IMU_1"]["y"] = 0.02
+matrix["GYRO_1"]["z"] = -0.15
+print(dict(matrix["IMU_1"]))  # 输出：{'x': 9.81, 'y': 0.02}
+```
+
+### 3. GUI/事件回调
+
+```py title="Python"
+# 模拟传感器回调注册（简化示例）
+def create_sensor_listener(name, on_change):
+    print(f"传感器 [{name}] 监听器已注册")
+    return on_change
+
+# 当噪声水平超过阈值时触发报警
+alarm = create_sensor_listener("IMU_1", lambda: print("噪声超标！"))
+# 后续触发
+alarm()  # 输出：噪声超标！
+```
+
+### 4. 元素取值
+
+```py title="Python"
+# 航迹点数据：(纬度, 经度)
+waypoints = [(39.9, 116.4), (31.2, 121.5), (23.1, 113.3)]
+
+# 按纬度排序
+by_lat = sorted(waypoints, key=lambda wp: wp[0])
+print(by_lat)
+# 输出：[(23.1, 113.3), (31.2, 121.5), (39.9, 116.4)]
+
+# 按经度排序
+by_lon = sorted(waypoints, key=lambda wp: wp[1])
+print(by_lon)
+# 输出：[(23.1, 113.3), (39.9, 116.4), (31.2, 121.5)]
+```
+
+## 局限性
+
+lambda 也有不少限制：
+
+### 1. 不能包含语句
+
+```py title="Python"
+# 错误：lambda 不能包含赋值语句
+# f = lambda x: (y = x + 1; y * 2)  # SyntaxError
+
+# 替代：用海象运算符（Python 3.8+）
+f = lambda x: (y := x + 1) * 2  # 海象运算符可以在表达式内赋值
+print(f(5))  # 输出：12
+```
+
+:::tip 海象运算符 :=
+`:=` 赋值表达式可以在表达式内部赋值。配合 lambda 能突破部分限制：
+```py title="Python"
+# 计算信号能量并返回原始值和能量
+energy_of = lambda x: (x, (sq := x ** 2))
+print(energy_of(3.0))  # 输出：(3.0, 9.0)
+```
+:::
+
+### 2. 不能有分支逻辑（除非用三元表达式）
+
+```py title="Python"
+# 用三元表达式模拟 if-else：判断信号方向
+classify = lambda x: "正" if x > 0 else ("零" if x == 0 else "负")
+print(classify(5.0))   # 输出：正
+print(classify(0.0))   # 输出：零
+print(classify(-3.0))  # 输出：负
+
+# 太复杂时应改用 def
+```
+
+### 3. 没有文档字符串
+
+lambda 不支持 `__doc__`，调用 `help()` 时显示的只是 `<lambda>`：
+
+```py title="Python"
+f = lambda x: x * 2
+help(f)
+# 输出：<lambda> function
+```
+
+### 4. 不能被装饰
+
+```py title="Python"
+# 不能直接对 lambda 应用 @decorator 语法
+# 必须用 def 才能用 @ 语法
+```
+
+## 与列表推导式对比
+
+很多场景下，列表推导式比 `map`/`filter` + lambda 更直观：
+
+```py title="Python"
+import numpy as np
+
+sampling_rates = [1000, 500, 200, 100, 50]
+
+# map + lambda
+intervals_1 = list(map(lambda fs: 1.0 / fs, sampling_rates))
+
+# 列表推导式
+intervals_2 = [1.0 / fs for fs in sampling_rates]
+
+# 两者结果相同
+print(intervals_1 == intervals_2)  # 输出：True
+```
+
+性能对比：
+
+```py title="Python"
+import timeit
+
+setup = "numbers = list(range(1000))"
+
+# map + lambda
+t1 = timeit.timeit("list(map(lambda x: x ** 2, numbers))", setup=setup, number=10000)
+
+# 列表推导式
+t2 = timeit.timeit("[x ** 2 for x in numbers]", setup=setup, number=10000)
+
+print(f"map + lambda:  {t1:.3f}s")
+print(f"列表推导式:    {t2:.3f}s")
+```
+
+通常列表推导式更快、更易读，但 `map` 在配合内置函数（如 `str`、`int`）时仍然简洁：
+
+```py title="Python"
+# 这种情况下 map 更简洁：将采样率字符串转为浮点数
+rate_strings = ["1000", "500", "200"]
+rates = list(map(float, rate_strings))  # 直接传 float，无需 lambda
+print(rates)  # 输出：[1000.0, 500.0, 200.0]
+
+# 等价列表推导式
+rates = [float(s) for s in rate_strings]
+```
+
+:::info 选择建议
+- 简单转换：列表推导式更 Pythonic
+- 配合已有函数（无 lambda）：`map`/`filter` 仍然简洁
+- 复杂逻辑：使用 `def` 定义具名函数
+:::
+
+## operator 模块
+
+`operator` 模块提供了对应内置运算符的函数，能替代部分 lambda，让代码更清晰：
+
+```py title="Python"
+import operator
+
+# 算术运算
+print(operator.add(3, 5))       # 输出：8  等价 lambda a, b: a + b
+print(operator.sub(10, 4))      # 输出：6
+print(operator.mul(3, 4))       # 输出：12
+print(operator.truediv(10, 4))  # 输出：2.5
+print(operator.mod(10, 3))      # 输出：1
+print(operator.pow(2, 10))      # 输出：1024
+
+# 比较
+print(operator.eq(3, 3))   # 输出：True
+print(operator.lt(3, 5))   # 输出：True
+print(operator.gt(3, 5))   # 输出：False
+```
+
+### itemgetter 与 attrgetter
+
+`itemgetter` 替代 `lambda x: x[key]`，`attrgetter` 替代 `lambda x: x.attr`：
+
+```py title="Python"
+from operator import itemgetter, attrgetter
+
+sensors = [
+    {"name": "加速度计", "sampling_rate": 1000, "noise_level": 0.02},
+    {"name": "陀螺仪", "sampling_rate": 500, "noise_level": 0.01},
+    {"name": "气压计", "sampling_rate": 50, "noise_level": 0.5},
+]
+
+# 用 lambda
+sorted1 = sorted(sensors, key=lambda s: s["sampling_rate"])
+
+# 用 itemgetter（更高效，因为内部用 C 实现）
+sorted2 = sorted(sensors, key=itemgetter("sampling_rate"))
+
+print([s["name"] for s in sorted1])  # 输出：['气压计', '陀螺仪', '加速度计']
+print([s["name"] for s in sorted2])  # 输出：['气压计', '陀螺仪', '加速度计']
+
+# 多字段排序
+multi = sorted(sensors, key=itemgetter("noise_level", "sampling_rate"))
+```
+
+对对象属性排序：
+
+```py title="Python"
+from dataclasses import dataclass
+
+@dataclass
+class Sensor:
+    name: str
+    sampling_rate: int
+    noise_level: float
+
+sensors = [
+    Sensor("加速度计", 1000, 0.02),
+    Sensor("陀螺仪", 500, 0.01),
+    Sensor("气压计", 50, 0.5),
+]
+
+# 用 attrgetter 替代 lambda s: s.noise_level
+sorted_sensors = sorted(sensors, key=attrgetter("noise_level"))
+print(sorted_sensors)
+# 输出：[Sensor(name='陀螺仪', ...), Sensor(name='加速度计', ...), Sensor(name='气压计', ...)]
+```
+
+:::tip itemgetter 性能更好
+`itemgetter`、`attrgetter`、`methodcaller` 由 C 实现，比 lambda 略快。在性能敏感场景下推荐使用。
+:::
+
+### methodcaller
+
+```py title="Python"
+from operator import methodcaller
+
+sensor_names = ["imu_1", "gyro_2", "baro_1"]
+uppercased = list(map(methodcaller("upper"), sensor_names))
+print(uppercased)  # 输出：['IMU_1', 'GYRO_2', 'BARO_1']
+
+# 等价于
+uppercased = list(map(lambda s: s.upper(), sensor_names))
+```
+
+## 实战：按多字段排序
+
+下面实现一个综合示例，按多个字段对传感器数据进行排序，并对比 lambda 和 operator 的写法：
+
+```py title="Python"
+from operator import itemgetter
+
+sensors = [
+    {"name": "IMU_1", "type": "惯性", "sampling_rate": 1000, "cost": 5000},
+    {"name": "IMU_2", "type": "惯性", "sampling_rate": 2000, "cost": 8000},
+    {"name": "GPS_1", "type": "定位", "sampling_rate": 10, "cost": 3000},
+    {"name": "BARO_1", "type": "气压", "sampling_rate": 50, "cost": 1000},
+    {"name": "BARO_2", "type": "气压", "sampling_rate": 50, "cost": 1500},
+]
+
+
+def sort_sensors(sensors: list[dict], *fields: str, reverse: bool = False) -> list[dict]:
+    """按多个字段排序传感器列表。
+
+    Args:
+        sensors: 传感器列表。
+        *fields: 排序字段，按优先级排列。
+        reverse: 是否降序。
+
+    Returns:
+        排序后的新列表。
+    """
+    if not fields:
+        return list(sensors)
+    key = itemgetter(*fields) if len(fields) > 1 else itemgetter(fields[0])
+    return sorted(sensors, key=key, reverse=reverse)
+
+
+# 1. 按类型升序
+by_type = sort_sensors(sensors, "type")
+print("按类型：", [s["name"] for s in by_type])
+# 输出：['IMU_1', 'IMU_2', 'GPS_1', 'BARO_1', 'BARO_2']
+
+# 2. 按类型、再按采样率降序（同类型内采样率高在前）
+by_type_rate = sorted(
+    sensors,
+    key=lambda s: (s["type"], -s["sampling_rate"]),
+)
+print("按类型+采样率降序：")
+for s in by_type_rate:
+    print(f"  {s['type']:4s} {s['name']:8s} {s['sampling_rate']}Hz")
+# 输出：
+#   惯性 IMU_2     2000Hz
+#   惯性 IMU_1     1000Hz
+#   定位 GPS_1     10Hz
+#   气压 BARO_1    50Hz
+#   气压 BARO_2    50Hz
+
+# 3. 按类型、再按成本（都升序），用 itemgetter
+by_type_cost = sorted(sensors, key=itemgetter("type", "cost"))
+print("按类型+成本：")
+for s in by_type_cost:
+    print(f"  {s['type']:4s} {s['name']:8s} ¥{s['cost']}")
+# 输出：
+#   惯性 IMU_1     ¥5000
+#   惯性 IMU_2     ¥8000
+#   定位 GPS_1     ¥3000
+#   气压 BARO_1    ¥1000
+#   气压 BARO_2    ¥1500
+```
+
+:::tip 多字段排序技巧
+- 同方向（都升序/都降序）：用 `itemgetter("a", "b")` 一次取出元组
+- 混合方向：数值字段可用 `-value` 反转，字符串字段较复杂，需多次 `sorted`（Python 的 `sorted` 是稳定排序）
+```py title="Python"
+# 多次稳定排序：先按次要字段，再按主要字段
+by_secondary = sorted(sensors, key=lambda s: s["cost"])            # 先按成本
+by_primary = sorted(by_secondary, key=lambda s: s["type"])         # 再按类型
+```
+:::
+
+## 🎯 动手练习
+
+1. **sorted 排序**：使用 lambda 对传感器列表按多个字段排序（如先按类型再按采样率降序）
+2. **operator 替代**：将 `lambda s: s["noise_level"]` 改写为 `itemgetter("noise_level")`，对比性能
+3. **defaultdict 默认值**：使用 `lambda: []` 创建默认值为列表的字典，按传感器类型分组
+4. **海象运算符**：使用 `:=` 在 lambda 中实现赋值并返回信号能量计算结果
+
+## 📚 延伸阅读
+
+- [PEP 309 - 部分函数应用](https://peps.python.org/pep-0309/) - `functools.partial` 规范
+- [operator 模块文档](https://docs.python.org/zh-cn/3/library/operator.html) - 运算符函数化
+- [Python 函数式编程指南](https://docs.python.org/zh-cn/3/howto/functional.html) - 函数式编程范式
+- [PEP 572 - 海象运算符](https://peps.python.org/pep-0572/) - 赋值表达式规范
+
+## 📊 速查表
+
+| 场景 | lambda 写法 | 更优替代 |
+|------|-------------|----------|
+| 加法 | `lambda a, b: a + b` | `operator.add` |
+| 字典取值 | `lambda s: s["key"]` | `itemgetter("key")` |
+| 属性访问 | `lambda s: s.attr` | `attrgetter("attr")` |
+| 方法调用 | `lambda s: s.method()` | `methodcaller("method")` |
+| 排序 key | `lambda s: s["sampling_rate"]` | `itemgetter("sampling_rate")` |
+| 默认值工厂 | `lambda: []` | `list` 或 `defaultdict(list)` |
+| 采样间隔 | `lambda fs: 1.0 / fs` | 列表推导式 `[1.0/fs for fs in ...]` |
+| 过滤高频 | `lambda s: s["rate"] > 200` | 列表推导式 `[s for s in ... if s["rate"]>200]` |
+
+## ✅ 本节总结
+
+- `lambda 参数: 表达式` 创建匿名函数，主体只能是单个表达式
+- 与 `def` 相比，lambda 简洁但缺少文档字符串、不支持装饰器、不适合复杂逻辑
+- lambda 最适合用作高阶函数（`sorted`/`map`/`filter`/`defaultdict`）的参数
+- 简单转换场景下，列表推导式通常比 `map + lambda` 更 Pythonic
+- `operator` 模块（`itemgetter`/`attrgetter`/`methodcaller`）能替代常用 lambda，更高效更清晰
+- 不要把 lambda 赋值给变量当作普通函数使用，那样做不如 `def`
+- 海象运算符 `:=` 可以在 lambda 表达式内部赋值，突破部分限制

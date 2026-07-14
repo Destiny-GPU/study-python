@@ -1,0 +1,227 @@
+.cardGridSection {
+  padding: 4rem 0;
+}
+
+.cardGridSection:last-child {
+  padding-bottom: 4rem;
+}
+
+.cardLink {
+  display: block;
+  height: 100%;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.card {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-radius-xl, 20px);
+  padding: 2rem 1.5rem;
+  height: 100%;
+  transition: transform var(--ifm-transition-fast) var(--ifm-transition-timing-default),
+              box-shadow var(--ifm-transition-fast) var(--ifm-transition-timing-default),
+              border-color var(--ifm-transition-fast) var(--ifm-transition-timing-default),
+              background-color var(--ifm-transition-fast) var(--ifm-transition-timing-default);
+  background: var(--ifm-background-color);
+  box-shadow: var(--ifm-shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.cardLink:hover .card {
+  transform: translateY(-4px);
+  box-shadow: var(--ifm-shadow-lg);
+  border-color: var(--ifm-color-primary);
+}
+
+.cardLink:hover .card::before {
+  opacity: 1;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ifm-color-primary-lightest), var(--ifm-color-primary));
+  opacity: 0;
+  transition: opacity var(--ifm-transition-fast) var(--ifm-transition-timing-default);
+}
+
+.cardEmoji {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 1rem;
+  display: inline-block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.08));
+  transition: transform var(--ifm-transition-fast) var(--ifm-transition-timing-default),
+              filter var(--ifm-transition-fast) var(--ifm-transition-timing-default);
+}
+
+.card:hover .cardEmoji {
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.cardLogo {
+  height: 80px;
+  width: auto;
+  max-width: 180px;
+  margin-bottom: 1rem;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.1));
+  transition: transform var(--ifm-transition-fast) var(--ifm-transition-timing-default),
+              filter var(--ifm-transition-fast) var(--ifm-transition-timing-default);
+}
+
+.card:hover .cardLogo {
+  transform: scale(1.08);
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.2));
+}
+
+.cardBody {
+  line-height: 1.7;
+}
+
+.cardBody h3 {
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cardContent {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.cardContent > *:last-child {
+  margin-bottom: 0;
+}
+
+/* 卡片按钮：ds-btn / ds-btn-primary 通过 JSX clsx 应用，此处仅定义卡片内覆盖 */
+.cardButton {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.95rem;
+}
+
+/* 深色模式下增强可见性 */
+[data-theme='dark'] .cardButton {
+  background: linear-gradient(135deg, var(--ifm-color-primary) 0%, var(--ifm-color-violet) 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(74, 108, 247, 0.4);
+}
+
+[data-theme='dark'] .cardButton:hover {
+  background: linear-gradient(135deg, var(--ifm-color-primary-dark) 0%, var(--ifm-color-violet-dark) 100%);
+  color: #ffffff;
+  box-shadow: 0 5px 20px rgba(74, 108, 247, 0.6);
+}
+
+/* 滚动入场动画 */
+.cardCol {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cardCol.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 区域标题 */
+.cardGridTitle {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+@media (max-width: 996px) {
+  .cardGridSection {
+    padding: 3rem 0;
+  }
+
+  .card {
+    padding: 1.5rem 1rem;
+  }
+
+  .cardEmoji {
+    font-size: 2.5rem;
+  }
+
+  .cardLogo {
+    height: 64px;
+    max-width: 140px;
+  }
+
+  .cardGridTitle {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .cardButton {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cardGridSection {
+    padding: 2rem 0;
+  }
+
+  .card {
+    padding: 1.25rem 1rem;
+  }
+
+  .cardEmoji {
+    font-size: 2rem;
+  }
+
+  .cardBody h3 {
+    font-size: 1.1rem;
+  }
+
+  .cardContent {
+    font-size: 0.875rem;
+  }
+
+  .cardGridTitle {
+    font-size: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .cardButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cardGridSection {
+    padding: 1.5rem 0;
+  }
+
+  .card {
+    padding: 1rem 0.875rem;
+  }
+
+  .cardGridTitle {
+    font-size: 1.375rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cardCol {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

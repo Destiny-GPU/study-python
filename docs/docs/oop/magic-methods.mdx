@@ -1,0 +1,982 @@
+---
+sidebar_position: 5
+sidebar_label: '魔术方法'
+title: 🏗️ 魔术方法
+description: 系统学习 Python 魔术方法（dunder methods）：__init__/__new__、__str__/__repr__、容器协议、迭代、比较、运算符、上下文管理器、__call__ 等。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🏗️ 魔术方法
+
+魔术方法（magic methods，又称 dunder methods，即 **d**ouble **under**score）是 Python 以双下划线开头和结尾的特殊方法，如 `__init__`、`__str__`、`__len__`。它们构成了 Python 的**对象协议（data model）**——通过重写这些方法，自定义类就能参与内置语法和函数的行为，比如 `len(obj)`、`obj[i]`、`for x in obj`、`with obj as o`、`a + b` 等。掌握魔术方法是写出"地道"Python 类的关键。
+
+:::tip 🎯 本节要点
+- `__new__`（创建实例）与 `__init__`（初始化实例）的分工
+- `__str__`（用户友好）与 `__repr__`（开发者明确）的区别与应用
+- 容器协议：`__len__`、`__getitem__`、`__setitem__`、`__delitem__`、`__contains__`
+- 迭代协议：`__iter__` 与 `__next__`，可迭代对象 vs 迭代器
+- 比较方法：`__eq__`、`__lt__`、`__hash__`，`functools.total_ordering` 补全比较
+- 运算符重载：`__add__`、`__mul__`、`__matmul__`、`__iadd__` 等
+- 上下文管理器：`__enter__` 与 `__exit__`，`with` 语句的资源管理
+- `__call__` 让实例可调用，应用于策略模式、装饰器类、神经网络层
+:::
+
+<PyodideRunner title="魔术方法快速体验">
+
+```python
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __repr__(self):
+        return f"Point({self.x}, {self.y})"
+
+    def __str__(self):
+        return f"({self.x}, {self.y})"
+
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
+
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
+
+    def __len__(self):
+        return 2  # 二维点
+
+# 使用魔术方法
+p1 = Point(1, 2)
+p2 = Point(3, 4)
+print(f"repr: {repr(p1)}")    # 调用 __repr__
+print(f"str: {str(p1)}")      # 调用 __str__
+print(f"加法: {p1 + p2}")     # 调用 __add__
+print(f"相等: {p1 == Point(1, 2)}")  # 调用 __eq__
+print(f"长度: {len(p1)}")     # 调用 __len__
+
+# 上下文管理器
+class Timer:
+    def __enter__(self):
+        import time
+        self.start = time.perf_counter()
+        return self
+
+    def __exit__(self, *args):
+        import time
+        self.elapsed = time.perf_counter() - self.start
+        print(f"耗时: {self.elapsed:.6f}s")
+
+with Timer():
+    total = sum(range(1000000))
+```
+
+</PyodideRunner>
+
+## `__new__` 与 `__init__`
+
+- `__new__(cls, ...)`：**创建**实例，返回一个对象。是静态方法（无需装饰器）。
+- `__init__(self, ...)`：**初始化**实例，设置属性。无返回值。
+
+通常只重写 `__init__`；`__new__` 用于控制实例创建，如单例、不可变类型、元类编程。
+
+```py title="Python"
+class SensorRegistry:
+    """传感器注册表（单例模式）：整个系统只维护一个传感器注册中心。"""
+    _instance: "SensorRegistry | None" = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, name: str = "default") -> None:
+        # __init__ 每次调用 SensorRegistry() 都会执行
+        self.name = name
+
+a = SensorRegistry("IMU")
+b = SensorRegistry("GPS")  # __init__ 会再次执行，覆盖 name
+print(a is b)       # 输出：True（同一个实例）
+print(a.name)       # 输出：GPS
+print(b.name)       # 输出：GPS
+```
+
+:::warning 单例中 __init__ 重复执行
+`SensorRegistry("GPS")` 仍会调用 `__init__`，把已存在实例的 `name` 改为 "GPS"。如果想避免，可以在 `__init__` 中用 `if hasattr(self, "name"): return` 跳过，或在 `__new__` 中检查后再调用。
+:::
+
+### 不可变类型的 `__new__`
+
+不可变类型（`tuple`、`str`、`int` 等）的属性在 `__init__` 调用前就已经定型，必须在 `__new__` 中设置：
+
+```py title="Python"
+class Position:
+    """不可变三维位置：x, y, z 坐标在创建后不可修改。"""
+    def __new__(cls, x: float, y: float, z: float):
+        instance = super().__new__(cls)
+        instance._x = x  # 在 __new__ 中赋值
+        instance._y = y
+        instance._z = z
+        return instance
+
+    @property
+    def x(self) -> float:
+        return self._x
+
+    @property
+    def y(self) -> float:
+        return self._y
+
+    @property
+    def z(self) -> float:
+        return self._z
+
+    def __repr__(self) -> str:
+        return f"Position({self._x}, {self._y}, {self._z})"
+
+p = Position(100, 200, 500)
+print(p)        # 输出：Position(100, 200, 500)
+print(p.x)      # 输出：100
+# p.x = 0  # AttributeError（只读）
+```
+
+:::info 不可变 vs 真正的不可变
+Python 没有语言级别的不可变对象（`frozen=True` 的 dataclass 通过 `__setattr__` 强制实现）。上面的例子通过约定（不提供 setter）来实现"逻辑不可变"。如果需要严格不可变，可以使用 `@dataclass(frozen=True)` 或 namedtuple。
+:::
+
+## `__str__` 与 `__repr__`
+
+- `__str__`：`print(obj)` / `str(obj)` 调用，面向**用户**的友好字符串。
+- `__repr__`：`repr(obj)` / 交互终端直接输入 / 容器内打印 调用，面向**开发者**，理想情况是可重建对象的表达式。
+
+```py title="Python"
+class Attitude:
+    """飞行器姿态：滚转角、俯仰角、偏航角（单位：度）。"""
+    def __init__(self, roll: float, pitch: float, yaw: float) -> None:
+        self.roll = roll
+        self.pitch = pitch
+        self.yaw = yaw
+
+    def __repr__(self) -> str:
+        return f"Attitude(roll={self.roll}, pitch={self.pitch}, yaw={self.yaw})"
+
+    def __str__(self) -> str:
+        return f"R:{self.roll:.1f}° P:{self.pitch:.1f}° Y:{self.yaw:.1f}°"
+
+attitude = Attitude(roll=15.3, pitch=-5.2, yaw=90.0)
+print(attitude)          # 输出：R:15.3° P:-5.2° Y:90.0°       ← __str__
+print(repr(attitude))    # 输出：Attitude(roll=15.3, pitch=-5.2, yaw=90.0)  ← __repr__
+print([attitude, attitude])  # 输出：[Attitude(roll=15.3, ...), ...]  ← 容器用 __repr__
+print(f"{attitude!s} / {attitude!r}")  # 输出：R:15.3° P:-5.2° Y:90.0° / Attitude(roll=15.3, ...)
+```
+
+:::tip 实用建议
+如果只写一个，优先写 `__repr__`——未定义 `__str__` 时会回退到 `__repr__`。
+:::
+
+## 容器协议：序列与映射
+
+通过实现以下方法，自定义对象可以像列表、字典一样使用：
+
+| 方法           | 触发场景                          |
+|----------------|-----------------------------------|
+| `__len__`      | `len(obj)`                        |
+| `__getitem__`  | `obj[i]`、`obj[key]`、切片、`for` |
+| `__setitem__`  | `obj[i] = value`                  |
+| `__delitem__`  | `del obj[i]`                      |
+| `__contains__` | `x in obj`（默认可由 `__getitem__` 推导） |
+| `__missing__`  | 字典 `obj[key]` 找不到时调用       |
+
+```py title="Python"
+class RotationMatrix:
+    """3×3 旋转矩阵：支持 [i][j] 双重索引访问矩阵元素。"""
+    def __init__(self) -> None:
+        # 默认单位矩阵
+        self._data: list[list[float]] = [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+
+    def __len__(self) -> int:
+        return 9  # 3×3 矩阵共 9 个元素
+
+    def __getitem__(self, index):
+        # 支持元组 (i, j) 索引和单整数索引（返回一行）
+        if isinstance(index, tuple):
+            i, j = index
+            return self._data[i][j]
+        return self._data[index]
+
+    def __setitem__(self, index, value) -> None:
+        if isinstance(index, tuple):
+            i, j = index
+            self._data[i][j] = value
+        else:
+            if len(value) != 3:
+                raise ValueError("旋转矩阵每行需要 3 个元素")
+            self._data[index] = list(value)
+
+    def __contains__(self, item) -> bool:
+        return any(item in row for row in self._data)
+
+    def __repr__(self) -> str:
+        rows_str = "\n  ".join(str(row) for row in self._data)
+        return f"RotationMatrix:\n  {rows_str}"
+
+R = RotationMatrix()
+# 手动设置绕 Z 轴旋转 90° 的旋转矩阵
+R[0, 0] = 0.0
+R[0, 1] = -1.0
+R[1, 0] = 1.0
+R[1, 1] = 0.0
+print(R)
+# 输出：
+# RotationMatrix:
+#   [0.0, -1.0, 0.0]
+#   [1.0, 0.0, 0.0]
+#   [0.0, 0.0, 1.0]
+
+print(R[0, 1])   # 输出：-1.0
+print(R[2][2])   # 输出：1.0（先 R[2] 返回一行，再 [2] 索引）
+print(1.0 in R)  # 输出：True
+print(len(R))    # 输出：9
+```
+
+### `__missing__`：字典键缺失时的钩子
+
+```py title="Python"
+class SignalCache(dict):
+    """飞行信号缓存：键不存在时自动创建默认值列表。"""
+    def __init__(self, default_factory=None) -> None:
+        super().__init__()
+        self.default_factory = default_factory
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        value = self.default_factory()
+        self[key] = value
+        return value
+
+cache: SignalCache = SignalCache(list)
+cache["altitude"].append(1000)
+cache["altitude"].append(1050)
+cache["airspeed"].append(55)
+print(cache)  # 输出：{'altitude': [1000, 1050], 'airspeed': [55]}
+```
+
+## 迭代协议：`__iter__` 与 `__next__`
+
+实现迭代协议后，对象就能用于 `for`、`list()`、`sum()`、生成器表达式等。
+
+### 方式一：可迭代对象 + 迭代器
+
+```py title="Python"
+class Range2:
+    """类似 range，演示可迭代对象与迭代器分离。"""
+    def __init__(self, start: int, stop: int) -> None:
+        self.start = start
+        self.stop = stop
+
+    def __iter__(self) -> "_Range2Iterator":
+        # 每次调用 __iter__ 返回一个新的迭代器
+        return _Range2Iterator(self.start, self.stop)
+
+    def __len__(self) -> int:
+        return max(0, self.stop - self.start)
+
+
+class _Range2Iterator:
+    def __init__(self, start: int, stop: int) -> None:
+        self.current = start
+        self.stop = stop
+
+    def __iter__(self):  # 迭代器本身也可迭代
+        return self
+
+    def __next__(self) -> int:
+        if self.current >= self.stop:
+            raise StopIteration  # 迭代结束信号
+        value = self.current
+        self.current += 1
+        return value
+
+
+r = Range2(1, 5)
+print(list(r))      # 输出：[1, 2, 3, 4]
+print(sum(r))       # 输出：10
+print(len(r))       # 输出：4
+
+# 可重复迭代（每次 __iter__ 返回新迭代器）
+for x in r:
+    for y in r:  # 内层 r 又从头开始
+        pass
+print("嵌套循环正常完成")
+```
+
+### 方式二：生成器（更简洁）
+
+让 `__iter__` 返回生成器，是最 Pythonic 的写法：
+
+```py title="Python"
+class TrajectoryGenerator:
+    """飞行轨迹生成器：在起点和终点之间线性插值生成航路点。"""
+    def __init__(self, start: tuple, end: tuple, steps: int) -> None:
+        self.start = start
+        self.end = end
+        self.steps = steps
+
+    def __iter__(self):
+        for i in range(self.steps):
+            t = i / max(self.steps - 1, 1)
+            point = tuple(
+                s + t * (e - s) for s, e in zip(self.start, self.end)
+            )
+            yield point
+
+    def __len__(self) -> int:
+        return self.steps
+
+trajectory = TrajectoryGenerator(
+    start=(0, 0, 100), end=(500, 300, 500), steps=5
+)
+for wp in trajectory:
+    print(f"  航路点: x={wp[0]:.0f}, y={wp[1]:.0f}, z={wp[2]:.0f}")
+# 输出：
+#   航路点: x=0, y=0, z=100
+#   航路点: x=125, y=75, z=200
+#   航路点: x=250, y=150, z=300
+#   航路点: x=375, y=225, z=400
+#   航路点: x=500, y=300, z=500
+```
+
+:::tip 可迭代 vs 迭代器
+- **可迭代对象（Iterable）**：实现 `__iter__`，能用于 `for`。
+- **迭代器（Iterator）**：同时实现 `__iter__` 和 `__next__`，且耗尽即废弃。
+- 生成器函数返回的对象天然是迭代器。
+
+判断方式：`from collections.abc import Iterable, Iterator`，然后 `isinstance(obj, Iterable)`。
+:::
+
+## 比较方法：`__eq__`、`__lt__`、`__hash__`
+
+Python 默认按对象身份（`is`）比较相等。重写比较方法后，可以按值比较：
+
+```py title="Python"
+class StateVector:
+    """飞行状态向量：按时间戳排序，按位置判断相等。"""
+    def __init__(self, t: float, x: float, y: float, z: float) -> None:
+        self.t = t
+        self.x = x
+        self.y = y
+        self.z = z
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, StateVector):
+            return NotImplemented  # 让 Python 尝试 other.__eq__
+        return (self.t == other.t and
+                (self.x, self.y, self.z) == (other.x, other.y, other.z))
+
+    def __lt__(self, other: "StateVector") -> bool:
+        return self.t < other.t
+
+    def __le__(self, other: "StateVector") -> bool:
+        return self == other or self < other
+
+    def __hash__(self) -> int:
+        # 重写 __eq__ 后默认 __hash__ 会变成 None，需要手动定义
+        return hash((self.t, self.x, self.y, self.z))
+
+    def __repr__(self) -> str:
+        return f"StateVector(t={self.t}, x={self.x}, y={self.y}, z={self.z})"
+
+print(StateVector(0, 0, 0, 100) == StateVector(0, 0, 0, 100))  # 输出：True（按值相等）
+print(StateVector(0, 0, 0, 100) < StateVector(1, 0, 0, 100))   # 输出：True
+print(StateVector(0, 0, 0, 100) <= StateVector(0, 0, 0, 100))  # 输出：True
+
+# 可用作字典键、放入集合（因为定义了 __hash__）
+d = {
+    StateVector(0, 0, 0, 100): "初始状态",
+    StateVector(1, 10, 5, 95): "飞行中",
+}
+print(d[StateVector(0, 0, 0, 100)])  # 输出：初始状态
+
+# 按时间戳排序
+states = [
+    StateVector(2, 20, 10, 80),
+    StateVector(0, 0, 0, 100),
+    StateVector(1, 10, 5, 95),
+]
+print(sorted(states))
+# 输出：[StateVector(t=0, ...), StateVector(t=1, ...), StateVector(t=2, ...)]
+```
+
+:::warning 重写 __eq__ 必须重写 __hash__
+一旦定义了 `__eq__`，Python 会自动把 `__hash__` 设为 `None`，使对象不可哈希（不能用作字典键、不能放入集合）。要么：
+- 重写 `__hash__` 让对象可哈希（保证 a == b 时 hash(a) == hash(b)）
+- 设 `__hash__ = None` 显式标记不可哈希
+:::
+
+### `functools.total_ordering`：补全比较方法
+
+只需定义 `__eq__` 和一个比较方法（`__lt__` 或 `__le__` 等），用装饰器自动补全其他：
+
+```py title="Python"
+from functools import total_ordering
+
+@total_ordering
+class FlightPhase:
+    """飞行阶段：用比较运算符判断阶段先后顺序。"""
+    PHASES = {"滑行": 0, "起飞": 1, "爬升": 2, "巡航": 3, "下降": 4, "着陆": 5}
+
+    def __init__(self, name: str) -> None:
+        if name not in self.PHASES:
+            raise ValueError(f"未知飞行阶段: {name}")
+        self.name = name
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, FlightPhase):
+            return NotImplemented
+        return self.name == other.name
+
+    def __lt__(self, other: "FlightPhase") -> bool:
+        return self.PHASES[self.name] < self.PHASES[other.name]
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+    def __repr__(self) -> str:
+        return f"FlightPhase('{self.name}')"
+
+print(FlightPhase("起飞") < FlightPhase("巡航"))    # 输出：True
+print(FlightPhase("巡航") > FlightPhase("起飞"))    # 输出：True（自动生成）
+print(FlightPhase("爬升") <= FlightPhase("爬升"))   # 输出：True（自动生成）
+print(FlightPhase("下降") >= FlightPhase("巡航"))   # 输出：True（自动生成）
+```
+
+## 运算符重载：`__add__`、`__mul__` 等
+
+```py title="Python"
+import math
+
+class Vector3D:
+    """三维向量：支持加减、标量乘、点积、叉积、取反、取模。"""
+    def __init__(self, x: float, y: float, z: float) -> None:
+        self.x, self.y, self.z = x, y, z
+
+    def __add__(self, other: "Vector3D") -> "Vector3D":
+        return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __sub__(self, other: "Vector3D") -> "Vector3D":
+        return Vector3D(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def __mul__(self, scalar: float) -> "Vector3D":
+        # 向量 * 标量
+        return Vector3D(self.x * scalar, self.y * scalar, self.z * scalar)
+
+    def __rmul__(self, scalar: float) -> "Vector3D":
+        # 标量 * 向量（左操作数不支持时调用）
+        return self * scalar
+
+    def __matmul__(self, other: "Vector3D") -> float:
+        # @ 运算符：点积
+        return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def __neg__(self) -> "Vector3D":
+        return Vector3D(-self.x, -self.y, -self.z)
+
+    def __abs__(self) -> float:
+        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
+
+    def __len__(self) -> int:
+        return 3
+
+    def __getitem__(self, i: int) -> float:
+        return (self.x, self.y, self.z)[i]
+
+    def __iter__(self):
+        return iter((self.x, self.y, self.z))
+
+    def __repr__(self) -> str:
+        return f"Vector3D({self.x}, {self.y}, {self.z})"
+
+pos = Vector3D(100, 200, 500)
+vel = Vector3D(10, 5, -2)
+
+print(pos + vel)       # 输出：Vector3D(110, 205, 498)  ← 合成位移
+print(pos - vel)       # 输出：Vector3D(90, 195, 502)   ← 相对位置
+print(vel * 2)         # 输出：Vector3D(20, 10, -4)     ← 缩放速度
+print(0.5 * vel)       # 输出：Vector3D(5.0, 2.5, -1.0)  ← __rmul__
+print(pos @ vel)       # 输出：1996  ← 点积（功率 P=F·v）
+print(-vel)            # 输出：Vector3D(-10, -5, 2)
+print(abs(vel))         # 输出：11.180339887498949  ← 速度大小 (m/s)
+print(vel[0])           # 输出：10
+print(sum(vel))         # 输出：13  ← __iter__ 让 sum 可用
+```
+
+:::info 常用算术运算符方法
+| 运算符      | 方法           | 反向方法          |
+|-------------|----------------|-------------------|
+| `+`         | `__add__`      | `__radd__`        |
+| `-`         | `__sub__`      | `__rsub__`        |
+| `*`         | `__mul__`      | `__rmul__`        |
+| `/`         | `__truediv__`  | `__rtruediv__`    |
+| `//`        | `__floordiv__` | `__rfloordiv__`   |
+| `%`         | `__mod__`      | `__rmod__`         |
+| `**`        | `__pow__`      | `__rpow__`        |
+| `@`         | `__matmul__`   | `__rmatmul__`     |
+
+对应原地运算符（`+=`、`-=` 等）：`__iadd__`、`__isub__`、`__imul__` 等。未定义时回退到普通运算符。
+:::
+
+### 增量赋值：`__iadd__`
+
+```py title="Python"
+class StepCounter:
+    """仿真步计数器：支持 += 原地递增。"""
+    def __init__(self, value: int = 0) -> None:
+        self.value = value
+
+    def __add__(self, other: int) -> "StepCounter":
+        # c = c + 1：返回新对象
+        return StepCounter(self.value + other)
+
+    def __iadd__(self, other: int) -> "StepCounter":
+        # c += 1：原地修改，返回 self
+        self.value += other
+        return self  # 必须返回 self！
+
+    def __repr__(self) -> str:
+        return f"StepCounter({self.value})"
+
+step = StepCounter(1000)
+new_step = step + 50
+print(step, new_step)  # 输出：StepCounter(1000) StepCounter(1050)  ← 原对象不变
+
+step += 50
+print(step)  # 输出：StepCounter(1050)  ← 原地修改
+```
+
+## 上下文管理器：`__enter__` 与 `__exit__`
+
+实现这两个方法的对象可用于 `with` 语句，自动管理资源（文件、锁、连接等）：
+
+```py title="Python"
+class FlightRecorder:
+    """飞行数据记录器：在 with 块内自动记录遥测数据。"""
+    def __init__(self, flight_id: str) -> None:
+        self.flight_id = flight_id
+        self.records: list[dict] = []
+
+    def __enter__(self):
+        print(f"  [开始记录] 飞行任务 {self.flight_id}")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(f"  [结束记录] 飞行任务 {self.flight_id}，共 {len(self.records)} 条记录")
+        if exc_type is not None:
+            print(f"  [异常] {exc_type.__name__}: {exc_val}")
+        return False  # 返回 True 表示吞掉异常，False/None 表示继续抛出
+
+    def record(self, timestamp: float, data: dict) -> None:
+        self.records.append({"t": timestamp, **data})
+
+with FlightRecorder("F-001") as recorder:
+    recorder.record(0.0, {"alt": 1000, "spd": 55})
+    recorder.record(1.0, {"alt": 1050, "spd": 58})
+# 输出：
+#   [开始记录] 飞行任务 F-001
+#   [结束记录] 飞行任务 F-001，共 2 条记录
+```
+
+### 用 `__exit__` 捕获异常
+
+```py title="Python"
+class FlightTestSession:
+    """飞行测试会话：捕获并记录测试中的异常，保证安全退出。"""
+    def __init__(self, test_id: str) -> None:
+        self.test_id = test_id
+
+    def __enter__(self):
+        print(f"  [开始] 飞行测试 #{self.test_id}")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            print(f"  [异常捕获] {exc_type.__name__}: {exc_val}")
+            print(f"  [安全处理] 测试 #{self.test_id} 异常已记录，继续执行")
+            return True  # 吞掉异常
+        print(f"  [完成] 测试 #{self.test_id} 正常结束")
+        return False
+
+with FlightTestSession("T-42"):
+    print("  执行飞行控制算法")
+    raise RuntimeError("传感器数据异常")
+    print("这行不会执行")  # 异常后跳过
+# 输出：
+#   [开始] 飞行测试 #T-42
+#   执行飞行控制算法
+#   [异常捕获] RuntimeError: 传感器数据异常
+#   [安全处理] 测试 #T-42 异常已记录，继续执行
+print("with 块外继续执行")  # 异常被吞掉，继续执行
+```
+
+:::tip 用 contextlib 简化
+写上下文管理器不必每次定义类，可以用 `@contextmanager` 装饰器把生成器函数转换：
+
+```py title="Python"
+from contextlib import contextmanager
+
+@contextmanager
+def flight_recorder(flight_id):
+    print(f"  [开始记录] {flight_id}")
+    records = []
+    try:
+        yield records
+    finally:
+        print(f"  [结束记录] {flight_id}，共 {len(records)} 条")
+```
+:::
+
+## `__call__`：让实例可调用
+
+实现 `__call__` 后，实例可以像函数一样被调用：
+
+```py title="Python"
+import math
+
+class StateTransition:
+    """状态转移函数：给定当前状态，返回下一步状态（简单匀速+重力模型）。"""
+    def __init__(self, dt: float, gravity: float = 9.81) -> None:
+        self.dt = dt
+        self.gravity = gravity
+
+    def __call__(self, state: tuple) -> tuple:
+        x, y, z, vx, vy, vz = state
+        new_vz = vz - self.gravity * self.dt
+        new_z = z + vz * self.dt - 0.5 * self.gravity * self.dt**2
+        return (x + vx * self.dt, y + vy * self.dt, new_z, vx, vy, new_vz)
+
+    def __repr__(self) -> str:
+        return f"StateTransition(dt={self.dt}, g={self.gravity})"
+
+step = StateTransition(dt=0.1)
+state = (0, 0, 100, 10, 5, 0)  # x, y, z, vx, vy, vz
+print(step)        # 输出：StateTransition(dt=0.1, g=9.81)
+
+# 模拟 5 步
+for i in range(5):
+    state = step(state)
+    print(f"  t={i*0.1:.1f}s: z={state[2]:.2f}m, vz={state[5]:.2f}m/s")
+# 输出：
+#   t=0.0s: z=100.00m, vz=0.00m/s
+#   t=0.1s: z=99.95m, vz=-0.98m/s
+#   t=0.2s: z=99.80m, vz=-1.96m/s
+#   t=0.3s: z=99.55m, vz=-2.94m/s
+#   t=0.4s: z=99.20m, vz=-3.92m/s
+
+# 可以用在需要可调用对象的地方
+states = [(0, 0, 100, 10, 5, 0)]
+for _ in range(3):
+    states.append(step(states[-1]))
+print(len(states))  # 输出：4
+print(callable(step))  # 输出：True
+```
+
+:::tip __call__ 的应用场景
+- **函数对象**：保存状态的可调用对象（如带缓存的函数）
+- **装饰器类**：既可保存状态又能当装饰器
+- **配置化策略**：把策略封装成对象，传给需要函数的地方
+- **神经网络层**：PyTorch 的 `nn.Module` 就是典型的可调用对象
+- **物理仿真**：状态转移函数、控制律、滤波器等
+:::
+
+## 其他常用魔术方法
+
+| 方法              | 用途                              |
+|-------------------|-----------------------------------|
+| `__bool__`        | `bool(obj)`、`if obj`             |
+| `__int__/__float__`| 类型转换                          |
+| `__format__`      | `f"{obj:spec}"`、`format(obj, spec)` |
+| `__sizeof__`      | `sys.getsizeof(obj)`              |
+| `__class_getitem__` | `类[类型]` 用于泛型（如 `list[int]`） |
+| `__copy__/__deepcopy__` | `copy.copy/deepcopy`        |
+
+```py title="Python"
+class FlightEnvelope:
+    """飞行包线：判断当前飞行状态是否在安全包线内。"""
+    def __init__(self, speed: float, altitude: float,
+                 max_speed: float = 250.0, max_altitude: float = 10000.0) -> None:
+        self.speed = speed
+        self.altitude = altitude
+        self.max_speed = max_speed
+        self.max_altitude = max_altitude
+
+    def __bool__(self) -> bool:
+        return self.speed <= self.max_speed and self.altitude <= self.max_altitude
+
+    def __format__(self, spec: str) -> str:
+        if spec == "status":
+            return "安全" if bool(self) else "超出包线"
+        elif spec == "detail":
+            return f"速度={self.speed:.1f}m/s, 高度={self.altitude:.0f}m"
+        return str(self)
+
+    def __repr__(self) -> str:
+        return f"FlightEnvelope(speed={self.speed}, alt={self.altitude})"
+
+env_ok = FlightEnvelope(speed=80, altitude=3000)
+env_bad = FlightEnvelope(speed=300, altitude=12000)
+
+if env_ok:
+    print("正常飞行")      # 输出：正常飞行
+if not env_bad:
+    print("超出飞行包线")   # 输出：超出飞行包线
+
+print(f"{env_ok:status}")   # 输出：安全
+print(f"{env_bad:status}")  # 输出：超出包线
+print(f"{env_ok:detail}")   # 输出：速度=80.0m/s, 高度=3000m
+```
+
+## 实战：自定义 Vector3D
+
+综合运用容器协议、迭代、比较、运算符、`__call__` 等，实现一个功能完整的三维飞行向量：
+
+```py title="Python"
+from functools import total_ordering
+import math
+
+
+@total_ordering
+class Vector3D:
+    """三维飞行向量：支持加减、标量乘、点积、叉积、比较、迭代、索引。"""
+
+    __slots__ = ("_x", "_y", "_z")
+
+    def __init__(self, x: float, y: float, z: float) -> None:
+        self._x = x
+        self._y = y
+        self._z = z
+
+    # ---------- 属性 ----------
+    @property
+    def x(self) -> float:
+        return self._x
+
+    @property
+    def y(self) -> float:
+        return self._y
+
+    @property
+    def z(self) -> float:
+        return self._z
+
+    # ---------- 容器协议 ----------
+    def __len__(self) -> int:
+        return 3
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return Vector3D(*(self._to_tuple()[index]))
+        return self._to_tuple()[index]
+
+    def __setitem__(self, index: int, value: float) -> None:
+        coords = list(self._to_tuple())
+        coords[index] = value
+        self._x, self._y, self._z = coords
+
+    def __iter__(self):
+        return iter(self._to_tuple())
+
+    def __contains__(self, value: float) -> bool:
+        return value in self._to_tuple()
+
+    # ---------- 运算符 ----------
+    def __add__(self, other: "Vector3D") -> "Vector3D":
+        return Vector3D(self._x + other._x, self._y + other._y, self._z + other._z)
+
+    def __sub__(self, other: "Vector3D") -> "Vector3D":
+        return Vector3D(self._x - other._x, self._y - other._y, self._z - other._z)
+
+    def __mul__(self, scalar: float) -> "Vector3D":
+        """标量乘法：vector * scalar。"""
+        return Vector3D(self._x * scalar, self._y * scalar, self._z * scalar)
+
+    def __rmul__(self, scalar: float) -> "Vector3D":
+        return self * scalar
+
+    def __matmul__(self, other: "Vector3D") -> float:
+        """点积：a @ b。"""
+        return self._x * other._x + self._y * other._y + self._z * other._z
+
+    def __neg__(self) -> "Vector3D":
+        return Vector3D(-self._x, -self._y, -self._z)
+
+    def __abs__(self) -> float:
+        """向量长度（模）。"""
+        return math.sqrt(self._x**2 + self._y**2 + self._z**2)
+
+    def cross(self, other: "Vector3D") -> "Vector3D":
+        """叉积：a × b（力矩 τ = r × F）。"""
+        return Vector3D(
+            self._y * other._z - self._z * other._y,
+            self._z * other._x - self._x * other._z,
+            self._x * other._y - self._y * other._x,
+        )
+
+    # ---------- 比较 ----------
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Vector3D):
+            return NotImplemented
+        return (self._x, self._y, self._z) == (other._x, other._y, other._z)
+
+    def __lt__(self, other: "Vector3D") -> bool:
+        if len(self) != len(other):
+            raise ValueError("维度不匹配")
+        return abs(self) < abs(other)
+
+    def __hash__(self) -> int:
+        return hash((self._x, self._y, self._z))
+
+    # ---------- 转换与展示 ----------
+    def __bool__(self) -> bool:
+        return abs(self) > 1e-9  # 零向量为 False
+
+    def __repr__(self) -> str:
+        return f"Vector3D({self._x}, {self._y}, {self._z})"
+
+    def __str__(self) -> str:
+        return f"⟨{self._x:.3f}, {self._y:.3f}, {self._z:.3f}⟩"
+
+    def __format__(self, spec: str) -> str:
+        if spec == "raw":
+            return repr(self)
+        return str(self)
+
+    # ---------- 实例可调用 ----------
+    def __call__(self, other: "Vector3D") -> float:
+        """调用形式计算夹角余弦。"""
+        dot = self @ other
+        denom = abs(self) * abs(other)
+        if denom == 0:
+            raise ZeroDivisionError("零向量无法计算夹角")
+        return dot / denom
+
+    # ---------- 辅助 ----------
+    def _to_tuple(self) -> tuple[float, float, float]:
+        return (self._x, self._y, self._z)
+
+
+# ===== 使用示例 =====
+pos = Vector3D(100, 200, 500)
+vel = Vector3D(10, 5, -2)
+
+# 展示
+print(repr(pos))  # 输出：Vector3D(100, 200, 500)
+print(str(pos))   # 输出：⟨100.000, 200.000, 500.000⟩
+
+# 运算
+print(pos + vel)        # 输出：Vector3D(110, 205, 498)
+print(pos - vel)        # 输出：Vector3D(90, 195, 502)
+print(vel * 2)          # 输出：Vector3D(20, 10, -4)
+print(0.5 * vel)        # 输出：Vector3D(5.0, 2.5, -1.0)  ← __rmul__
+print(pos @ vel)        # 输出：1996  ← 点积
+print(-vel)             # 输出：Vector3D(-10, -5, 2)
+print(abs(vel))          # 输出：11.180339887498949
+
+# 叉积：力矩 τ = r × F
+r = Vector3D(1, 0, 0)
+F = Vector3D(0, 10, 0)
+torque = r.cross(F)
+print(torque)  # 输出：Vector3D(0.0, 0.0, 10.0)
+
+# 容器
+print(len(pos))        # 输出：3
+print(pos[0])          # 输出：100
+print(pos[0:2])        # 输出：Vector3D(100, 200)  ← 切片返回新向量
+print(200 in pos)      # 输出：True
+print(list(pos))       # 输出：[100, 200, 500]
+print(sum(pos))        # 输出：800
+
+# 修改
+pos[0] = 999
+print(pos)             # 输出：⟨999.000, 200.000, 500.000⟩
+pos[0] = 100
+
+# 比较
+print(pos == Vector3D(100, 200, 500))  # 输出：True
+print(vel < pos)                          # 输出：True（按模长比较）
+print(sorted([pos, vel, Vector3D(0, 0, 0)]))
+# 输出：[Vector3D(0, 0, 0), Vector3D(10, 5, -2), Vector3D(100, 200, 500)]
+
+# bool 与 hash
+print(bool(Vector3D(0, 0, 0)))  # 输出：False（零向量）
+print(bool(vel))                # 输出：True
+print(vel in {Vector3D(10, 5, -2), Vector3D(100, 200, 500)})  # 输出：True
+
+# 实例可调用：计算夹角余弦
+cos_sim = vel(pos)
+angle = math.acos(max(-1.0, min(1.0, cos_sim)))
+print(f"速度与位置夹角余弦：{cos_sim:.4f}，角度：{math.degrees(angle):.2f}°")
+# 输出：速度与位置夹角余弦：0.3571，角度：69.08°
+
+# format
+print(f"{vel:raw} | {vel}")  # 输出：Vector3D(10, 5, -2) | ⟨10.000, 5.000, -2.000⟩
+```
+
+## 🎯 动手练习
+
+1. **航路点列表**：实现 `WaypointList` 类，支持 `len()`、索引访问、切片、`for` 循环、`in` 检查，存储 (x, y, z) 坐标元组
+2. **不可变飞行配置**：创建 `FlightConfig` 类，在 `__new__` 中设置属性实现不可变，包含 mass、wing_area、max_thrust 等参数
+3. **遥测记录器**：实现 `TelemetrySession` 上下文管理器，记录 with 块内的飞行数据，退出时打印统计摘要
+4. **PID 控制器**：实现 `PidController` 类，用 `__call__` 接收误差值返回控制输出，支持 kp/ki/kd 参数配置
+
+## 📚 延伸阅读
+
+- **描述符协议**：`__get__`、`__set__`、`__delete__`，`@property` 的底层机制
+- **元类编程**：`__new__` 元类、`__init_subclass__`、`__class_getitem__` 泛型支持
+- **上下文管理器进阶**：`contextlib` 模块、`@contextmanager`、`AsyncExitStack`
+- **运算符完整清单**：反射运算、原地运算、类型转换运算的完整列表
+
+## 📊 速查表
+
+| 魔术方法 | 触发场景 | 飞行动力学示例 |
+|----------|----------|----------------|
+| `__new__` | 创建实例 | `SensorRegistry` 单例、`Position` 不可变位置 |
+| `__init__` | 初始化实例 | `self.x = x` |
+| `__str__` | `print(obj)` / `str(obj)` | `Attitude` → `"R:15.3° P:-5.2° Y:90.0°"` |
+| `__repr__` | `repr(obj)` / 容器内 | `Attitude(roll=15.3, pitch=-5.2, yaw=90.0)` |
+| `__len__` | `len(obj)` | `RotationMatrix` → 9 个元素 |
+| `__getitem__` | `obj[i]` / 切片 | `RotationMatrix[0, 1]` 访问矩阵元素 |
+| `__setitem__` | `obj[i] = value` | `RotationMatrix[0, 1] = 0.5` |
+| `__delitem__` | `del obj[i]` | 删除航路点 |
+| `__contains__` | `x in obj` | `1.0 in RotationMatrix` |
+| `__iter__` | `iter(obj)` / `for` | `TrajectoryGenerator` 生成航路点 |
+| `__next__` | `next(iterator)` | 推进迭代，结束抛 `StopIteration` |
+| `__eq__` | `a == b` | `StateVector` 按时间+位置判断相等 |
+| `__lt__` | `a < b` | `FlightPhase("起飞") < FlightPhase("巡航")` |
+| `__hash__` | `hash(obj)` / 字典键 | 返回整数哈希值 |
+| `__add__` | `a + b` | `Vector3D` 合成位移 |
+| `__mul__` | `a * b` | `Vector3D` 缩放速度 |
+| `__matmul__` | `a @ b` | `Vector3D` 点积（功率 P=F·v） |
+| `__iadd__` | `a += b` | `StepCounter` 仿真步递增 |
+| `__enter__` | `with obj as x` 进入 | `FlightRecorder` 开始记录 |
+| `__exit__` | `with` 块退出 | `FlightRecorder` 结束记录、处理异常 |
+| `__call__` | `obj(args)` | `StateTransition` 状态转移函数 |
+| `__bool__` | `bool(obj)` / `if obj` | `FlightEnvelope` 是否在安全包线内 |
+| `__format__` | `f"{obj:spec}"` | `FlightEnvelope` 自定义格式化 |
+
+## 📝 本节总结
+
+本节我们以飞行动力学为背景，系统学习了魔术方法，核心要点包括：
+
+- **`__new__` 与 `__init__` 分工**：`__new__` 创建实例（如 `SensorRegistry` 单例），`__init__` 初始化；不可变类型必须在 `__new__` 中赋值
+- **`__str__` 与 `__repr__`**：前者面向用户（如 `Attitude` 的 `"R:15.3° P:-5.2° Y:90.0°"`），后者面向开发者；简单场景只写 `__repr__` 即可
+- **容器协议让对象像内置类型**：`RotationMatrix` 支持 `[i][j]` 索引，`SignalCache` 用 `__missing__` 自动创建默认值
+- **迭代协议分两层**：可迭代对象实现 `__iter__` 返回迭代器，`TrajectoryGenerator` 用生成器实现最 Pythonic 的写法
+- **比较与哈希**：`StateVector` 按时间排序，`FlightPhase` 用 `@total_ordering` 自动补全比较方法
+- **运算符重载**：`Vector3D` 支持加减、标量乘、点积（`@`）、叉积，配合反向方法和原地方法
+- **上下文管理器**：`FlightRecorder` 自动管理飞行数据记录，`__exit__` 可捕获异常保证安全退出
+- **`__call__` 让实例可调用**：`StateTransition` 作为状态转移函数，适合物理仿真、控制律等场景
+
+掌握魔术方法后，你的自定义类将能无缝融入 Python 的语法生态，写出真正"Pythonic"的飞行动力学代码。下一节将介绍**数据类**——用 `@dataclass` 装饰器自动生成样板代码，让数据建模更简洁。

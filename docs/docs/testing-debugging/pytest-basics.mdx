@@ -1,0 +1,351 @@
+---
+sidebar_position: 1
+sidebar_label: 'pytest 测试基础'
+title: '🧪 pytest 测试基础'
+description: 用 pytest 快速上手 Python 测试：编写第一个测试、断言、运行测试、参数化、常用 fixture，不搞复杂理论，直接上手。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🧪 pytest 测试基础
+
+写完代码怎么知道它对不对？靠 `print` 看输出？那万一改了一处，之前测试过的功能又坏了呢？**测试**就是用来回答这个问题的——它自动验证代码行为，改完代码跑一下就知道有没有"搞坏什么"。本节用最精简的方式带你上手 pytest。
+
+:::tip 🎯 本节要点
+- 测试就是一个函数，名字以 `test_` 开头
+- 用 `assert` 验证结果，pytest 自动报告哪里失败
+- `uv run pytest` 一行跑所有测试
+- 参数化测试用 `@pytest.mark.parametrize` 覆盖多组输入
+- fixture 用 `@pytest.fixture` 准备测试需要的数据和环境
+:::
+
+<PyodideRunner title="pytest 测试快速体验">
+
+```python
+# 被测试的函数
+def add(a, b):
+    return a + b
+
+def divide(a, b):
+    if b == 0:
+        raise ValueError("除数不能为零")
+    return a / b
+
+# 测试函数
+def test_add():
+    assert add(1, 2) == 3
+    assert add(-1, 1) == 0
+    assert add(0, 0) == 0
+
+def test_divide():
+    assert divide(10, 2) == 5.0
+    assert divide(9, 3) == 3.0
+
+def test_divide_by_zero():
+    try:
+        divide(10, 0)
+        assert False, "应该抛出异常"
+    except ValueError as e:
+        assert "除数不能为零" in str(e)
+
+# 运行测试
+test_add()
+test_divide()
+test_divide_by_zero()
+print("所有测试通过！")
+
+# 参数化测试
+test_cases = [
+    (1, 2, 3),
+    (0, 0, 0),
+    (-1, 1, 0),
+    (10, -5, 5),
+]
+
+print("\n参数化测试:")
+for a, b, expected in test_cases:
+    result = add(a, b)
+    status = "✓" if result == expected else "✗"
+    print(f"  {status} add({a}, {b}) = {result} (期望 {expected})")
+```
+
+</PyodideRunner>
+
+## 第一个测试
+
+假设你有一个计算器模块：
+
+```py title="Python"
+# calc.py
+
+def add(a: int, b: int) -> int:
+    return a + b
+
+def divide(a: float, b: float) -> float:
+    if b == 0:
+        raise ValueError("除数不能为零")
+    return a / b
+```
+
+在 `tests/` 目录下新建 `test_calc.py`：
+
+```py title="Python"
+# tests/test_calc.py
+import pytest
+from calc import add, divide
+
+def test_add():
+    assert add(2, 3) == 5
+    assert add(-1, 1) == 0
+    assert add(0, 0) == 0
+
+def test_divide():
+    assert divide(10, 2) == 5.0
+    assert divide(1, 3) == pytest.approx(0.333, abs=0.01)
+
+def test_divide_by_zero():
+    with pytest.raises(ValueError, match="除数不能为零"):
+        divide(1, 0)
+```
+
+运行：
+
+```bash title="Shell"
+uv run pytest
+```
+
+```text title="输出"
+tests/test_calc.py::test_add PASSED
+tests/test_calc.py::test_divide PASSED
+tests/test_calc.py::test_divide_by_zero PASSED
+
+========= 3 passed =========
+```
+
+就这？就这。**测试就是一个普通函数**，名字以 `test_` 开头，用 `assert` 写条件，pytest 自动发现并运行它们。
+
+:::tip 测试命名规则
+pytest 默认发现 `test_*.py` 文件中 `test_` 开头的函数。文件和函数名都必须以 `test_` 开头，否则 pytest 不会识别。
+:::
+
+## assert 断言
+
+`assert` 是测试的核心——如果条件为假，测试失败：
+
+```py title="Python"
+def test_string():
+    name = "Python"
+    assert name.startswith("P")      # 通过
+    assert len(name) == 6            # 通过
+    assert "thon" in name            # 通过
+
+def test_list():
+    nums = [1, 2, 3]
+    assert len(nums) == 3
+    assert nums[0] == 1
+    assert 4 not in nums
+```
+
+pytest 失败时会显示详细的对比信息：
+
+```bash title="Shell"
+uv run pytest tests/test_calc.py::test_add -v
+```
+
+如果 `add(2, 3)` 返回了 `6`，你会看到：
+
+```text title="输出"
+>       assert add(2, 3) == 5
+E       assert 6 == 5
+```
+
+不需要自己写 `print`，pytest 自动展示期望值 vs 实际值。
+
+### 浮点数比较
+
+浮点数有精度问题，别直接 `==`：
+
+```py title="Python"
+import pytest
+
+def test_float():
+    # ❌ 不可靠
+    # assert 0.1 + 0.2 == 0.3
+
+    # ✅ 用 pytest.approx
+    assert 0.1 + 0.2 == pytest.approx(0.3)
+    assert 0.1 + 0.2 == pytest.approx(0.3, abs=1e-9)
+```
+
+### 异常测试
+
+验证代码抛出了预期的异常：
+
+```py title="Python"
+import pytest
+
+def test_divide_by_zero():
+    with pytest.raises(ValueError):
+        divide(1, 0)
+
+def test_error_message():
+    with pytest.raises(ValueError, match="除数不能为零"):
+        divide(1, 0)
+```
+
+`match` 参数支持正则匹配异常消息。
+
+## 参数化测试
+
+同一个函数用多组输入测试，别写一堆重复函数：
+
+```py title="Python"
+import pytest
+
+@pytest.mark.parametrize("a, b, expected", [
+    (2, 3, 5),
+    (-1, 1, 0),
+    (0, 0, 0),
+    (100, 200, 300),
+])
+def test_add_param(a, b, expected):
+    assert add(a, b) == expected
+```
+
+运行时 pytest 会为每组参数生成独立的测试用例：
+
+```text title="输出"
+tests/test_calc.py::test_add_param[2-3-5] PASSED
+tests/test_calc.py::test_add_param[-1-1-0] PASSED
+tests/test_calc.py::test_add_param[0-0-0] PASSED
+tests/test_calc.py::test_add_param[100-200-300] PASSED
+```
+
+任何一组失败都会单独报告，不用一个一个排查。
+
+## fixture：准备测试数据
+
+测试经常需要重复准备数据（数据库连接、临时文件、测试客户端等）。pytest 的 `fixture` 就是解决这个问题的：
+
+```py title="Python"
+# conftest.py（pytest 自动识别此文件中的 fixture）
+import pytest
+
+@pytest.fixture
+def sample_data():
+    """准备一组测试数据"""
+    return {"name": "Alice", "age": 25, "scores": [85, 92, 78]}
+
+@pytest.fixture
+def temp_file(tmp_path):
+    """创建临时文件"""
+    p = tmp_path / "test.txt"
+    p.write_text("hello")
+    return p
+```
+
+使用 fixture 只需把函数名作为参数传入：
+
+```py title="Python"
+def test_name(sample_data):
+    assert sample_data["name"] == "Alice"
+
+def test_average_score(sample_data):
+    avg = sum(sample_data["scores"]) / len(sample_data["scores"])
+    assert avg == pytest.approx(85.0)
+
+def test_read_file(temp_file):
+    content = temp_file.read_text()
+    assert content == "hello"
+```
+
+pytest 会自动发现 `conftest.py` 中的 fixture，不需要 import。
+
+:::info fixture 的作用域
+默认每个使用该 fixture 的测试函数都会重新执行一次。如果想让 fixture 在整个文件中只执行一次，加 `scope="module"`：
+
+```py title="Python"
+@pytest.fixture(scope="module")
+def db_connection():
+    conn = create_connection()
+    yield conn          # yield 之后的代码在所有测试结束后执行（清理）
+    conn.close()
+```
+
+常用 scope：`function`（默认）→ `class` → `module` → `session`。
+:::
+
+## 常用 pytest 命令
+
+```bash title="Shell"
+# 运行所有测试
+uv run pytest
+
+# 运行指定文件
+uv run pytest tests/test_calc.py
+
+# 运行指定函数
+uv run pytest tests/test_calc.py::test_add
+
+# 按关键词过滤
+uv run pytest -k "divide"
+
+# 显示详细输出
+uv run pytest -v
+
+# 显示最后 N 条失败的详细信息
+uv run pytest --tb=short
+
+# 只运行上次失败的测试
+uv run pytest --lf
+
+# 失败后立即停止
+uv run pytest -x
+
+# 显示 print 输出
+uv run pytest -s
+```
+
+## 实战：给斐波那契函数写测试
+
+```py title="Python"
+# fibonacci.py
+
+def fib(n: int) -> list[int]:
+    """返回前 n 项斐波那契数。"""
+    if n <= 0:
+        return []
+    if n == 1:
+        return [0]
+    seq = [0, 1]
+    for _ in range(2, n):
+        seq.append(seq[-1] + seq[-2])
+    return seq
+```
+
+```py title="Python"
+# tests/test_fibonacci.py
+import pytest
+from fibonacci import fib
+
+def test_empty():
+    assert fib(0) == []
+    assert fib(-1) == []
+
+def test_single():
+    assert fib(1) == [0]
+
+def test_basic():
+    assert fib(5) == [0, 1, 1, 2, 3]
+
+@pytest.mark.parametrize("n, expected", [
+    (1, [0]),
+    (2, [0, 1]),
+    (6, [0, 1, 1, 2, 3, 5]),
+    (10, [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]),
+])
+def test_fib_param(n, expected):
+    assert fib(n) == expected
+
+def test_length():
+    assert len(fib(10)) == 10

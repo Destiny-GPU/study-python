@@ -1,0 +1,228 @@
+---
+slug: decorator-deep-dive
+title: 装饰器深入理解：从原理到实战
+authors: [destiny]
+tags: [python, 进阶技巧]
+---
+
+装饰器是 Python 里「能让你代码立刻看起来很专业」的特性，也是初学者最容易卡住的坎。这篇笔记不打算抄一遍教程，而是从原理讲清楚——一旦理解了「函数就是对象」这件事，所有装饰器语法都顺理成章。
+
+{/* truncate */}
+
+## 一、原理：函数就是对象
+
+Python 里函数是一等对象（first-class object），意味着它可以：
+
+- 赋值给变量
+- 作为参数传入
+- 作为返回值返回
+- 装进容器里
+
+```py
+def greet(name: str) -> str:
+    return f"hello, {name}"
+
+say = greet              # 赋值给另一个名字
+print(say("destiny"))    # hello, destiny
+
+funcs = [greet, str.upper]
+print(funcs[0]("world"))  # hello, world
+```
+
+:::note
+理解装饰器的关键，不是去记 `@decorator` 的语法，而是先接受「函数就是普通的值」。后面所有装饰器都是这个事实的自然推论。
+:::
+
+## 二、@ 语法糖到底做了什么
+
+先看一个「手动」装饰的例子：
+
+```py
+def shout(func):
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        return result.upper()
+    return wrapper
+
+def hello(name):
+    return f"hello, {name}"
+
+hello = shout(hello)   # 关键一步：把原函数替换成 wrapper
+print(hello("destiny"))  # HELLO, DESTINY
+```
+
+`@shout` 就是上面 `hello = shout(hello)` 的语法糖：
+
+```py
+@shout
+def hello(name):
+    return f"hello, {name}"
+
+# 等价于：def hello(...): ... 然后 hello = shout(hello)
+```
+
+:::warning
+很多教程只讲到这里就停了，但你立刻会发现一个坑：`hello` 的 `__name__` 变成了 `wrapper`，`help(hello)` 也丢了原函数的文档。这就是 `functools.wraps` 存在的理由——下一节讲。
+:::
+
+## 三、functools.wraps：保留元信息
+
+写装饰器永远要加 `@wraps`，否则调试时你会痛不欲生：
+
+```py
+from functools import wraps
+
+def shout(func):
+    @wraps(func)                       # ← 关键
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        return result.upper()
+    return wrapper
+
+@shout
+def hello(name):
+    """打招呼"""
+    return f"hello, {name}"
+
+print(hello.__name__)   # hello，而不是 wrapper
+print(hello.__doc__)    # 打招呼
+```
+
+`@wraps` 把原函数的 `__name__`、`__doc__`、`__module__`、`__wrapped__` 都复制到 wrapper 上，调试器、Sphinx、IDE 才能正确显示信息。
+
+## 四、带参数的装饰器
+
+参数化装饰器本质是「多嵌一层」——外层接收参数、返回真正的装饰器：
+
+```py
+from functools import wraps
+
+def repeat(times: int):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = None
+            for _ in range(times):
+                result = func(*args, **kwargs)
+            return result
+        return wrapper
+    return decorator
+
+@repeat(times=3)
+def ping():
+    print("pong", end=" ")
+
+ping()  # pong pong pong
+```
+
+记忆要点：**普通装饰器是两层函数，带参数装饰器是三层函数**。
+
+## 五、类装饰器
+
+类也可以做装饰器，用 `__call__` 让实例可调用即可。这种写法在需要「状态」时更清晰：
+
+```py
+class CountCalls:
+    def __init__(self, func):
+        self.func = func
+        self.count = 0
+        wraps(func)(self)   # 也可以保留元信息
+
+    def __call__(self, *args, **kwargs):
+        self.count += 1
+        print(f"第 {self.count} 次调用")
+        return self.func(*args, **kwargs)
+
+@CountCalls
+def task():
+    print("do work")
+
+task(); task(); task()
+```
+
+也可以反过来：装饰一个类——比如自动给所有方法加 `@staticmethod`，或自动生成 `__repr__`。`dataclass` 就是典型的类装饰器。
+
+## 六、常用内置装饰器速览
+
+```py
+from functools import lru_cache, cached_property, wraps
+from dataclasses import dataclass
+
+@lru_cache(maxsize=128)            # 自动缓存返回值，按参数缓存
+def fib(n: int) -> int:
+    return n if n < 2 else fib(n-1) + fib(n-2)
+
+@dataclass(slots=True)             # 自动生成 __init__/__repr__/__eq__
+class Point:
+    x: float
+    y: float
+
+class Image:
+    @cached_property               # 第一次访问后缓存，后续直接返回
+    def size(self) -> tuple[int, int]:
+        # 假设这里读文件、做计算
+        return (1920, 1080)
+
+@staticmethod / @classmethod        # 方法类型控制
+@property                          # getter
+```
+
+:::tip
+3.9+ 推荐用 `functools.cache`，它等价于 `lru_cache(maxsize=None)`，无大小限制且略快。3.12 还新增了 `@override` 用于标注重写。
+:::
+
+## 七、实战：带参数的缓存装饰器
+
+把上面的概念用起来，自己实现一个「带 TTL 的缓存」：
+
+```py
+from functools import wraps
+from time import monotonic
+from typing import Callable, Any
+
+def cached(ttl: float = 60.0):
+    """带过期时间的缓存装饰器，单位秒。"""
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        store: dict[tuple, tuple[float, Any]] = {}
+        hits = misses = 0
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal hits, misses
+            key = (args, tuple(sorted(kwargs.items())))
+            now = monotonic()
+
+            if key in store:
+                ts, val = store[key]
+                if now - ts < ttl:
+                    hits += 1
+                    return val
+                else:
+                    del store[key]
+
+            misses += 1
+            val = func(*args, **kwargs)
+            store[key] = (now, val)
+            return val
+
+        wrapper.cache_info = lambda: {"hits": hits, "misses": misses, "size": len(store)}  # type: ignore[attr-defined]
+        return wrapper
+    return decorator
+
+@cached(ttl=0.5)
+def slow_square(x: int) -> int:
+    print(f"  computing {x}...")
+    return x * x
+
+print(slow_square(4))   # computing 4... → 16
+print(slow_square(4))   # 直接返回 16（命中缓存）
+print(slow_square.cache_info())  # {'hits': 1, 'misses': 1, 'size': 1}
+```
+
+这个例子同时用到了：带参数装饰器、`@wraps`、闭包共享状态、动态给函数加属性。看懂它，装饰器就基本过关了。
+
+## 小结
+
+装饰器不是黑魔法，本质就一句话：**用函数返回函数，用 `@` 把原函数替换掉**。理解之后，去看 FastAPI 的 `@app.get("/")`、`pytest` 的 `@pytest.mark.parametrize`、Django 的 `@login_required`，会发现它们都遵循同一个套路。
+
+下一篇我们会讲生成器与上下文管理器——和装饰器一样，它们也是「写出 Pythonic 代码」的三大件之一。

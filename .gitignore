@@ -1,0 +1,54 @@
+### Python ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+### Testing ###
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+### Environments ###
+.env
+.venv
+env/
+venv/
+
+### IDE ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+
+### Tools ###
+.ruff_cache/
+.mypy_cache/
+.pytype/
+pyrightconfig.json
+
+### Docs ###
+docs/node_modules/
+docs/build/
+docs/.docusaurus/
+
+### Agent artifacts ###
+.compose/
+.trae/
+.mimocode/
+docs/compose/
+
+### OS ###
+.DS_Store
+*~
+
+### Project-specific ###
+complement/

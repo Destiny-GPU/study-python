@@ -1,0 +1,654 @@
+---
+sidebar_position: 1
+sidebar_label: '类型注解'
+title: 🚀 类型注解
+description: 学习 Python 类型注解体系，掌握变量、函数、类的标注方式，Optional/Union/泛型/TypeAlias 以及 Python 3.12 type 语句。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🚀 类型注解
+
+Python 是一门**动态类型**语言，变量的类型在运行时确定，可以随时改变。但动态类型也带来了代价：大型项目难以维护、IDE 自动补全不够智能、重构时容易出错。类型注解（PEP 484）建立了一套"渐进式类型系统"——**注解是可选的、不强制运行时检查，但能被静态类型检查器（如 mypy、pyright）和 IDE 利用**，让 Python 也能享受静态类型的红利。
+
+:::info 类型注解不会影响运行
+类型注解默认**不强制运行时检查**。`x: int = "hello"` 不会报错，运行时注解只作为元信息存储在 `__annotations__` 中。注解的价值在于开发期，由 mypy/pyright 等工具在静态分析阶段发现问题。
+:::
+
+<PyodideRunner title="类型注解快速体验">
+
+```python
+# 基本类型注解
+name: str = "张三"
+age: int = 25
+scores: list[float] = [90.5, 85.0, 92.3]
+
+# 函数注解
+def greet(name: str, times: int = 1) -> str:
+    return (f"你好, {name}! " * times).strip()
+
+print(greet("世界"))
+print(greet("Python", 3))
+
+# Optional 和 Union
+from typing import Optional
+
+def find_item(items: list[str], target: str) -> Optional[str]:
+    for item in items:
+        if item == target:
+            return item
+    return None
+
+result = find_item(["apple", "banana"], "banana")
+print(f"找到: {result}")
+
+result = find_item(["apple", "banana"], "cherry")
+print(f"找到: {result}")
+
+# 类型别名
+from typing import TypeAlias
+Vector: TypeAlias = list[float]
+
+def dot_product(v1: Vector, v2: Vector) -> float:
+    return sum(a * b for a, b in zip(v1, v2))
+
+print(f"点积: {dot_product([1, 2, 3], [4, 5, 6])}")
+```
+
+</PyodideRunner>
+
+## 📌 本节要点
+
+学完本节后，你将掌握：
+
+- 变量与函数的类型注解基础语法
+- Python 3.9+ 内置容器泛型：`list[str]`、`dict[str, int]`
+- `Optional`、`Union` 与 Python 3.10+ 的 `X | Y` 联合类型语法
+- 泛型容器的嵌套使用：`list[list[int]]`、`dict[str, list[dict[str, int]]]`
+- 类与 `@dataclass` 的属性注解
+- `TypeAlias` 类型别名与 Python 3.12 的 `type` 语句（PEP 695）
+- 运行时类型检查：`isinstance`、`TypeGuard`
+- 查看注解信息：`__annotations__`、`typing.get_type_hints()`
+
+## 变量注解
+
+变量注解使用 `变量名: 类型 = 值` 的形式：
+
+```py title="Python"
+# 飞行控制系统中的基本变量注解
+altitude: float = 500.0          # 高度（米）
+velocity: list[float] = [0.0, 0.0, 0.0]  # 三轴速度
+sensor_id: str = "IMU-01"
+is_active: bool = True
+
+# 也可以只声明类型，不赋值（默认 None）
+target_heading: float
+target_heading = 90.0
+
+print(altitude, velocity, sensor_id, is_active, target_heading)
+```
+
+:::tip 注解不会阻止重新赋值
+即使注解为 `float`，运行时仍可赋值为字符串。这是动态类型的本质，类型检查器会在静态阶段提醒你，但运行时不报错：
+
+```py title="Python"
+x: int = 1
+x = "two"  # 运行时不报错，但 mypy 会警告：Incompatible types in assignment
+```
+:::
+
+## 内置类型
+
+Python 3.9+ 可以直接使用内置容器类型作为泛型，无需从 `typing` 导入：
+
+```py title="Python"
+# 基本标量
+n: int = 42
+s: str = "hello"
+f: float = 3.14
+b: bool = True
+
+# 容器类型 —— 飞行数据常用结构
+sensor_readings: list[float] = [9.81, 9.79, 9.82]  # 加速度计读数
+motor_commands: dict[str, float] = {"roll": 0.5, "pitch": -0.2, "yaw": 0.0}
+waypoint: tuple[float, float, float] = (39.9, 116.4, 500.0)  # 经度、纬度、高度
+motor_ids: set[int] = {1, 2, 3, 4}
+
+# 变长元组
+# tuple[float, ...] 表示元素全为 float，长度任意
+time_series: tuple[float, ...] = (0.0, 0.1, 0.2, 0.3, 0.4)
+
+print(sensor_readings, motor_commands, waypoint, motor_ids)
+```
+
+:::tip 推荐语法
+Python 3.10+（PEP 604）引入了 `X | Y` 联合类型语法，3.9+（PEP 585）支持小写内置类型泛型。本教程统一使用新语法：
+
+```py title="Python"
+# ✅ 推荐（Python 3.10+）
+def greet(name: str | None) -> str: ...
+scores: dict[str, int] = {}
+items: list[str] = []
+```
+
+## 函数注解
+
+函数注解标注参数和返回值的类型：
+
+```py title="Python"
+def compute_heading(target_lat: float, target_lon: float, current_lat: float, current_lon: float) -> float:
+    """计算到目标点的航向角（度）。"""
+    import math
+    d_lon = math.radians(target_lon - current_lon)
+    lat1, lat2 = math.radians(current_lat), math.radians(target_lat)
+    x = math.sin(d_lon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(d_lon)
+    return math.degrees(math.atan2(x, y))
+
+
+print(compute_heading(40.0, 116.4, 39.9, 116.0))  # 约 70.0
+
+
+# 标注多个参数和复杂返回类型
+def build_telemetry(ts: float, altitude: float, velocity: list[float]) -> dict[str, object]:
+    return {"timestamp": ts, "altitude": altitude, "velocity": velocity}
+
+
+print(build_telemetry(0.0, 500.0, [10.0, 0.0, -2.0]))
+```
+
+### 可选参数与默认值
+
+默认值为 `None` 的参数，类型应该是 `X | None`：
+
+```py title="Python"
+def load_calibration(sensor_id: str, config_path: str | None = None) -> dict[str, float] | None:
+    """加载传感器校准参数，失败返回 None。"""
+    if config_path is None:
+        return None
+    # 模拟从文件加载校准数据
+    return {"offset": 0.01, "scale": 1.002}
+
+
+print(load_calibration("IMU-01"))  # 输出: None
+print(load_calibration("IMU-01", "/etc/calib.json"))  # 输出: {'offset': 0.01, 'scale': 1.002}
+```
+
+## Optional 与 Union
+
+`Optional[X]` 表示"X 或 None"，等价于 `X | None`：
+
+```py title="Python"
+from typing import Optional
+
+# 下面两种写法等价
+def parse_float(s: str) -> Optional[float]:
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def parse_float_new(s: str) -> float | None:
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+print(parse_float("3.14"))  # 输出: 3.14
+print(parse_float("abc"))   # 输出: None
+```
+
+`Union[X, Y]` 表示"X 或 Y"，Python 3.10+ 可以用 `X | Y` 替代：
+
+```py title="Python"
+from typing import Union
+
+# ❌ 旧写法
+def scale_value(x: Union[int, float]) -> Union[int, float]:
+    return x * 2
+
+
+# ✅ 新写法（Python 3.10+，推荐）
+def scale_value_new(x: int | float) -> int | float:
+    return x * 2
+
+
+print(scale_value(5))     # 输出: 10
+print(scale_value(3.14))  # 输出: 6.28
+```
+
+:::tip 类型注解语法速查
+| 语法 | 含义 | 示例 |
+|------|------|------|
+| `X \| Y` | 联合类型 | `int \| str` |
+| `X \| None` | 可选类型 | `str \| None` |
+| `list[X]` | 列表泛型 | `list[int]` |
+| `dict[K, V]` | 字典泛型 | `dict[str, int]` |
+
+## 泛型容器
+
+类型注解支持嵌套的泛型容器，表达复杂的数据结构：
+
+```py title="Python"
+# 三轴数据矩阵
+acceleration_matrix: list[list[float]] = [
+    [0.01, 0.02, -0.03],
+    [0.02, -0.01, 0.04],
+    [-0.03, 0.04, 0.01],
+]
+
+# 按通道分组的传感器数据
+sensor_channels: dict[str, list[float]] = {
+    "gyro_x": [0.1, 0.2, 0.3],
+    "gyro_y": [-0.1, 0.0, 0.1],
+    "gyro_z": [0.0, 0.0, 0.0],
+}
+
+# 航点间距离表
+distance_map: dict[tuple[str, str], float] = {
+    ("WP1", "WP2"): 1318.0,
+    ("WP1", "WP3"): 2129.0,
+}
+
+# 复杂的嵌套结构：多传感器配置
+config: dict[str, list[dict[str, int | str]]] = {
+    "sensors": [
+        {"type": "IMU", "rate": 200},
+        {"type": "GPS", "rate": 10},
+    ],
+}
+
+print(acceleration_matrix[1][2])  # 输出: 0.04
+print(sensor_channels["gyro_x"])  # 输出: [0.1, 0.2, 0.3]
+print(config["sensors"][0])       # 输出: {'type': 'IMU', 'rate': 200}
+```
+
+## 类与属性注解
+
+类的属性可以在 `__init__` 中或类体中标注：
+
+```py title="Python"
+class SignalConfig:
+    """信号处理配置。"""
+    # 类体中声明
+    sample_rate: int
+    channels: int
+
+    def __init__(self, sample_rate: int, channels: int) -> None:
+        self.sample_rate = sample_rate
+        self.channels = channels
+
+    def __repr__(self) -> str:
+        return f"SignalConfig(rate={self.sample_rate}, ch={self.channels})"
+
+
+cfg = SignalConfig(200, 6)
+print(cfg)  # SignalConfig(rate=200, ch=6)
+```
+
+### 使用 dataclass 简化
+
+`@dataclass` 能自动生成 `__init__`、`__repr__` 等方法，且自带类型注解：
+
+```py title="Python"
+from dataclasses import dataclass, field
+
+
+@dataclass
+class FlightState:
+    """飞行状态数据。"""
+    timestamp: float
+    altitude: float
+    velocity: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+
+    @property
+    def speed(self) -> float:
+        import math
+        return math.sqrt(sum(v ** 2 for v in self.velocity))
+
+
+# 使用示例
+state = FlightState(timestamp=0.0, altitude=500.0, velocity=[10.0, 0.0, -2.0])
+print(state)        # FlightState(timestamp=0.0, altitude=500.0, velocity=[10.0, 0.0, -2.0])
+print(state.speed)  # 10.198039027185569
+```
+
+:::warning 可变默认值的陷阱
+类属性注解中，**不要**直接用可变对象作为默认值（如 `velocity: list[float] = []`）。所有实例会共享同一个列表，导致意外行为。应使用 `field(default_factory=list)` 每次创建新列表。
+:::
+
+## TypeAlias 类型别名
+
+当类型注解变得复杂时，可以用 `TypeAlias` 给类型起别名，提高可读性：
+
+```py title="Python"
+from typing import TypeAlias
+
+# 旧写法：TypeAlias
+SensorID: TypeAlias = str
+Timestamp: TypeAlias = float
+SensorData: TypeAlias = dict[SensorID, list[Timestamp]]
+
+readings: SensorData = {
+    "IMU-01": [0.0, 0.1, 0.2],
+    "GPS-01": [39.9, 116.4, 500.0],
+}
+print(readings["IMU-01"])  # [0.0, 0.1, 0.2]
+
+
+# 更复杂的别名
+FlightData: TypeAlias = None | bool | int | float | str | list["FlightData"] | dict[str, "FlightData"]
+# 注意：自引用类型需要用字符串引号包裹
+
+data: FlightData = {"attitude": [0.1, 0.2, 0.3], "armed": True}
+print(data)
+```
+
+:::note Python 3.10+ 的 type 别名
+Python 3.10+ 可以直接用 `X = SomeType` 的形式，不需要显式写 `TypeAlias`，但显式写法更清晰，能避免歧义：
+
+```py title="Python"
+# Python 3.10+ 简化写法
+SensorID = int  # 类型检查器可能不确定这是别名还是普通赋值
+
+from typing import TypeAlias
+SensorID: TypeAlias = int  # 明确告诉检查器：这是类型别名
+```
+:::
+
+## Python 3.12 type 语句（PEP 695）
+
+Python 3.12 引入了 `type` 语句（PEP 695），提供了一种全新的、原生的类型别名声明语法，还支持泛型参数：
+
+```py title="Python"
+# Python 3.12+ 新语法：type 语句
+type SensorID = str
+type Timestamp = float
+type SensorData = dict[SensorID, list[Timestamp]]
+
+readings: SensorData = {
+    "IMU-01": [0.0, 0.1, 0.2],
+    "GPS-01": [39.9, 116.4, 500.0],
+}
+print(readings["IMU-01"])  # [0.0, 0.1, 0.2]
+
+
+# 递归类型别名不再需要字符串引号
+type FlightData = None | bool | int | float | str | list[FlightData] | dict[str, FlightData]
+
+data: FlightData = {"attitude": [0.1, 0.2, 0.3], "armed": True}
+print(data)
+
+
+# type 语句支持泛型参数（TypeAlias 做不到）
+type Pair[T] = tuple[T, T]
+type Result[T, E] = tuple[T, E] | E
+
+p: Pair[int] = (1, 2)
+r: Result[int, str] = (42, "")
+print(p, r)
+```
+
+:::tip type 语句的优势
+相比 `TypeAlias`，Python 3.12 的 `type` 语句有三大优势：
+1. **支持泛型参数**：`type Pair[T] = tuple[T, T]`，无需 `TypeVar`
+2. **递归别名无需引号**：`type JSON = ... | list[JSON]` 直接自引用
+3. **语义更清晰**：`type` 语句明确表达"这是类型别名定义"
+
+如果项目使用 Python 3.12+，应优先使用 `type` 语句定义类型别名。
+:::
+
+## 运行时类型检查
+
+类型注解默认不参与运行时检查，但有时我们需要在运行时校验类型。
+
+### isinstance 检查
+
+`isinstance()` 是运行时类型检查的基础：
+
+```py title="Python"
+def process_sensor(value: float | str) -> str:
+    if isinstance(value, float):
+        return f"传感器读数：{value:.3f}"
+    return f"传感器状态：{value.upper()}"
+
+
+print(process_sensor(9.806))     # 传感器读数：9.806
+print(process_sensor("active"))  # 传感器状态：ACTIVE
+```
+
+:::warning isinstance 与联合类型
+`isinstance` 支持直接使用 `X | Y` 形式的联合类型作为第二参数：
+
+```py title="Python"
+x: int | str = 42
+print(isinstance(x, int | str))  # True
+```
+
+但 `isinstance` 不能检查泛型参数，例如 `isinstance(x, list[int])` 会报错——运行时类型已擦除，只能检查 `isinstance(x, list)`：
+
+```py title="Python"
+x: list[int] = [1, 2, 3]
+print(isinstance(x, list))        # True
+# print(isinstance(x, list[int]))  # TypeError: isinstance() argument 2 cannot be a parameterized generic
+```
+:::
+
+### TypeGuard 类型守卫
+
+`TypeGuard` 用于在类型检查器中**收窄类型**——告诉检查器"在某个函数返回 True 后，参数类型已确定为 T"：
+
+```py title="Python"
+from typing import TypeGuard
+
+
+def is_valid_readings(values: list[object]) -> TypeGuard[list[float]]:
+    """判断是否为有效的传感器浮点读数列表。"""
+    return all(isinstance(v, (int, float)) for v in values)
+
+
+def process_readings(values: list[object]) -> None:
+    if is_valid_readings(values):
+        # 这里类型检查器知道 values 是 list[float]
+        # 可以安全地做数值计算
+        mean_val = sum(values) / len(values)
+        print(f"平均值: {mean_val:.3f}")
+    else:
+        print("包含非数值数据")
+
+
+process_readings([9.81, 9.79, 9.82])  # 平均值: 9.807
+process_readings([1, 2, "error"])      # 包含非数值数据
+```
+
+:::note TypeGuard 的局限
+`TypeGuard` 只影响静态类型检查器的推断，运行时不做任何事。函数体里的判断逻辑需要你自己保证正确性——如果 `is_valid_readings` 实现有 bug，类型检查器仍会"相信"它的返回值。
+
+Python 3.13 引入了 `TypeIs`（PEP 742），比 `TypeGuard` 更严格、更智能的类型收窄，推荐在新代码中使用。
+:::
+
+## 查看注解信息
+
+注解存储在 `__annotations__` 属性中，可以在运行时访问：
+
+```py title="Python"
+def compute_heading(target_lat: float, target_lon: float, current_lat: float, current_lon: float) -> float:
+    import math
+    d_lon = math.radians(target_lon - current_lon)
+    lat1, lat2 = math.radians(current_lat), math.radians(target_lat)
+    x = math.sin(d_lon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(d_lon)
+    return math.degrees(math.atan2(x, y))
+
+
+class SignalConfig:
+    sample_rate: int
+    channels: int
+
+    def __init__(self, sample_rate: int, channels: int) -> None:
+        self.sample_rate = sample_rate
+        self.channels = channels
+
+
+print(compute_heading.__annotations__)
+# {'target_lat': <class 'float'>, 'target_lon': <class 'float'>, 'current_lat': <class 'float'>, 'current_lon': <class 'float'>, 'return': <class 'float'>}
+
+print(SignalConfig.__annotations__)
+# {'sample_rate': <class 'int'>, 'channels': <class 'int'>}
+
+# 局部变量注解不存储在 __annotations__
+x: int = 10
+```
+
+:::info 运行时访问注解的库
+需要运行时类型检查的场景，推荐使用专门的库而非手写 `isinstance` 检查：
+- **pydantic**：基于类型注解做数据校验和序列化，最流行
+- **typeguard**：运行时类型检查库
+- **cattrs**：结构化数据与类型注解的转换
+
+这些库能解析 `__annotations__` 并递归校验嵌套类型。
+:::
+
+## 实战：带类型注解的飞行传感器模型
+
+下面实现一个简化的飞行传感器读数与滤波结果模型，综合运用变量、函数、类注解和类型别名：
+
+```py title="Python"
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import TypeAlias, Literal
+import math
+
+
+# 类型别名
+SensorType: TypeAlias = Literal["IMU", "GPS", "BARO"]
+Axis: TypeAlias = Literal["x", "y", "z"]
+
+
+@dataclass
+class SensorReading:
+    """单个传感器读数。"""
+    sensor_type: SensorType
+    timestamp: float
+    values: dict[Axis, float]
+    noise_level: float = 0.0
+
+    @property
+    def magnitude(self) -> float:
+        """读数的向量幅值。"""
+        return math.sqrt(sum(v ** 2 for v in self.values.values()))
+
+
+@dataclass
+class FilterResult:
+    """滤波后的结果。"""
+    timestamp: float
+    filtered_values: dict[Axis, float]
+    confidence: float
+    outlier_count: int = 0
+
+    @property
+    def is_reliable(self) -> bool:
+        return self.confidence > 0.9 and self.outlier_count == 0
+
+
+# 类型别名：多帧数据
+SensorSequence: TypeAlias = list[SensorReading]
+
+
+def filter_readings(readings: SensorSequence, window: int = 3) -> FilterResult:
+    """对传感器读数序列做简单滑动平均滤波。"""
+    if not readings:
+        return FilterResult(0.0, {"x": 0.0, "y": 0.0, "z": 0.0}, 0.0)
+
+    # 取最后 window 帧求均值
+    recent = readings[-window:]
+    axes: list[Axis] = ["x", "y", "z"]
+    filtered = {}
+    for axis in axes:
+        filtered[axis] = sum(r.values.get(axis, 0.0) for r in recent) / len(recent)
+
+    avg_noise = sum(r.noise_level for r in recent) / len(recent)
+    confidence = max(0.0, 1.0 - avg_noise)
+
+    return FilterResult(
+        timestamp=recent[-1].timestamp,
+        filtered_values=filtered,
+        confidence=confidence,
+    )
+
+
+# 模拟传感器数据
+imu_data = [
+    SensorReading("IMU", 0.0, {"x": 0.01, "y": -0.02, "z": 9.81}, noise_level=0.01),
+    SensorReading("IMU", 0.1, {"x": 0.02, "y": -0.01, "z": 9.80}, noise_level=0.02),
+    SensorReading("IMU", 0.2, {"x": 0.01, "y": -0.03, "z": 9.82}, noise_level=0.01),
+]
+
+result = filter_readings(imu_data)
+print(f"滤波结果: {result.filtered_values}")
+print(f"置信度: {result.confidence:.3f}")
+print(f"可靠: {result.is_reliable}")
+```
+
+输出：
+
+```text title="输出"
+滤波结果: {'x': 0.013333333333333334, 'y': -0.02, 'z': 9.81}
+置信度: 0.990
+可靠: True
+```
+
+:::tip from \_\_future\_\_ import annotations
+文件首行的 `from __future__ import annotations`（PEP 563）让所有注解变成字符串形式存储，不在定义时求值。好处是：
+- 可以使用尚未定义的类型（前向引用）
+- 性能更好（注解不立即求值）
+- Python 3.12 之前避免某些注解求值问题
+
+但运行时访问 `__annotations__` 时拿到的是字符串而非类型对象，需要用 `typing.get_type_hints()` 解析。
+:::
+
+## 🎯 动手练习
+
+尝试完成以下练习，巩固本节知识：
+
+1. **类型注解实践**：为你之前编写的传感器处理函数添加完整的类型注解，包括参数和返回值
+2. **TypeAlias 重构**：使用 Python 3.12 的 `type` 语句重构一个项目中的复杂类型注解（如将 `dict[str, list[float]]` 别名为 `SensorChannelData`）
+3. **TypeGuard 实现**：编写一个 `is_valid_imu_data(values: list[float]) -> TypeGuard[list[float]]` 函数，验证 IMU 数据是否在合理范围内
+4. **泛型函数**：编写一个泛型函数 `swap[T, U](pair: tuple[T, U]) -> tuple[U, T]`，交换元组元素
+
+## 📚 延伸阅读
+
+- [PEP 484 - 类型提示](https://peps.python.org/pep-0484/) - Python 类型注解的正式规范
+- [PEP 585 - 内置泛型](https://peps.python.org/pep-0585/) - Python 3.9+ 的 `list[str]` 语法
+- [PEP 604 - 联合类型语法](https://peps.python.org/pep-0604/) - Python 3.10+ 的 `X | Y` 语法
+- [PEP 695 - 类型参数语法](https://peps.python.org/pep-0695/) - Python 3.12 的 `type` 语句与泛型函数
+- [PEP 742 - TypeIs](https://peps.python.org/pep-0742/) - Python 3.13 更严格的类型守卫
+- [mypy 文档](https://mypy.readthedocs.io/) - 最流行的 Python 静态类型检查器
+- [pyright 文档](https://github.com/microsoft/pyright) - Microsoft 开发的快速类型检查器
+
+## 📊 速查表
+
+| 语法 | 含义 | Python 版本 |
+|------|------|-------------|
+| `x: float` | 变量类型注解 | 3.5+ |
+| `def f() -> float:` | 函数返回类型 | 3.5+ |
+| `list[float]` | 泛型容器 | 3.9+ |
+| `int \| str` | 联合类型 | 3.10+ |
+| `X \| None` | 可选类型 | 3.10+ |
+| `type SensorID = str` | 类型别名 | 3.12+ |
+| `def f[T](x: T) -> T:` | 泛型函数 | 3.12+ |
+| `TypeGuard[T]` | 类型守卫 | 3.10+ |
+| `isinstance(x, T)` | 运行时类型检查 | 所有版本 |
+
+## ✅ 本节总结
+
+- 类型注解是**可选的、不影响运行**的元信息，主要服务于静态类型检查器和 IDE
+- Python 3.9+ 直接使用 `list[str]`、`dict[str, int]` 等内置容器作为泛型，无需 `typing.List`
+- `Optional[X]` 等价于 `X | None`，`Union[X, Y]` 等价于 `X | Y`（Python 3.10+）
+- `TypeAlias` 用于声明类型别名；Python 3.12 的 `type` 语句（PEP 695）是更现代的写法，还支持泛型参数
+- `isinstance` 是运行时类型检查的基础，但不能检查泛型参数（如 `list[int]`）
+- `TypeGuard` 用于在类型检查器中收窄类型，运行时不做任何事
+- 推荐使用 `@dataclass` 自动生成带类型注解的数据类，如 `FlightState`、`SensorReading`

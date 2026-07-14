@@ -1,0 +1,193 @@
+---
+slug: modern-python-features
+title: 现代 Python 你应该知道的 10 个特性
+authors: [destiny]
+tags: [python, 进阶技巧]
+---
+
+很多人写 Python 还停留在 3.6 时代的写法：`Optional[int]`、`os.path.join`、`if-elif-else` 一长串。其实从 3.10 开始，Python 已经悄悄变成了一门「看起来很像新语言」的语言。下面这 10 个特性，是我在日常代码里几乎天天都会用到的。本教程默认 Python 3.12+，所以放心大胆地用。
+
+{/* truncate */}
+
+## 1. match-case：结构化模式匹配（3.10）
+
+不再是简单的 switch，它支持解构：
+
+```py
+def describe(point: tuple[int, int]) -> str:
+    match point:
+        case (0, 0):
+            return "原点"
+        case (x, 0):
+            return f"在 x 轴上，x={x}"
+        case (0, y):
+            return f"在 y 轴上，y={y}"
+        case (x, y):
+            return f"普通点 ({x}, {y})"
+
+print(describe((3, 0)))  # 在 x 轴上，x=3
+```
+
+:::tip
+`match-case` 还能匹配类实例、字典、序列，配合「守卫表达式」(`case Point(x, y) if x == y`) 非常强大。
+:::
+
+## 2. 海象运算符 `:=`（3.8，但 3.10 才流行起来）
+
+赋值的同时返回值，省掉一次重复调用：
+
+```py
+import re
+
+if (m := re.search(r"\d+", "订单号: 9527")) is not None:
+    print(f"提取到数字：{m.group()}")  # 提取到数字：9527
+```
+
+## 3. 类型注解 `X | Y`（3.10）
+
+终于不用再写 `Union[int, str]` 和 `Optional[int]`：
+
+```py
+def find_user(user_id: int) -> dict | None:
+    if user_id == 1:
+        return {"name": "destiny"}
+    return None
+
+# 等价于 Optional[dict] / Union[dict, None]
+```
+
+## 4. dataclass + slots（3.10）
+
+一行 `slots=True` 让 dataclass 用 `__slots__`，省内存又禁止动态属性：
+
+```py
+from dataclasses import dataclass
+
+@dataclass(slots=True)
+class Point:
+    x: float
+    y: float
+
+p = Point(1.0, 2.0)
+# p.z = 3.0  # AttributeError，防止手滑加错字段
+```
+
+## 5. f-string 嵌套与调试输出（3.12）
+
+3.12 终于支持在 f-string 的 `{}` 里再写 f-string，`=调试语法`也更好用：
+
+```py
+user = {"name": "destiny", "level": 5}
+width = 12
+
+# 嵌套 f-string
+print(f"{f"{user['name']:^{width}}"}")  #    destiny
+
+# 调试语法 = 直接打印变量名和值
+print(f"{user=}")  # user={'name': 'destiny', 'level': 5}
+```
+
+## 6. TaskGroup：结构化并发（3.11）
+
+`asyncio.gather` 的更安全替代，子任务出错能一起取消：
+
+```py
+import asyncio
+
+async def fetch(url: str) -> str:
+    await asyncio.sleep(0.1)
+    return f"data from {url}"
+
+async def main() -> None:
+    async with asyncio.TaskGroup() as tg:
+        t1 = tg.create_task(fetch("api/a"))
+        t2 = tg.create_task(fetch("api/b"))
+    print(t1.result(), t2.result())
+
+asyncio.run(main())
+```
+
+:::warning
+`TaskGroup` 一旦有任何子任务抛错，会取消其它所有子任务，并抛出 `ExceptionGroup`。这正是我们想要的行为——并发任务要么一起成功，要么一起失败。
+:::
+
+## 7. ExceptionGroup / except*（3.11）
+
+为并发场景设计的「一组异常一起处理」：
+
+```py
+def risky(x: int) -> None:
+    if x < 0:
+        raise ValueError(f"负数：{x}")
+
+try:
+    risky(-1)
+    risky(-2)
+except* ValueError as eg:
+    for e in eg.exceptions:
+        print("处理：", e)
+```
+
+## 8. `type` 语句：定义类型别名（3.12）
+
+`TypeAlias` 的语法糖，还能定义泛型别名：
+
+```py
+type Vector = list[float]
+type Matrix[T] = list[list[T]]
+
+def norm(v: Vector) -> float:
+    return sum(x * x for x in v) ** 0.5
+
+# 泛型别名
+m: Matrix[int] = [[1, 2], [3, 4]]
+```
+
+## 9. `pathlib.Path.walk()`（3.12）
+
+终于不用再写 `os.walk`，而且能拿到 `dir_entry` 做更高效过滤：
+
+```py
+from pathlib import Path
+
+root = Path(".")
+for dirpath, dirnames, filenames in root.walk():
+    if "__pycache__" in dirnames:
+        dirnames.remove("__pycache__")  # 剪枝，不再深入
+    for name in filenames:
+        if name.endswith(".py"):
+            print(dirpath / name)
+```
+
+:::tip
+`Path.walk()` 还支持 `top_down=False`，自底向上遍历——删空目录时非常有用。
+:::
+
+## 10. Self 类型 & `override` 装饰器（3.11/3.12）
+
+写「返回自己类型」的方法不再痛苦：
+
+```py
+from typing import Self, override
+
+class Shape:
+    def scale(self, factor: float) -> Self:
+        return self  # 子类调用会自动返回子类类型
+
+class Circle(Shape):
+    def __init__(self, r: float) -> None:
+        self.r = r
+
+    @override
+    def scale(self, factor: float) -> Self:
+        self.r *= factor
+        return self
+```
+
+`@override` 会在父类没有同名方法时静态报错，防止手滑写错方法名。
+
+## 小结
+
+这 10 个特性里，**真正改变我写代码习惯**的是三个：`match-case`（替代 if-elif 链）、`X | Y` 类型注解（让类型写起来不痛苦）、`TaskGroup`（让并发代码更安全）。其余几个则是「锦上添花」，但堆在一起，已经让 Python 3.12 读起来像一门全新的语言。
+
+如果你还在用 3.9 写代码，强烈建议升级到 3.12——体验的提升不只是「快一点」，而是「写法完全不同」。

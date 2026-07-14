@@ -1,0 +1,8 @@
+{
+  "label": "🧰 标准库",
+  "position": 12,
+  "link": {
+    "type": "generated-index",
+    "description": "熟练使用 os、pathlib、datetime、collections、itertools 等核心标准库模块。"
+  }
+}

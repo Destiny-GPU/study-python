@@ -1,0 +1,325 @@
+---
+sidebar_position: 2
+sidebar_label: '调试技巧'
+title: '🔍 调试技巧'
+description: 代码出 bug 了？别慌。掌握 print 调试、pdb 断点、IDE 调试器三种方法，从简单到高效，快速定位问题。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🔍 调试技巧
+
+代码跑不通、输出不对、莫名报错——每个程序员都会遇到。"调试"就是找到问题原因的过程。本节介绍三种最实用的方法：`print` 调试、`pdb` 断点调试、IDE 可视化调试，从简单到高效逐步升级。
+
+:::tip 🎯 本节要点
+- `print` 是最快的调试手段，适合快速排查
+- `breakpoint()` + pdb 可以暂停程序、检查变量、单步执行
+- IDE 调试器（VS Code / PyCharm）提供图形化断点、变量监视、调用栈
+- 遇到报错先读 Traceback，它会告诉你出错的文件、行号、调用链
+:::
+
+<PyodideRunner title="调试技巧快速体验">
+
+```python
+# print 调试
+def find_max(numbers):
+    """找到列表中的最大值"""
+    if not numbers:
+        return None
+
+    max_val = numbers[0]
+    print(f"调试: 初始化 max_val = {max_val}")
+
+    for i, num in enumerate(numbers[1:], 1):
+        print(f"调试: 比较 numbers[{i}]={num} 与 max_val={max_val}")
+        if num > max_val:
+            max_val = num
+            print(f"调试: 更新 max_val = {max_val}")
+
+    return max_val
+
+# 测试
+result = find_max([3, 1, 4, 1, 5, 9, 2, 6])
+print(f"最大值: {result}")
+
+# 使用 assert 调试
+def validate_age(age):
+    assert isinstance(age, int), f"age 必须是整数，得到 {type(age)}"
+    assert 0 <= age <= 150, f"age 必须在 0-150 之间，得到 {age}"
+    return True
+
+try:
+    validate_age(25)
+    print("验证通过: 25")
+    validate_age(-5)
+except AssertionError as e:
+    print(f"验证失败: {e}")
+
+# 使用 logging 调试
+import logging
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s: %(message)s')
+
+def process_data(data):
+    logging.debug(f"输入数据: {data}")
+    result = [x * 2 for x in data if x > 0]
+    logging.debug(f"处理结果: {result}")
+    return result
+
+process_data([-1, 0, 1, 2, 3])
+```
+
+</PyodideRunner>
+
+## 方法一：print 调试
+
+最朴素但最快的方法——在关键位置插入 `print`，看变量值：
+
+```py title="Python"
+def calculate_average(numbers):
+    print(f"输入: {numbers}")          # 调试：确认输入
+    total = sum(numbers)
+    print(f"总和: {total}")             # 调试：确认计算
+    avg = total / len(numbers)
+    print(f"平均值: {avg}")             # 调试：确认结果
+    return avg
+```
+
+### print 的增强技巧
+
+```py title="Python"
+# 1. 打印变量名 + 值
+x = 42
+print(f"{x = }")                       # Python 3.8+ → x = 42
+
+# 2. 打印类型
+print(type(x))                          # <class 'int'>
+
+# 3. 打印位置信息
+import traceback
+traceback.print_stack()                 # 打印当前调用栈
+
+# 4. 条件调试：只在特定条件下打印
+for i in range(100):
+    if i % 10 == 0:
+        print(f"处理到第 {i} 项")
+```
+
+:::tip print 调试的局限
+- 需要改代码 → 改完记得删掉
+- 看不到完整的调用栈和变量作用域
+- 多个变量时输出杂乱
+
+适合简单快速的问题。复杂问题请升级到 pdb 或 IDE 调试器。
+:::
+
+## 方法二：pdb 断点调试
+
+Python 自带调试器 pdb，可以在代码中设置断点，暂停执行后交互式检查变量。
+
+### 使用 breakpoint()
+
+Python 3.7+ 推荐用 `breakpoint()` 设置断点：
+
+```py title="Python"
+def calculate_average(numbers):
+    total = sum(numbers)
+    breakpoint()                        # 程序执行到这里会暂停
+    avg = total / len(numbers)
+    return avg
+
+calculate_average([10, 20, 30])
+```
+
+运行后程序暂停，进入 pdb 交互界面：
+
+```text title="输出"
+> /home/user/project/calc.py(6)calculate_average()
+-> avg = total / len(numbers)
+(Pdb)
+```
+
+### pdb 常用命令
+
+```text title="输出"
+# 在 pdb 提示符下输入：
+
+n           # 执行下一行（next）
+s           # 进入函数内部（step）
+c           # 继续运行到下一个断点（continue）
+p variable  # 打印变量值（print）
+pp variable # 格式化打印（pretty print）
+l           # 显示当前代码位置（list）
+w           # 显示调用栈（where）
+q           # 退出调试器（quit）
+h           # 查看帮助（help）
+```
+
+### 实际例子
+
+```py title="Python"
+def process_data(data):
+    result = []
+    for item in data:
+        processed = transform(item)
+        breakpoint()                    # 暂停，检查每轮循环
+        result.append(processed)
+    return result
+```
+
+暂停后可以逐行查看 `item`、`processed` 的值：
+
+```text title="Output"
+> /home/user/project/main.py(6)process_data()
+-> result.append(processed)
+(Pdb) p item
+{'name': 'Alice', 'score': 85}
+(Pdb) p processed
+{'name': 'alice', 'score': 85, 'grade': 'B'}
+(Pdb) n
+> /home/user/project/main.py(4)process_data()
+-> for item in data:
+```
+
+### 关闭 pdb
+
+运行时设置环境变量可以跳过所有 `breakpoint()`：
+
+```bash title="Shell"
+PYTHONNOUSERSITE=1 python -c "breakpoint()"   # 不会暂停
+```
+
+或者在 `.env` 文件中加 `PYTHONBREAKPOINT=0`。
+
+## 方法三：IDE 可视化调试
+
+VS Code 和 PyCharm 都提供图形化调试器，体验远优于 pdb。
+
+### VS Code 调试
+
+1. 在代码行号左侧点击，添加断点（红色圆点）
+2. 按 `F5` 或点击"运行和调试"
+3. 程序暂停时：左侧显示变量值，底部可输入表达式
+
+配置 `launch.json`：
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: 当前文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    }
+  ]
+}
+```
+
+### PyCharm 调试
+
+1. 行号左侧点击添加断点
+2. 右键文件 → Debug
+3. 暂停后底部面板显示：Variables（变量）、Watches（监视）、Console（控制台）
+
+:::tip IDE 调试 vs pdb
+- **pdb**：轻量、终端内完成，适合远程服务器或快速排查
+- **IDE 调试器**：可视化、支持条件断点、变量修改、多线程调试，日常开发首选
+
+两种方式可以混用——IDE 调试器底层也是 pdb。
+:::
+
+## 读懂 Traceback
+
+Python 报错时会打印 Traceback（回溯信息），这是调试的起点：
+
+```text title="Output"
+Traceback (most recent call last):
+  File "main.py", line 10, in <module>
+    result = process(data)
+  File "main.py", line 5, in process
+    value = data["key"]
+KeyError: 'key'
+```
+
+从下往上看：
+
+1. **最后一行**：异常类型和消息 — `KeyError: 'key'`
+2. **倒数第二行**：出错的代码 — `value = data["key"]`
+3. **再往上**：调用链 — 谁调用了这个函数
+
+:::tip 调试思路
+1. 看异常类型：`KeyError` → 字典缺键、`ValueError` → 值不对、`TypeError` → 类型错误
+2. 看出错行号：`line 5` → 打开文件看第 5 行
+3. 看调用链：从下往上追踪调用路径
+4. 加 `breakpoint()` 在出错行之前，检查变量状态
+:::
+
+## 常见报错速查
+
+| 异常 | 常见原因 | 解决方向 |
+|------|----------|----------|
+| `NameError` | 变量未定义 | 检查拼写、是否在作用域内 |
+| `TypeError` | 类型不匹配 | 检查传参类型，`str(123)` 转换 |
+| `ValueError` | 值不合理 | 检查输入范围 |
+| `KeyError` | 字典缺键 | 用 `dict.get(key, default)` 或 `key in dict` |
+| `IndexError` | 列表越界 | 检查索引范围，`len(list)` |
+| `AttributeError` | 对象无此属性 | 检查拼写、import 是否正确 |
+| `ImportError` | 导入失败 | 检查包名、是否安装、版本兼容 |
+| `FileNotFoundError` | 文件不存在 | 检查路径、工作目录 |
+
+## 实战：调试一个有 bug 的程序
+
+下面这段代码有问题，试着用上面的方法找出并修复：
+
+```py title="Python"
+# buggy.py
+
+def find_longest(words):
+    """找出列表中最长的单词"""
+    longest = ""
+    for word in words:
+        if len(word) > len(longest):
+            longest = word
+    return longest
+
+words = ["apple", "banana", "cherry", "date"]
+result = find_longest(words)
+print(f"最长的单词是：{result}")
+print(f"长度是：{result.length}")       # ← bug 在这里
+```
+
+### 调试步骤
+
+1. **运行看报错**：
+
+```bash title="Shell"
+uv run python buggy.py
+```
+
+```text title="Output"
+最长的单词是：cherry
+Traceback (most recent call last):
+  File "buggy.py", line 12, in <module>
+    print(f"长度是：{result.length}")
+AttributeError: 'str' object has no attribute 'length'
+```
+
+2. **读 Traceback**：`AttributeError` + `'str' object has no attribute 'length'` → 字符串没有 `.length` 属性
+
+3. **修复**：Python 字符串用 `len()` 函数，不是 `.length` 属性
+
+```py title="Python"
+print(f"长度是：{len(result)}")         # ✅ 修复
+```
+
+## 调试清单
+
+遇到问题时按这个顺序排查：
+
+1. **读报错信息** — 异常类型 + 行号能解决 80% 的问题
+2. **print 关键变量** — 在报错行之前打印变量值
+3. **加断点** — 用 `breakpoint()` 或 IDE 断点逐行检查
+4. **简化复现** — 去掉无关代码，找到最小复现步骤
+5. **搜索** — 把错误信息贴到搜索引擎，通常有人遇到过同样的问题

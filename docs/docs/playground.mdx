@@ -1,0 +1,109 @@
+---
+sidebar_position: 998
+sidebar_label: '在线运行'
+title: '在线代码运行'
+description: '在浏览器中直接运行 Python 代码，无需安装任何环境'
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 在线代码运行
+
+在这里可以直接运行 Python 代码，无需安装任何环境。
+
+:::info
+首次运行需要加载 Python 运行时（约 10MB），之后的代码将秒级执行。
+:::
+
+## 基础示例
+
+<PyodideRunner title="Hello, World!">
+
+```python
+print("Hello, World!")
+print("欢迎来到 Python 的世界！")
+```
+
+</PyodideRunner>
+
+## 循环与条件
+
+<PyodideRunner title="判断奇偶数">
+
+```python
+numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+for n in numbers:
+    if n % 2 == 0:
+        print(f"{n} 是偶数")
+    else:
+        print(f"{n} 是奇数")
+```
+
+</PyodideRunner>
+
+## 函数定义
+
+<PyodideRunner title="斐波那契数列">
+
+```python
+def fibonacci(n):
+    """生成斐波那契数列"""
+    a, b = 0, 1
+    result = []
+    for _ in range(n):
+        result.append(a)
+        a, b = b, a + b
+    return result
+
+# 打印前 15 个斐波那契数
+print("斐波那契数列：")
+print(fibonacci(15))
+```
+
+</PyodideRunner>
+
+## 类与对象
+
+<PyodideRunner title="简单的计算器类">
+
+```python
+class Calculator:
+    def __init__(self):
+        self.history = []
+
+    def add(self, a, b):
+        result = a + b
+        self.history.append(f"{a} + {b} = {result}")
+        return result
+
+    def multiply(self, a, b):
+        result = a * b
+        self.history.append(f"{a} × {b} = {result}")
+        return result
+
+    def show_history(self):
+        print("计算历史：")
+        for item in self.history:
+            print(f"  {item}")
+
+calc = Calculator()
+print(f"3 + 5 = {calc.add(3, 5)}")
+print(f"4 × 7 = {calc.multiply(4, 7)}")
+print()
+calc.show_history()
+```
+
+</PyodideRunner>
+
+## 试试看
+
+<PyodideRunner title="自己动手试试">
+
+```python
+# 在这里写你的 Python 代码
+name = "Python"
+print(f"Hello, {name}!")
+```
+
+</PyodideRunner>

@@ -1,0 +1,479 @@
+---
+sidebar_position: 5
+sidebar_label: '推导式'
+title: 📦 推导式（Comprehension）
+description: 推导式是 Python 用一行简洁语法构造列表、字典、集合与生成器的利器，是 Pythonic 风格的核心标志。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 📦 推导式（Comprehension）
+
+推导式（comprehension）是 Python 最具标志性的语法之一。它用一行紧凑的表达式从一个可迭代对象构造出新的容器，把"循环 + 条件 + 收集"三步合一，既简洁又高效。掌握推导式，是从"会写 Python"到"写出 Pythonic 代码"的关键一步。
+
+Python 提供四种推导式：列表推导式、字典推导式、集合推导式，以及用圆括号表示的生成器表达式。
+
+<PyodideRunner title="推导式快速体验">
+
+```python
+# 列表推导式
+squares = [x ** 2 for x in range(10)]
+print(f"平方数: {squares}")
+
+# 带条件的推导式
+evens = [x for x in range(20) if x % 2 == 0]
+print(f"偶数: {evens}")
+
+# 字典推导式
+word_lengths = {word: len(word) for word in ["python", "java", "c++", "javascript"]}
+print(f"单词长度: {word_lengths}")
+
+# 集合推导式
+first_letters = {word[0] for word in ["apple", "avocado", "banana", "cherry"]}
+print(f"首字母集合: {first_letters}")
+
+# 生成器表达式（节省内存）
+total = sum(x ** 2 for x in range(1000000))
+print(f"1-100万的平方和: {total}")
+```
+
+</PyodideRunner>
+
+## 列表推导式
+
+列表推导式用方括号 `[]`，语法为 `[表达式 for 变量 in 可迭代对象]`。
+
+```py title="Python"
+# 传统写法
+squares = []
+for x in range(6):
+    squares.append(x * x)
+print(squares)  # [0, 1, 4, 9, 16, 25]
+
+# 列表推导式
+squares = [x * x for x in range(6)]
+print(squares)  # [0, 1, 4, 9, 16, 25]
+
+# 表达式可以是任意计算
+words = ["hello", "world"]
+lengths = [len(w) for w in words]
+print(lengths)  # [5, 5]
+
+upper = [w.upper() for w in words]
+print(upper)  # ['HELLO', 'WORLD']
+```
+
+:::tip 性能优势
+列表推导式通常比等价的 `for` 循环 + `append` 更快，因为推导式在 CPython 中通过专用字节码执行，省去了每次 `append` 的属性查找与方法调用开销。
+:::
+
+## 字典推导式
+
+字典推导式用花括号 `{}`，表达式写成 `键: 值`。
+
+```py title="Python"
+# 1. 数字到平方的映射
+squares = {x: x * x for x in range(5)}
+print(squares)  # {0: 0, 1: 1, 2: 4, 3: 9, 4: 16}
+
+# 2. 反转字典（键值互换）
+original = {"a": 1, "b": 2, "c": 3}
+reversed_map = {v: k for k, v in original.items()}
+print(reversed_map)  # {1: 'a', 2: 'b', 3: 'c'}
+
+# 3. 从两个列表构造字典
+keys = ["name", "age", "city"]
+values = ["Alice", 30, "北京"]
+person = {k: v for k, v in zip(keys, values)}
+print(person)  # {'name': 'Alice', 'age': 30, 'city': '北京'}
+```
+
+## 集合推导式
+
+集合推导式同样用花括号 `{}`，但表达式是单个值（不是 `键: 值`），自动去重。
+
+```py title="Python"
+# 1. 提取所有单词首字母并去重
+words = ["apple", "avocado", "banana", "cherry", "blueberry"]
+first_letters = {w[0] for w in words}
+print(first_letters)  # {'a', 'b', 'c'}
+
+# 2. 平方去重（负数和正数平方相同会被合并）
+squares = {x * x for x in range(-3, 4)}
+print(squares)  # {0, 1, 4, 9}
+
+# 3. 偶数集合
+nums = range(10)
+evens = {x for x in nums if x % 2 == 0}
+print(evens)  # {0, 2, 4, 6, 8}
+```
+
+:::warning 花括号的二义性
+`{x for x in ...}` 是集合推导式；`{x: y for ...}` 是字典推导式；`{}` 单独出现是空字典。没有"空集合推导式"——空集合只能用 `set()`。
+:::
+
+## 生成器表达式
+
+把列表推导式的方括号换成圆括号 `()`，就得到**生成器表达式**。它不一次性生成所有元素，而是按需逐个产出，节省内存。
+
+```py title="Python"
+# 列表推导式：立即生成完整列表
+squares_list = [x * x for x in range(5)]
+print(type(squares_list))  # <class 'list'>
+
+# 生成器表达式：惰性求值
+squares_gen = (x * x for x in range(5))
+print(type(squares_gen))  # <class 'generator'>
+
+# 逐个产出
+print(next(squares_gen))  # 0
+print(next(squares_gen))  # 1
+print(list(squares_gen))  # [4, 9, 16]  剩余的
+
+# 生成器只能迭代一次
+gen = (x * x for x in range(3))
+print(list(gen))  # [0, 1, 4]
+print(list(gen))  # []  已耗尽
+```
+
+:::tip 节省内存
+处理大文件、大数据时，用生成器表达式可以避免一次性把所有数据装入内存。最常见的用法是配合 `sum`、`max`、`min`、`any`、`all` 等聚合函数。
+:::
+
+```py title="Python"
+# 求和：生成器 vs 列表
+total_gen = sum(x * x for x in range(1_000_000))   # 几乎不占额外内存
+total_list = sum([x * x for x in range(1_000_000)]) # 先建大列表再求和
+
+# 配合 any/all 做存在性判断
+has_negative = any(x < 0 for x in [1, 2, -3, 4])  # True
+all_positive = all(x > 0 for x in [1, 2, 3])      # True
+```
+
+:::info 聚合函数里的括号可省
+当生成器表达式是函数的唯一参数时，外层圆括号可以省略：`sum(x for x in range(10))`。这让代码更简洁。
+:::
+
+## 嵌套推导式
+
+推导式可以嵌套多层 `for`，用于处理二维或更高维数据。
+
+```py title="Python"
+# 1. 扁平化二维列表
+matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+flat = [num for row in matrix for num in row]
+print(flat)  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+# 等价的循环写法
+flat2 = []
+for row in matrix:
+    for num in row:
+        flat2.append(num)
+print(flat2 == flat)  # True
+
+# 2. 构造二维列表（如 3x4 全零矩阵）
+zeros = [[0 for _ in range(4)] for _ in range(3)]
+print(zeros)  # [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+
+# 3. 笛卡尔积
+colors = ["红", "绿"]
+sizes = ["S", "M", "L"]
+combos = [(c, s) for c in colors for s in sizes]
+print(combos)
+# [('红', 'S'), ('红', 'M'), ('红', 'L'), ('绿', 'S'), ('绿', 'M'), ('绿', 'L')]
+```
+
+:::warning 阅读顺序
+嵌套推导式的 `for` 顺序与等价的嵌套循环顺序一致：从左到右对应从外到内。超过两层嵌套会严重影响可读性，建议改用显式循环。
+:::
+
+## 条件过滤
+
+在 `for` 之后加 `if 条件` 可过滤元素；在表达式位置加 `if-else` 可对值做条件选择。两者位置不同、含义不同。
+
+```py title="Python"
+nums = range(10)
+
+# 1. 过滤：if 放在 for 之后
+evens = [x for x in nums if x % 2 == 0]
+print(evens)  # [0, 2, 4, 6, 8]
+
+# 2. 选择表达式：if-else 放在 for 之前
+labels = ["偶" if x % 2 == 0 else "奇" for x in nums]
+print(labels)  # ['偶', '奇', '偶', '奇', ...]
+
+# 3. 多重过滤
+positive_evens = [x for x in nums if x > 0 if x % 2 == 0]
+print(positive_evens)  # [2, 4, 6, 8]
+
+# 4. 带过滤的字典推导式
+scores = {"Alice": 90, "Bob": 55, "Carol": 95, "Dave": 48}
+passed = {n: s for n, s in scores.items() if s >= 60}
+print(passed)  # {'Alice': 90, 'Carol': 95}
+```
+
+:::tip 两种 if 的区别
+- `if` 在 `for` **后面**：是**过滤器**，决定哪些元素被收集。
+- `if-else` 在 `for` **前面**（表达式里）：是**选择器**，决定每个元素收集什么值。
+两者经常被初学者混淆，请务必区分。
+:::
+
+## 平行遍历
+
+用 `zip` 平行遍历多个可迭代对象，是推导式中常见的模式。
+
+```py title="Python"
+names = ["Alice", "Bob", "Carol"]
+scores = [90, 85, 95]
+
+# 1. 配对成元组列表
+pairs = [(n, s) for n, s in zip(names, scores)]
+print(pairs)  # [('Alice', 90), ('Bob', 85), ('Carol', 95)]
+
+# 2. 构造字典
+grade_dict = {n: s for n, s in zip(names, scores)}
+print(grade_dict)  # {'Alice': 90, 'Bob': 85, 'Carol': 95}
+
+# 3. 同位置元素求和
+a = [1, 2, 3]
+b = [10, 20, 30]
+sums = [x + y for x, y in zip(a, b)]
+print(sums)  # [11, 22, 33]
+```
+
+:::info zip 与 enumerate
+- `zip(a, b)` 把多个序列按位置配对，长度以最短者为准。
+- `enumerate(seq)` 给元素加序号，是带索引遍历的标准做法。
+:::
+
+## 与 map / filter 对比
+
+`map` 和 `filter` 是函数式编程的函数式工具，推导式通常能以更易读的方式完成同样的事。
+
+```py title="Python"
+nums = range(10)
+
+# map：对每个元素应用函数
+squares_map = list(map(lambda x: x * x, nums))
+squares_comp = [x * x for x in nums]
+print(squares_map == squares_comp)  # True
+
+# filter：保留满足条件的元素
+evens_filter = list(filter(lambda x: x % 2 == 0, nums))
+evens_comp = [x for x in nums if x % 2 == 0]
+print(evens_filter == evens_comp)  # True
+
+# 组合：先 filter 后 map
+result_map = list(map(lambda x: x * x, filter(lambda x: x % 2 == 0, nums)))
+result_comp = [x * x for x in nums if x % 2 == 0]
+print(result_map == result_comp)  # True
+```
+
+:::tip 何时仍用 map/filter
+当函数已经以具名形式存在（如 `str.upper`、`int`），`map(str.upper, words)` 也清晰。但当逻辑需要 `lambda` 或多层嵌套时，推导式更直观、更 Pythonic。社区共识是：**优先推导式**。
+:::
+
+```py title="Python"
+# 这种情况 map 反而更短
+strs = list(map(str, [1, 2, 3]))
+strs2 = [str(x) for x in [1, 2, 3]]
+print(strs, strs2)  # ['1', '2', '3']
+```
+
+## Pythonic 风格
+
+### 何时用推导式
+
+推导式适合**简单、单一目的**的变换。一旦逻辑复杂，应优先考虑可读性。
+
+```py title="Python"
+# ✅ 简单变换：用推导式
+squares = [x * x for x in range(10)]
+upper_words = [w.upper() for w in words if w]
+
+# ❌ 过于复杂的推导式：可读性差
+result = [
+    transform(x) if condition(x) else default(x)
+    for sublist in data
+    for x in sublist
+    if validate(x)
+]
+# ✅ 改用显式循环更易读
+result = []
+for sublist in data:
+    for x in sublist:
+        if not validate(x):
+            continue
+        result.append(transform(x) if condition(x) else default(x))
+```
+
+:::warning 别为了短而短
+"一行代码"不是目的，**清晰**才是。如果一个推导式需要超过两三个 `for`/`if`，或者表达式嵌套很深，拆成循环或函数往往更好。PEP 8 与社区共识都强调：可读性优先。
+:::
+
+### 副作用陷阱
+
+推导式应保持"无副作用"——只做收集，不做额外的状态修改。
+
+```py title="Python"
+# ❌ 反模式：在推导式里做副作用
+nums = [1, 2, 3]
+total = 0
+# 不要这样写
+_ = [total := total + x for x in nums]  # 用海象运算符制造副作用
+# 虽然能跑，但意图不明
+
+# ✅ 直接用 sum
+total = sum(nums)
+print(total)  # 6
+```
+
+:::info 海象运算符 :=
+`:=`（海象运算符）可以在表达式内赋值。它有合理用途（如缓存计算结果避免重复调用），但**不要**用来在推导式里搞副作用编程，那会降低可读性。
+:::
+
+## 实战：矩阵转置
+
+下面用嵌套推导式实现矩阵转置（行列互换），这是推导式处理二维数据的经典应用。
+
+```py title="Python"
+from __future__ import annotations
+
+
+def transpose(matrix: list[list[int]]) -> list[list[int]]:
+    """转置二维矩阵：行变列、列变行。
+
+    例：
+        [[1, 2, 3],          [[1, 4, 7],
+         [4, 5, 6],    ->     [2, 5, 8],
+         [7, 8, 9]]           [3, 6, 9]]
+    """
+    if not matrix:
+        return []
+
+    rows = len(matrix)
+    cols = len(matrix[0])
+
+    # 用 zip 最简洁
+    # return [list(row) for row in zip(*matrix)]
+
+    # 等价的下标推导式
+    return [[matrix[r][c] for r in range(rows)] for c in range(cols)]
+
+
+def main() -> None:
+    matrix = [
+        [1, 2, 3],
+        [4, 5, 6],
+        [7, 8, 9],
+    ]
+
+    transposed = transpose(matrix)
+    print("原矩阵:")
+    for row in matrix:
+        print(row)
+    print("转置后:")
+    for row in transposed:
+        print(row)
+
+    # 非方阵也能转置
+    rect = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+    ]
+    rect_t = [list(row) for row in zip(*rect)]
+    print("\n2x4 矩阵转置为 4x2:")
+    for row in rect_t:
+        print(row)
+
+    # 用生成器表达式统计矩阵信息
+    flat = (x for row in matrix for x in row)
+    print(f"\n最大值: {max(flat)}")
+
+    # 注意：生成器已耗尽，需重新创建
+    total = sum(x for row in matrix for x in row)
+    print(f"所有元素之和: {total}")
+
+    # 推导式 + 条件：找出所有偶数及其位置
+    evens = [
+        (r, c, matrix[r][c])
+        for r in range(len(matrix))
+        for c in range(len(matrix[r]))
+        if matrix[r][c] % 2 == 0
+    ]
+    print(f"\n偶数位置: {evens}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+输出：
+
+```
+原矩阵:
+[1, 2, 3]
+[4, 5, 6]
+[7, 8, 9]
+转置后:
+[1, 4, 7]
+[2, 5, 8]
+[3, 6, 9]
+
+2x4 矩阵转置为 4x2:
+[1, 5]
+[2, 6]
+[3, 7]
+[4, 8]
+
+最大值: 9
+所有元素之和: 45
+
+偶数位置: [(0, 1, 2), (1, 0, 4), (1, 2, 6), (2, 1, 8)]
+```
+
+:::tip zip(*matrix) 的妙用
+`zip(*matrix)` 用星号解包把矩阵的每一行作为参数传给 `zip`，等价于按列重新组合，一行实现转置。这是 Python 中极其优雅的惯用法，配合列表推导式 `[list(row) for row in zip(*matrix)]` 即可完成转置。
+:::
+
+## 🎯 动手练习
+
+1. **列表推导式**：使用推导式生成 1-100 中所有能被 3 或 5 整除的数（FizzBuzz 前置）
+2. **字典推导式**：给定单词列表 `["apple", "banana", "cherry"]`，创建 `{单词: 长度}` 的字典
+3. **生成器表达式**：使用生成器表达式计算 1-1000 的平方和，对比与列表推导式的内存占用
+4. **矩阵转置**：使用 `zip(*matrix)` 和嵌套推导式两种方式实现 3x4 矩阵转置
+
+## 📚 延伸阅读
+
+- [PEP 202 - 列表推导式](https://peps.python.org/pep-0202/) - 列表推导式规范
+- [PEP 274 - 字典推导式](https://peps.python.org/pep-0274/) - 字典推导式规范
+- [PEP 289 - 生成器表达式](https://peps.python.org/pep-0289/) - 生成器表达式规范
+- [Python 函数式编程指南](https://docs.python.org/zh-cn/3/howto/functional.html) - map/filter/推导式对比
+
+## 📊 速查表
+
+| 类型 | 语法 | 示例 |
+|------|------|------|
+| 列表推导式 | `[expr for x in iter]` | `[x**2 for x in range(5)]` |
+| 字典推导式 | `{k: v for ...}` | `{x: x**2 for x in range(5)}` |
+| 集合推导式 | `{expr for ...}` | `{x**2 for x in range(5)}` |
+| 生成器表达式 | `(expr for ...)` | `(x**2 for x in range(5))` |
+| 条件过滤 | `[x for x if cond]` | `[x for x in range(10) if x%2==0]` |
+| 条件选择 | `[a if c else b for ...]` | `["偶" if x%2==0 else "奇" for x in range(5)]` |
+| 嵌套推导式 | `[expr for x for y]` | `[x for row in matrix for x in row]` |
+| zip 配对 | `[(a,b) for a,b in zip()]` | `[(n,s) for n,s in zip(names,scores)]` |
+| 聚合函数 | `sum/gen` | `sum(x**2 for x in range(10))` |
+
+## ✅ 本节总结
+
+- 推导式用一行从可迭代对象构造容器：`[]` 列表、`{}` 字典或集合、`()` 生成器
+- 列表推导式通常比 `for + append` 更快、更 Pythonic
+- 生成器表达式惰性求值，配合 `sum`/`max`/`any` 等聚合函数能省内存
+- 嵌套推导式的 `for` 顺序与嵌套循环一致；超过两层建议改用显式循环
+- `if` 在 `for` 后是**过滤**，`if-else` 在表达式里是**选择**，二者含义不同
+- `zip` 平行遍历、`enumerate` 带索引遍历是推导式中的常用搭档
+- 推导式优先于 `map`/`filter` + `lambda`，但复杂逻辑应优先可读性
+
+:::info 🔗 延伸学习
+推导式与生成器密切相关。如需深入了解生成器函数、`yield` 语法、惰性求值的高级应用（如无限序列、协程等），请参阅 **[生成器与迭代器](/docs/functions/generators)** 章节。
+:::

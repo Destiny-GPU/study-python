@@ -1,0 +1,784 @@
+---
+sidebar_position: 5
+sidebar_label: 'pathlib'
+title: 🧰 pathlib 路径库
+description: 掌握 PurePath 与 Path、路径拼接与属性、读写文件、glob/rglob 查找、目录遍历与 Python 3.12 的 walk 方法。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🧰 pathlib 路径库
+
+`pathlib` 是 Python 处理文件路径的现代工具。它把路径封装成对象，用 `/` 运算符拼接，用属性访问组件，用方法完成读写、查找、创建、删除等操作——告别 `os.path.join` 的字符串拼接时代。本章全面讲解 `pathlib`，并重点介绍 `Path.walk()` 等新特性。
+
+:::tip 🎯 本节要点
+- **PurePath vs Path**：纯路径（字符串操作）与具体路径（文件系统交互）的区别
+- **`/` 运算符**：路径拼接，比 `os.path.join` 更直观
+- **属性访问**：`name`、`stem`、`suffix`、`parent`、`parents`、`parts`
+- **修改组件**：`with_name`、`with_suffix`、`with_stem`（3.12+）、`with_parent`（3.12+）
+- **读写文件**：`read_text`/`write_text` 适合小文件，大文件用 `open()` 迭代
+- **glob/rglob**：模式匹配查找文件，`rglob` 递归，3.13+ 支持 `case_sensitive`
+- **Path.walk()**：Python 3.12 新增，返回 `Path` 对象，配合 `dirs[:] = [...]` 剪枝
+- **resolve vs absolute**：`resolve` 解析符号链接和 `.`/`..`，`absolute` 仅拼接当前目录
+- **relative_to(walk_up=True)**：3.12+ 支持向上回溯的相对路径计算
+:::
+
+:::info 与 file-handling 章节的关系
+入门教程中"路径处理"一章介绍了 `pathlib` 的基础用法。本章从标准库参考视角做更系统的讲解，重点补充 `PurePath` 体系、3.12 新方法、更复杂的遍历与实战。两章内容互补，可对照阅读。
+:::
+
+<PyodideRunner title="pathlib 快速体验">
+
+```python
+from pathlib import PurePosixPath, PureWindowsPath
+
+# PurePath：纯路径操作，不访问磁盘
+p = PurePosixPath("/home/user/docs/readme.txt")
+print(f"文件名: {p.name}")
+print(f"扩展名: {p.suffix}")
+print(f"父目录: {p.parent}")
+print(f"所有部分: {p.parts}")
+
+# 路径拼接
+base = PurePosixPath("/home/user")
+full = base / "docs" / "readme.txt"
+print(f"拼接结果: {full}")
+
+# 修改路径组件
+p = PurePosixPath("/home/user/docs/report.txt")
+print(f"换扩展名: {p.with_suffix('.md')}")
+print(f"换文件名: {p.with_name('summary.txt')}")
+
+# Windows 风格路径
+win = PureWindowsPath("C:/Users/Tom/file.txt")
+print(f"Windows路径: {win}")
+print(f"盘符: {win.drive}")
+```
+
+</PyodideRunner>
+
+## PurePath 与 Path
+
+`pathlib` 把路径分为两类：
+
+- `PurePath`：**纯路径**，不与文件系统交互，只做字符串层面的操作。又分 `PurePosixPath`（Linux 风格，用 `/`）和 `PureWindowsPath`（Windows 风格，用 `\`）。
+- `Path`：**具体路径**，继承自 `PurePath`，可与文件系统交互（`exists`、`stat`、`read_text` 等）。又分 `PosixPath` 和 `WindowsPath`。
+
+```py title="Python"
+from pathlib import PurePath, PurePosixPath, PureWindowsPath, Path
+
+# PurePath：纯字符串操作，不访问磁盘
+p = PurePosixPath("/home/user/docs/readme.txt")
+print(p.name)     # readme.txt
+print(p.parent)   # /home/user/docs
+
+# 在 Linux 上构造 Windows 风格路径
+win = PureWindowsPath("C:/Users/Tom/file.txt")
+print(win)        # C:\Users\Tom\file.txt
+print(win.drive)  # C:
+print(win.root)   # \
+
+# Path：可与文件系统交互
+real = Path("/home/user/docs/readme.txt")
+# real.exists()    # 真正访问磁盘
+# real.read_text() # 真正读取文件
+```
+
+:::tip 跨平台路径分析
+处理外部传来的路径（如配置文件、用户输入）但当前不访问文件系统时，用 `PurePath` 更明确——它表达"我只关心路径字符串的解析"。需要在不同平台上分析异种路径时，用 `PurePosixPath` 或 `PureWindowsPath` 显式指定风格。
+:::
+
+### 当前平台的 Path 类
+
+```py title="Python"
+from pathlib import Path, PosixPath, WindowsPath
+
+# Path() 在当前平台上返回 PosixPath 或 WindowsPath
+p = Path(".")
+print(type(p).__name__)
+# Linux/macOS: PosixPath
+# Windows: WindowsPath
+
+# PurePath 与 Path 的关系
+print(issubclass(PosixPath, PurePosixPath))  # True
+print(issubclass(WindowsPath, PureWindowsPath))  # True
+```
+
+:::warning 不能在 Windows 上实例化 PosixPath
+`PosixPath` 和 `WindowsPath` 是与系统绑定的具体类。在 Windows 上调用 `PosixPath(...)` 会抛 ` NotImplementedError`。需要跨平台分析路径字符串时，用 `PurePosixPath` / `PureWindowsPath`。
+:::
+
+## Path 构造
+
+```py title="Python"
+from pathlib import Path
+
+# 多种构造方式
+p1 = Path("readme.txt")                # 相对路径
+p2 = Path("/home/user/docs")           # 绝对路径
+p3 = Path()                            # 当前目录，等价于 Path(".")
+p4 = Path.home()                       # 用户主目录
+p5 = Path.cwd()                        # 当前工作目录
+
+# 多段拼接（构造时即可拼接）
+p6 = Path("/home", "user", "docs")     # /home/user/docs
+p7 = Path("/home") / "user" / "docs"   # /home/user/docs
+
+# 从 bytes 构造（解析系统原生字节路径）
+p8 = Path(b"/home/user")  # 等价于 Path(os.fsdecode(b"/home/user"))
+```
+
+## / 运算符拼接路径
+
+`Path` 重载了 `/` 运算符，让路径拼接像数学表达式一样自然：
+
+```py title="Python"
+from pathlib import Path
+
+base = Path("/home/user")
+docs = base / "docs"
+readme = docs / "readme.txt"
+
+print(readme)  # /home/user/docs/readme.txt
+
+# 与字符串拼接
+config = base / ".config" / "app.cfg"
+print(config)  # /home/user/.config/app.cfg
+
+# Path / Path 也行
+sub = Path("subdir")
+file = Path("file.txt")
+combined = sub / file
+print(combined)  # subdir/file.txt
+```
+
+:::tip / 运算符的优先级
+`/` 是二元运算符，优先级高于函数调用。可以放心写 `Path("/a") / "b" / "c"`，结果是 `/a/b/c`。但注意 `Path("/a/b/c")` 与 `Path("/a") / "b" / "c"` 等价，多段路径直接传给构造函数更简洁。
+:::
+
+## 路径属性：name / stem / suffix / parent
+
+`Path` 把路径的各个组成部分暴露为属性，比 `os.path.basename` 等函数更直观：
+
+```py title="Python"
+from pathlib import Path
+
+p = Path("/home/user/docs/readme.tar.gz")
+
+print(p.name)        # readme.tar.gz     完整文件名
+print(p.stem)        # readme.tar        不含最后一个扩展名
+print(p.suffix)      # .gz               最后一个扩展名
+print(p.suffixes)    # ['.tar', '.gz']   所有扩展名
+print(p.parent)      # /home/user/docs   父目录
+print(p.parents)    # <PosixPath.parents>
+print(list(p.parents))
+# [PosixPath('/home/user/docs'),
+#  PosixPath('/home/user'),
+#  PosixPath('/home'),
+#  PosixPath('/')]
+print(p.anchor)      # /                 根（盘符 + 根符）
+print(p.parts)       # ('/', 'home', 'user', 'docs', 'readme.tar.gz')
+print(p.as_posix())  # /home/user/docs/readme.tar.gz   始终用 / 分隔
+```
+
+### 修改路径组件
+
+```py title="Python"
+from pathlib import Path
+
+p = Path("/home/user/docs/readme.txt")
+
+# with_name：替换完整文件名
+print(p.with_name("intro.md"))      # /home/user/docs/intro.md
+
+# with_suffix：替换扩展名
+print(p.with_suffix(".md"))         # /home/user/docs/readme.md
+print(p.with_suffix(""))            # /home/user/docs/readme  去掉扩展名
+
+# with_stem：替换文件名（保留扩展名）  Python 3.12+
+print(p.with_stem("intro"))         # /home/user/docs/intro.txt
+
+# with_parent：替换父目录           Python 3.12+
+print(p.with_parent("/tmp"))         # /tmp/readme.txt
+```
+
+:::info Python 3.12 新增方法
+`with_stem` 和 `with_parent` 是 3.12 才加入的。在此之前，"保留扩展名换文件名"要写 `p.with_name(f"new_name{p.suffix}")`，"换父目录"要写 `Path("/tmp") / p.name`。新方法让这类常见操作更直观。
+:::
+
+## 读写文件：read_text / read_bytes / write_text
+
+`Path` 内置便捷读写方法，省去 `open()` 样板代码：
+
+```py title="Python"
+from pathlib import Path
+
+p = Path("greeting.txt")
+
+# 一次性写入文本（覆盖）
+p.write_text("你好，世界\n", encoding="utf-8")
+
+# 一次性读取文本
+content = p.read_text(encoding="utf-8")
+print(content)  # 你好，世界
+
+# 二进制读写
+p.write_bytes(b"\x89PNG\r\n\x1a\n")
+data = p.read_bytes()
+print(data)  # b'\x89PNG\r\n\x1a\n'
+
+# Python 3.10+ write_text 支持 newline 参数
+p.write_text("line1\nline2", encoding="utf-8", newline="")
+```
+
+:::warning 一次性操作的内存代价
+`read_text` / `read_bytes` / `write_text` / `write_bytes` 把整个文件读入或写入内存，**只适合中小文件**。处理 GB 级日志或大文件应使用 `open()` 迭代或分块读写：
+
+```py title="Python"
+# 大文件按行读取
+with Path("big.log").open(encoding="utf-8") as f:
+    for line in f:
+        process(line)
+```
+:::
+
+### 追加与上下文管理
+
+```py title="Python"
+from pathlib import Path
+
+p = Path("log.txt")
+
+# 追加模式：用 open
+with p.open("a", encoding="utf-8") as f:
+    f.write("新的一行\n")
+
+# open 完整支持 mode、encoding、buffering 等参数
+with p.open("r", encoding="utf-8") as f:
+    text = f.read()
+```
+
+## 文件查找：glob 与 rglob
+
+### glob：当前目录匹配
+
+```py title="Python"
+from pathlib import Path
+
+# 当前目录下所有 .py 文件
+for f in Path(".").glob("*.py"):
+    print(f)
+
+# 指定目录下的 Markdown 文件
+for f in Path("docs").glob("*.md"):
+    print(f)
+
+# 通配符
+for f in Path("data").glob("2025-*.csv"):
+    print(f)
+```
+
+### rglob：递归匹配
+
+`rglob` 递归进入所有子目录，等价于 `glob("**/pattern")`：
+
+```py title="Python"
+from pathlib import Path
+
+# 递归查找所有 .py 文件
+for f in Path(".").rglob("*.py"):
+    print(f)
+
+# 等价写法
+for f in Path(".").glob("**/*.py"):
+    print(f)
+
+# 多个模式：用 glob 分别匹配后合并
+patterns = ["*.py", "*.mdx", "*.ipynb"]
+all_files = []
+for pat in patterns:
+    all_files.extend(Path(".").rglob(pat))
+```
+
+:::tip 通配符规则
+- `*`：匹配任意字符（不跨目录分隔符）
+- `?`：匹配单个字符
+- `[abc]`：匹配字符集中任意一个
+- `[!abc]`：匹配不在字符集中的字符
+- `**`：跨目录匹配（必须配合 `rglob` 或 `glob("**/...")`）
+:::
+
+### Python 3.13 新参数
+
+```py title="Python"
+from pathlib import Path
+
+# Python 3.13 起 glob/rglob 支持 case_sensitive 参数
+# 此前大小写敏感性跟随系统（Linux 大小写敏感，Windows 不敏感）
+for f in Path(".").rglob("*.PY", case_sensitive=False):
+    print(f)
+```
+
+:::warning glob 结果未排序
+`Path.glob()` / `rglob()` 返回生成器，**顺序由文件系统决定，不保证稳定**。需要排序时显式调用：
+
+```py title="Python"
+for f in sorted(Path(".").rglob("*.py")):
+    print(f)
+```
+:::
+
+## 判断文件：exists / is_file / is_dir
+
+```py title="Python"
+from pathlib import Path
+
+p = Path("/home/user/docs/readme.txt")
+
+p.exists()             # 是否存在
+p.is_file()            # 是否是普通文件
+p.is_dir()             # 是否是目录
+p.is_symlink()         # 是否是符号链接
+p.is_socket()          # 是否是 socket 文件
+p.is_fifo()            # 是否是命名管道
+p.is_block_device()    # 是否是块设备
+p.is_char_device()     # 是否是字符设备
+```
+
+### 获取文件信息：stat
+
+```py title="Python"
+from pathlib import Path
+from datetime import datetime
+
+p = Path("readme.txt")
+st = p.stat()
+
+print(st.st_size)        # 文件大小（字节）
+print(st.st_mtime)        # 修改时间（时间戳）
+print(st.st_atime)        # 访问时间
+print(st.st_ctime)        # 创建时间 / 元数据变更时间
+print(st.st_mode)         # 权限模式
+
+# 时间戳转可读时间
+print(datetime.fromtimestamp(st.st_mtime))
+
+# resolve() 解析符号链接后再 stat
+print(p.resolve().stat().st_size)
+```
+
+### owner 与 group
+
+```py title="Python"
+from pathlib import Path
+import pwd  # 仅 Unix 可用
+
+p = Path("/etc/passwd")
+print(p.owner())   # root（Unix）
+# print(p.group())  # root
+```
+
+:::note Windows 上的 owner
+`Path.owner()` 在 Unix 上返回用户名，在 Windows 上需要 `win32security` 模块支持。跨平台脚本建议先判断 `os.name`。
+:::
+
+## 创建与删除：mkdir / rmdir / touch / unlink
+
+### 创建目录
+
+```py title="Python"
+from pathlib import Path
+
+# 单层目录
+Path("new_folder").mkdir()
+
+# 递归创建多层（类似 mkdir -p）
+Path("data/cache/logs").mkdir(parents=True, exist_ok=True)
+# parents=True：允许创建多层
+# exist_ok=True：目录已存在时不报错
+
+# 设置权限模式
+Path("secret").mkdir(mode=0o700)
+```
+
+:::warning 默认参数会报错
+`mkdir()` 默认 `parents=False, exist_ok=False`。父目录不存在或目标已存在都会抛异常。**实际开发中通常都加 `parents=True, exist_ok=True`**，避免琐碎的异常处理。
+:::
+
+### 创建与删除文件
+
+```py title="Python"
+from pathlib import Path
+
+# touch：创建空文件（已存在则更新时间戳）
+Path("empty.txt").touch()
+
+# unlink：删除文件
+Path("temp.txt").unlink(missing_ok=True)
+# missing_ok=True（3.8+）：文件不存在时不抛异常
+
+# rmdir：删除空目录（非空目录会抛 OSError）
+Path("empty_folder").rmdir()
+
+# 删除非空目录：仍需 shutil
+import shutil
+shutil.rmtree(Path("folder_with_files"))
+```
+
+### rename 与 replace
+
+```py title="Python"
+from pathlib import Path
+
+# rename：重命名/移动（目标存在时不同平台行为不同）
+Path("old.txt").rename("new.txt")
+
+# replace：原子性替换（目标存在则覆盖，跨平台行为一致）
+Path("temp.txt").replace("final.txt")
+
+# 移动到其他目录
+Path("file.txt").rename(Path("backup") / "file.txt")
+```
+
+:::tip rename vs replace
+`rename` 在目标已存在时行为依赖系统——Linux 上覆盖，Windows 上抛异常。`replace` 始终覆盖，行为跨平台一致。需要原子性、跨平台的替换优先用 `replace`。
+:::
+
+## Python 3.12 新特性：Path.walk()
+
+`Path.walk()` 是 Python 3.12 的重大新增，类似 `os.walk()` 但返回 `Path` 对象，更适合现代代码：
+
+### 自上而下遍历
+
+```py title="Python"
+from pathlib import Path
+
+for top, dirs, files in Path(".").walk():
+    print(f"目录：{top}")
+    for d in dirs:
+        print(f"  子目录：{d}")
+    for f in files:
+        print(f"  文件：{f}")
+```
+
+### Path 对象带来的便利
+
+与 `os.walk` 返回字符串不同，`Path.walk` 返回的 `top` 是 `Path`，可以直接用 `/` 拼接：
+
+```py title="Python"
+from pathlib import Path
+
+# 统计每个 Python 文件的行数
+for top, dirs, files in Path(".").walk():
+    for f in files:
+        if f.endswith(".py"):
+            full = top / f  # Path / str 自动拼接
+            line_count = sum(1 for _ in full.open(encoding="utf-8"))
+            print(f"{full}: {line_count} 行")
+```
+
+### 剪枝：修改 dirs 阻止递归
+
+```py title="Python"
+from pathlib import Path
+
+for top, dirs, files in Path(".").walk():
+    # 排除 .git 和 __pycache__（不进入它们）
+    dirs[:] = [d for d in dirs if d not in {".git", "__pycache__"}]
+
+    for f in files:
+        if f.endswith(".py"):
+            print(top / f)
+```
+
+:::tip 剪枝的秘密
+`Path.walk` 在每层把 `dirs` 列表传给回调代码，**就地修改 `dirs` 会影响后续遍历**。`dirs[:] = [...]` 是就地替换列表内容的惯用法。这是处理"忽略某些目录"最高效的方式——比遍历完再过滤省大量 I/O。
+:::
+
+### 自下而上遍历
+
+```py title="Python"
+from pathlib import Path
+
+# top_down=False：先处理子目录，再处理父目录
+# 适合"清空目录后删除目录本身"的场景
+for top, dirs, files in Path("temp_project").walk(top_down=False):
+    for f in files:
+        (top / f).unlink()
+    top.rmdir()
+```
+
+## 其他实用方法
+
+### resolve 与 absolute
+
+```py title="Python"
+from pathlib import Path
+
+p = Path("docs/../readme.txt")
+
+# absolute：仅拼接当前目录，不解析 . 和 ..
+print(p.absolute())  # /current/docs/../readme.txt
+
+# resolve：解析符号链接、. 、..，返回规范化绝对路径
+print(p.resolve())   # /current/readme.txt
+
+# strict=True（3.6+）：路径不存在时抛异常
+# p.resolve(strict=True)  # FileNotFoundError
+```
+
+### relative_to
+
+```py title="Python"
+from pathlib import Path
+
+base = Path("/home/user")
+full = Path("/home/user/docs/readme.txt")
+
+# 计算相对路径
+rel = full.relative_to(base)
+print(rel)  # docs/readme.txt
+
+# Python 3.12 支持walk_up=True：允许向上回溯
+other = Path("/home/other/file.txt")
+rel_up = other.relative_to(base, walk_up=True)
+print(rel_up)  # ../other/file.txt
+```
+
+:::info 3.12 的 walk_up
+此前 `relative_to` 严格要求 `other` 是 `base` 的后代，否则抛 `ValueError`。3.12 的 `walk_up=True` 允许跨越父目录返回 `../` 形式的相对路径，更贴近 `os.path.relpath`。
+:::
+
+### expanduser
+
+```py title="Python"
+from pathlib import Path
+
+# 展开 ~ 与 ~user
+p = Path("~/docs/readme.txt")
+print(p)               # ~/docs/readme.txt
+print(p.expanduser())  # /home/tom/docs/readme.txt
+```
+
+### iterdir
+
+```py title="Python"
+from pathlib import Path
+
+# 列举目录下所有条目（不递归）
+for entry in Path(".").iterdir():
+    print(entry)
+# PosixPath('./.git')
+# PosixPath('./docs')
+# PosixPath('./readme.md')
+# ...
+```
+
+## 实战：项目文件统计
+
+下面实现一个项目文件统计工具，综合运用 `Path.walk()`、`glob`、`stat`、`groupby`，分析 Python 项目的代码分布：
+
+```py title="Python"
+from pathlib import Path
+from collections import defaultdict
+from datetime import datetime
+import os
+
+
+def human_size(num: int) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if num < 1024:
+            return f"{num:.1f} {unit}"
+        num /= 1024
+    return f"{num:.1f} TB"
+
+
+def analyze_project(root: str | Path, ignore: set[str] | None = None) -> dict:
+    """
+    分析项目文件分布。
+    - 按扩展名统计文件数与总大小
+    - 找出最大的 N 个文件
+    - 统计 Python 文件总行数
+    """
+    if ignore is None:
+        ignore = {".git", "__pycache__", ".venv", "node_modules", ".pytest_cache"}
+
+    root = Path(root)
+    if not root.is_dir():
+        raise NotADirectoryError(f"{root} 不是目录")
+
+    by_ext: dict[str, list[tuple[Path, int]]] = defaultdict(list)
+    py_line_count = 0
+    ignored_count = 0
+
+    # Path.walk 剪枝忽略目录
+    for top, dirs, files in root.walk():
+        # 就地过滤被忽略的目录
+        dirs[:] = [d for d in dirs if d not in ignore]
+
+        for f in files:
+            full = top / f
+            try:
+                size = full.stat().st_size
+            except OSError:
+                continue
+
+            ext = full.suffix.lower() if full.suffix else "(无扩展名)"
+            by_ext[ext].append((full, size))
+
+            # 统计 Python 行数
+            if ext == ".py":
+                try:
+                    with full.open(encoding="utf-8") as fp:
+                        py_line_count += sum(1 for _ in fp)
+                except (OSError, UnicodeDecodeError):
+                    pass
+
+    # 汇总
+    summary = []
+    for ext, items in by_ext.items():
+        total_size = sum(size for _, size in items)
+        summary.append({
+            "ext": ext,
+            "count": len(items),
+            "total_size": total_size,
+            "human_size": human_size(total_size),
+        })
+    summary.sort(key=lambda x: x["total_size"], reverse=True)
+
+    # 最大的 5 个文件
+    all_files = [(p, s) for items in by_ext.values() for p, s in items]
+    largest = sorted(all_files, key=lambda x: x[1], reverse=True)[:5]
+
+    return {
+        "root": str(root.resolve()),
+        "scan_time": datetime.now().isoformat(timespec="seconds"),
+        "total_files": sum(item["count"] for item in summary),
+        "total_size": sum(item["total_size"] for item in summary),
+        "py_files": len(by_ext.get(".py", [])),
+        "py_lines": py_line_count,
+        "by_ext": summary,
+        "largest_files": [(str(p.relative_to(root)), human_size(s)) for p, s in largest],
+    }
+
+
+def print_report(report: dict) -> None:
+    print("=" * 70)
+    print(f"项目分析报告：{report['root']}")
+    print(f"扫描时间：{report['scan_time']}")
+    print("=" * 70)
+    print(f"总文件数：{report['total_files']}")
+    print(f"总大小：  {human_size(report['total_size'])}")
+    print(f"Python 文件：{report['py_files']} 个，共 {report['py_lines']} 行")
+    print()
+
+    print("-" * 70)
+    print(f"{'扩展名':<15} {'文件数':>8} {'总大小':>12}")
+    print("-" * 70)
+    for item in report["by_ext"]:
+        print(f"{item['ext']:<15} {item['count']:>8} {item['human_size']:>12}")
+
+    print()
+    print("-" * 70)
+    print("最大的 5 个文件：")
+    for path, size in report["largest_files"]:
+        print(f"  {size:>10}  {path}")
+
+
+if __name__ == "__main__":
+    # 在当前项目目录运行
+    import sys
+    target = sys.argv[1] if len(sys.argv) > 1 else "."
+    report = analyze_project(target)
+    print_report(report)
+```
+
+输出示例（在本项目根目录运行）：
+
+```text title="输出"
+======================================================================
+项目分析报告：/home/tom/MyProject/PythonProject/study-python/docs/docs
+扫描时间：2025-07-10T14:30:00
+======================================================================
+总文件数：87
+总大小：  245.6 KB
+Python 文件：0 个，共 0 行
+
+----------------------------------------------------------------------
+扩展名                   文件数       总大小
+----------------------------------------------------------------------
+.mdx                        87     245.6 KB
+.json                        5       2.3 KB
+
+----------------------------------------------------------------------
+最大的 5 个文件：
+     12.4 KB  standard-library/datetime.mdx
+     10.8 KB  standard-library/os.mdx
+      9.2 KB  standard-library/collections.mdx
+      ...
+```
+
+:::tip Path.walk 的剪枝威力
+上面的统计工具用 `dirs[:] = [...]` 一次剪掉 `.git`、`node_modules`、`.venv` 等目录，避免进入它们做无用的 `stat` 调用。在大项目上，这种剪枝能让扫描时间从分钟级降到秒级。
+:::
+
+## 🎯 动手练习
+
+1. **批量重命名**：用 `pathlib` 遍历目录，将所有 `.jpeg` 文件重命名为 `.jpg`
+2. **文件统计**：用 `Path.walk()` 统计项目中各类型文件的数量和总大小，忽略 `.git` 等目录
+3. **路径转换**：实现一个函数，将 Windows 风格路径转换为 Linux 风格（跨平台分析）
+4. **日志清理**：查找 7 天前的 `.log` 文件并删除，使用 `stat().st_mtime` 判断时间
+
+## 📊 速查表
+
+| 操作 | 方法 | 说明 |
+|------|------|------|
+| 构造路径 | `Path("/a/b/c")` | 多段直接传参 |
+| 用户目录 | `Path.home()` | 返回 `~` 展开后的路径 |
+| 当前目录 | `Path.cwd()` | 返回当前工作目录 |
+| 拼接路径 | `base / "sub" / "file.txt"` | `/` 运算符 |
+| 文件名 | `p.name` | 完整文件名 |
+| 无扩展名 | `p.stem` | 不含最后一个扩展名 |
+| 扩展名 | `p.suffix` / `p.suffixes` | 最后一个/所有扩展名 |
+| 父目录 | `p.parent` / `p.parents` | 单层/所有父目录 |
+| 替换文件名 | `p.with_name("new.txt")` | 保持目录不变 |
+| 替换扩展名 | `p.with_suffix(".md")` | 保持文件名不变 |
+| 替换 stem | `p.with_stem("new")` | Python 3.12+ |
+| 替换父目录 | `p.with_parent("/tmp")` | Python 3.12+ |
+| 读取文本 | `p.read_text(encoding="utf-8")` | 适合小文件 |
+| 写入文本 | `p.write_text(text, encoding="utf-8")` | 覆盖写入 |
+| 查找文件 | `p.glob("*.py")` | 当前层匹配 |
+| 递归查找 | `p.rglob("*.py")` | 递归所有子目录 |
+| 判断存在 | `p.exists()` / `p.is_file()` | 是否存在/是否文件 |
+| 文件信息 | `p.stat()` | 大小、时间、权限 |
+| 创建目录 | `p.mkdir(parents=True, exist_ok=True)` | 递归创建 |
+| 删除文件 | `p.unlink(missing_ok=True)` | 3.8+ 支持 missing_ok |
+| 删除空目录 | `p.rmdir()` | 非空目录抛异常 |
+| 重命名 | `p.rename(new)` | 目标存在时行为依赖系统 |
+| 原子替换 | `p.replace(new)` | 始终覆盖，跨平台一致 |
+| 规范化 | `p.resolve()` | 解析符号链接和 `.`/`..` |
+| 相对路径 | `p.relative_to(base, walk_up=True)` | 3.12+ 支持向上回溯 |
+| 展开 ~ | `p.expanduser()` | 展开用户主目录 |
+| 遍历目录 | `p.walk()` | Python 3.12+，返回 Path 对象 |
+
+## 📚 延伸阅读
+
+- **[pathlib 官方文档](https://docs.python.org/zh-cn/3/library/pathlib.html)** - 完整 API 参考
+- **[PEP 428](https://peps.python.org/pep-0428/)** - pathlib 模块规范
+- **[PEP 632](https://peps.python.org/pep-0632/)** - `os.path` 弃用建议（部分场景）
+- **[os.path vs pathlib](https://docs.python.org/zh-cn/3/library/os.html#os.path)** - 何时仍需要 os.path
+
+## 📝 本节总结
+
+- **`PurePath` 是纯路径类（不访问磁盘）**，`Path` 是具体路径类（可读写文件）；`PurePosixPath` / `PureWindowsPath` 显式指定风格
+- **`Path.home()` / `Path.cwd()` 是常用构造**，`/` 运算符让拼接直观可读
+- **路径组件用属性访问**：`name`、`stem`、`suffix`、`suffixes`、`parent`、`parents`、`anchor`、`parts`
+- **修改组件用 `with_name` / `with_suffix` / `with_stem`（3.12+） / `with_parent`（3.12+）**
+- **小文件读写用 `read_text` / `write_text`**，大文件用 `open()` 迭代
+- **`glob` 当前层查找，`rglob` 递归查找**，结果未排序需要 `sorted()`
+- **`exists` / `is_file` / `is_dir` 判断类型**，`stat()` 获取文件元数据
+- **`mkdir(parents=True, exist_ok=True)` 创建目录**，`unlink(missing_ok=True)` 删除文件，`replace` 原子替换
+- **Python 3.12 的 `Path.walk()` 是现代遍历利器**，配合 `dirs[:] = [...]` 剪枝性能极佳
+- **`resolve` 规范化路径**，`relative_to(walk_up=True)`（3.12+）支持跨父目录相对计算
+
+下一节将学习 `functools` 模块——`@cache`、`partial`、`reduce`、`singledispatch` 等函数工具。

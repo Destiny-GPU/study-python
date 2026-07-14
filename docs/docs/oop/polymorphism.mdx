@@ -1,0 +1,756 @@
+---
+sidebar_position: 3
+sidebar_label: '多态'
+title: 🏗️ 多态
+description: 学习鸭子类型、typing.Protocol 协议、运行时多态、方法重写与运算符重载，理解 Python 灵活的多态机制。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🏗️ 多态
+
+多态（polymorphism）指**同一接口在不同对象上表现出不同行为**。在 Python 中，多态并非通过严格的类型继承实现，而是更轻量、更灵活的"鸭子类型"——只要对象提供了所需的方法，就可以被当作某类对象使用。这种动态特性是 Python 简洁优雅的关键，让我们能写出"对扩展开放、对修改关闭"的高复用代码。
+
+:::tip 🎯 本节要点
+- 鸭子类型：不关心对象是什么类型，只关心它有什么方法
+- `typing.Protocol` 用类型注解描述鸭子类型，实现结构化子类型
+- 运行时多态：方法调用在运行时根据对象实际类型决定（动态分派）
+- 方法重写是经典多态形式，子类重写父类方法提供特定实现
+- 运算符重载通过魔术方法让自定义对象支持 `+`、`==`、`<` 等运算
+- 多态让代码"对扩展开放、对修改关闭"，优先用协议/鸭子类型而非 `isinstance` 分支
+:::
+
+<PyodideRunner title="多态快速体验">
+
+```python
+# 鸭子类型：不关心类型，只关心方法
+class Duck:
+    def quack(self):
+        return "嘎嘎！"
+
+class Person:
+    def quack(self):
+        return "我在学鸭子叫！"
+
+# 同一函数，不同对象，不同行为
+def make_it_quack(thing):
+    print(thing.quack())
+
+make_it_quack(Duck())
+make_it_quack(Person())
+
+# 运算符重载
+class Vector:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __add__(self, other):
+        return Vector(self.x + other.x, self.y + other.y)
+
+    def __repr__(self):
+        return f"Vector({self.x}, {self.y})"
+
+v1 = Vector(1, 2)
+v2 = Vector(3, 4)
+print(f"{v1} + {v2} = {v1 + v2}")
+```
+
+</PyodideRunner>
+
+## 鸭子类型
+
+> "如果它走起来像鸭子，叫起来像鸭子，那么它就是鸭子。"
+
+Python 不关心对象**是什么类型**，只关心它**有什么方法**。只要实现了需要的方法，就能用：
+
+```py title="Python"
+class PIDController:
+    def compute(self, state: float, target: float, dt: float = 0.01) -> float:
+        """PID 控制计算"""
+        error = target - state
+        return 0.5 * error  # 简化版 PID
+
+class LQRController:
+    def compute(self, state: float, target: float, dt: float = 0.01) -> float:
+        """LQR 最优控制计算"""
+        error = target - state
+        return 0.6 * error  # 简化版 LQR
+
+class SimpleController:
+    def compute(self, state: float, target: float, dt: float = 0.01) -> float:
+        """简单比例控制"""
+        error = target - state
+        return 0.3 * error
+
+def control_output(ctrl, state: float, target: float) -> float:
+    # 不关心 ctrl 是什么类型，只要有 compute 方法即可
+    return ctrl.compute(state, target)
+
+print(control_output(PIDController(), state=10.0, target=5.0))   # 输出：-2.5
+print(control_output(LQRController(), state=10.0, target=5.0))   # 输出：-3.0
+print(control_output(SimpleController(), state=10.0, target=5.0)) # 输出：-1.5
+```
+
+`PIDController`、`LQRController`、`SimpleController` 没有共同父类，但它们都实现了 `compute()`，因此都能传给 `control_output`。这就是鸭子类型——**多态不需要继承**。
+
+:::tip Pythonic 哲学
+相比 Java 等强类型语言，Python 的多态更关注**行为契约**而非**类型层级**。请求原谅比许可容易（EAFP：Easier to Ask Forgiveness than Permission），通常直接调用方法，再用 `try/except` 处理异常。
+:::
+
+### 鸭子类型示例：可迭代对象
+
+```py title="Python"
+def show_all(items) -> None:
+    """任何实现了 __iter__ 的对象都能传入。"""
+    for item in items:
+        print(item, end=" ")
+    print()
+
+show_all([1, 2, 3])         # 列表
+show_all(("a", "b", "c"))   # 元组
+show_all(range(5))           # range 对象
+show_all({"x": 1, "y": 2})  # 字典（迭代键）
+show_all(n for n in range(3))  # 生成器
+# 输出：
+# 1 2 3
+# a b c
+# 0 1 2 3 4
+# x y
+# 0 1 2
+```
+
+`show_all` 不关心参数是 list、tuple、range 还是 dict，只要支持迭代就能用。
+
+## `typing.Protocol`：结构化类型
+
+`Protocol` 让我们能**用类型注解描述鸭子类型**。它是"结构化子类型"——类不需要显式继承协议，只要结构（方法/属性）匹配就算符合：
+
+```py title="Python"
+from typing import Protocol, runtime_checkable
+
+
+@runtime_checkable  # 让协议支持 isinstance 检查
+class Controller(Protocol):
+    """任何具有 compute() 方法的对象都符合 Controller 协议。"""
+    def compute(self, state: float, target: float, dt: float = 0.01) -> float: ...
+
+
+class PIDController:
+    def compute(self, state: float, target: float, dt: float = 0.01) -> float:
+        return 0.5 * (target - state)
+
+class LQRController:
+    def compute(self, state: float, target: float, dt: float = 0.01) -> float:
+        return 0.6 * (target - state)
+
+class Drone:
+    def fly(self) -> str:
+        return "飞行中"
+
+
+def apply_control(ctrl: Controller, state: float, target: float) -> float:
+    return ctrl.compute(state, target)
+
+
+print(apply_control(PIDController(), state=10.0, target=5.0))  # 输出：-2.5
+print(apply_control(LQRController(), state=10.0, target=5.0))  # 输出：-3.0
+
+# Drone 不满足 Controller 协议（没有 compute 方法）
+# apply_control(Drone())  # 静态类型检查器会报错！
+
+# runtime_checkable 让 isinstance 可用（仅检查方法是否存在）
+print(isinstance(PIDController(), Controller))  # 输出：True
+print(isinstance(Drone(), Controller))          # 输出：False
+```
+
+:::note Protocol vs ABC
+- **ABC（抽象基类）**：名义子类型，子类必须**显式继承**。
+- **Protocol**：结构子类型，只要**结构匹配**就算符合，无需继承声明。
+
+Protocol 更接近 Python 的鸭子类型哲学，特别适合"我希望传入的对象有这些方法"的接口描述场景。
+:::
+
+### 协议的属性与方法
+
+```py title="Python"
+from typing import Protocol
+
+
+class Tunable(Protocol):
+    """描述可调参的对象：有 gains 属性和 tune 方法。"""
+    gains: np.ndarray
+
+    def tune(self, performance: float) -> None: ...
+
+
+class AdaptivePID:
+    def __init__(self, kp: float = 1.0, ki: float = 0.1, kd: float = 0.05) -> None:
+        self.gains = np.array([kp, ki, kd])
+
+    def tune(self, performance: float) -> None:
+        # 根据性能指标调整增益
+        self.gains *= (1.0 + 0.01 * performance)
+
+
+def optimize(ctrl: Tunable, perf: float) -> None:
+    ctrl.tune(perf)
+    print(f"调整后增益: {ctrl.gains}")
+
+
+pid = AdaptivePID(1.0, 0.1, 0.05)
+optimize(pid, perf=0.8)  # 输出：调整后增益: [1.008 0.1008 0.0504]
+```
+
+## 运行时多态
+
+Python 是动态语言，方法调用在**运行时**根据对象的实际类型决定调用哪个实现。这种"动态分派"是多态的底层机制：
+
+```py title="Python"
+
+
+class AttitudeController:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def stabilize(self) -> str:
+        return f"[{self.name}] 姿态稳定中：PID 三轴控制"
+
+class PositionController:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def stabilize(self) -> str:
+        return f"[{self.name}] 位置保持中：LQR 最优控制"
+
+class VelocityController:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def stabilize(self) -> str:
+        return f"[{self.name}] 速度调节中：前馈+反馈控制"
+
+
+# 运行时根据实际类型决定行为
+controllers = [
+    AttitudeController("姿态环"),
+    PositionController("位置环"),
+    VelocityController("速度环"),
+]
+for ctrl in controllers:
+    # 同样的 stabilize() 调用，不同对象不同行为
+    print(ctrl.stabilize())
+# 输出：
+# [姿态环] 姿态稳定中：PID 三轴控制
+# [位置环] 位置保持中：LQR 最优控制
+# [速度环] 速度调节中：前馈+反馈控制
+```
+
+### 多态 vs 类型判断
+
+新手容易写出"用 `if type ==` 分支"的反多态代码：
+
+```py title="Python"
+# ❌ 反模式：硬编码类型判断，扩展性差
+def stabilize_bad(ctrl) -> str:
+    if type(ctrl) is AttitudeController:
+        return f"[{ctrl.name}] 姿态稳定中：PID 三轴控制"
+    elif type(ctrl) is PositionController:
+        return f"[{ctrl.name}] 位置保持中：LQR 最优控制"
+    # 新增类型时必须改这里
+
+# ✅ 正确：依赖多态，依赖接口而非实现
+def stabilize_good(ctrl) -> str:
+    return ctrl.stabilize()  # 只要对象实现了 stabilize 方法即可
+```
+
+:::warning 别滥用 isinstance
+如果发现自己写了大量 `isinstance` 分支，可能违背了多态原则。更好的做法是让每个对象自己实现一个统一接口的方法，让多态帮你分派。
+:::
+
+## 方法重写实现多态
+
+子类重写父类方法是最经典的多态形式：
+
+```py title="Python"
+import numpy as np
+
+
+class Controller:
+    def compute(self, state: np.ndarray, target: np.ndarray) -> float:
+        raise NotImplementedError("子类必须实现 compute")
+
+    def describe(self) -> str:
+        return f"{type(self).__name__} 控制输出: {self.compute(np.zeros(3), np.zeros(3)):.4f}"
+
+class PIDController(Controller):
+    def __init__(self, kp: float = 1.0, ki: float = 0.1, kd: float = 0.05) -> None:
+        self.kp, self.ki, self.kd = kp, ki, kd
+
+    def compute(self, state: np.ndarray, target: np.ndarray) -> float:
+        error = np.linalg.norm(target - state)
+        return self.kp * error
+
+class LQRController(Controller):
+    def __init__(self, Q: float = 1.0, R: float = 0.1) -> None:
+        self.Q, self.R = Q, R
+
+    def compute(self, state: np.ndarray, target: np.ndarray) -> float:
+        error = np.linalg.norm(target - state)
+        gain = np.sqrt(self.Q / self.R)
+        return gain * error
+
+class MPCController(Controller):
+    def __init__(self, horizon: int = 10) -> None:
+        self.horizon = horizon
+
+    def compute(self, state: np.ndarray, target: np.ndarray) -> float:
+        error = np.linalg.norm(target - state)
+        # 简化的 MPC：按预测步长缩放
+        return error / np.sqrt(self.horizon)
+
+# 父类引用指向子类对象，调用时表现不同行为
+ctrls: list[Controller] = [
+    PIDController(1.0, 0.1, 0.05),
+    LQRController(1.0, 0.1),
+    MPCController(10),
+]
+state = np.array([1.0, 0.0, 0.3])   # 当前状态：位置 + 速度 + 姿态角
+target = np.array([0.0, 0.0, 0.0])  # 目标：悬停在原点
+
+for c in ctrls:
+    print(f"{type(c).__name__:15} 输出 = {c.compute(state, target):.4f}")
+# 输出：
+# PIDController     输出 = 1.0440
+# LQRController     输出 = 3.3014
+# MPCController     输出 = 0.3301
+```
+
+注意 `describe` 定义在 `Controller` 中，但调用 `self.compute()` 时实际执行的是子类的方法——这就是多态的精髓。
+
+## 运算符重载
+
+通过重写魔术方法，可以让自定义对象支持 `+`、`-`、`==`、`<` 等运算符。这也是一种多态：相同的运算符在不同对象上有不同含义。
+
+```py title="Python"
+import numpy as np
+
+
+class StateVector:
+    """飞行器状态向量：位置(x,y,z)、速度(vx,vy,vz)、姿态角(roll,pitch,yaw)。"""
+    def __init__(self, position: np.ndarray, velocity: np.ndarray, attitude: np.ndarray) -> None:
+        self.position = np.asarray(position, dtype=float)
+        self.velocity = np.asarray(velocity, dtype=float)
+        self.attitude = np.asarray(attitude, dtype=float)
+
+    # + 运算符：状态叠加
+    def __add__(self, other: "StateVector") -> "StateVector":
+        return StateVector(
+            self.position + other.position,
+            self.velocity + other.velocity,
+            self.attitude + other.attitude,
+        )
+
+    # - 运算符：状态偏差
+    def __sub__(self, other: "StateVector") -> "StateVector":
+        return StateVector(
+            self.position - other.position,
+            self.velocity - other.velocity,
+            self.attitude - other.attitude,
+        )
+
+    # == 运算符
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, StateVector):
+            return NotImplemented
+        return (
+            np.allclose(self.position, other.position)
+            and np.allclose(self.velocity, other.velocity)
+            and np.allclose(self.attitude, other.attitude)
+        )
+
+    # < 运算符：按总能量比较
+    def __lt__(self, other: "StateVector") -> bool:
+        return float(np.linalg.norm(self.velocity)) < float(np.linalg.norm(other.velocity))
+
+    # abs()：总状态范数
+    def __abs__(self) -> float:
+        return float(np.sqrt(
+            np.sum(self.position**2) + np.sum(self.velocity**2) + np.sum(self.attitude**2)
+        ))
+
+    def __repr__(self) -> str:
+        return f"StateVector(pos={self.position}, vel={self.velocity})"
+
+s1 = StateVector([1, 0, 0], [0.5, 0, 0], [0.1, 0, 0])
+s2 = StateVector([0, 1, 0], [0, 0.3, 0], [0, 0.2, 0])
+
+print(s1 + s2)          # 输出：StateVector(pos=[1. 1. 0.], vel=[0.5 0.3 0.])
+print(s1 - s2)          # 输出：StateVector(pos=[ 1. -1.  0.], vel=[0.5 -0.3  0.])
+print(s1 == StateVector([1, 0, 0], [0.5, 0, 0], [0.1, 0, 0]))  # 输出：True
+print(s2 < s1)           # 输出：True（s2 速度更小）
+print(abs(s1))           # 输出：1.1224...
+
+# 配合 max、sorted 等使用
+states = [s1, s2, StateVector([2, 0, 0], [1, 0, 0], [0, 0, 0])]
+print(max(states))       # 速度最大的状态
+print(sorted(states))   # 按速度排序
+```
+
+:::info 常用运算符方法
+| 运算符 | 方法        | 说明          |
+|--------|-------------|---------------|
+| `+`    | `__add__`   | 加法          |
+| `-`    | `__sub__`   | 减法          |
+| `*`    | `__mul__`   | 乘法          |
+| `/`    | `__truediv__`| 真除法        |
+| `//`   | `__floordiv__`| 整除        |
+| `**`   | `__pow__`   | 幂            |
+| `==`   | `__eq__`    | 相等          |
+| `<`    | `__lt__`    | 小于          |
+| `<=`   | `__le__`    | 小于等于      |
+| `>`    | `__gt__`    | 大于          |
+| `in`   | `__contains__`| 包含         |
+| `len()`| `__len__`   | 长度          |
+
+完整的魔术方法清单详见[魔术方法](./magic-methods.mdx)一节。
+:::
+
+### 反向运算符：`__radd__` 等
+
+当左操作数不支持运算时，Python 会尝试右操作数的反向方法：
+
+```py title="Python"
+
+
+class ForceVector:
+    """力向量：表示三轴控制力/力矩。"""
+    def __init__(self, fx: float = 0.0, fy: float = 0.0, fz: float = 0.0) -> None:
+        self.fx, self.fy, self.fz = fx, fy, fz
+
+    def __add__(self, other: "ForceVector") -> "ForceVector":
+        return ForceVector(self.fx + other.fx, self.fy + other.fy, self.fz + other.fz)
+
+    # 当 float + ForceVector 时，float 不支持 + ForceVector，会调用 ForceVector.__radd__
+    def __radd__(self, other: float) -> "ForceVector":
+        return ForceVector(other + self.fx, other + self.fy, other + self.fz)
+
+    def __repr__(self) -> str:
+        return f"ForceVector(fx={self.fx}, fy={self.fy}, fz={self.fz})"
+
+f = ForceVector(10.0, 5.0, 2.0)
+print(f + ForceVector(1.0, 1.0, 1.0))  # 输出：ForceVector(fx=11.0, fy=6.0, fz=3.0)  ← __add__
+print(0.5 + f)                           # 输出：ForceVector(fx=10.5, fy=5.5, fz=2.5)  ← __radd__
+```
+
+## 多态实战场景
+
+### 策略模式
+
+多态天然实现了策略模式——把算法封装到不同的类中，通过替换对象来切换策略：
+
+```py title="Python"
+from typing import Protocol
+
+
+class DisturbanceRejection(Protocol):
+    """扰动抑制策略：计算补偿力。"""
+    def compensate(self, disturbance: float) -> float: ...
+
+
+class NoRejection:
+    def compensate(self, disturbance: float) -> float:
+        return 0.0
+
+
+class ProportionalRejection:
+    """比例补偿：直接乘以增益。"""
+    def __init__(self, gain: float) -> None:
+        self.gain = gain
+
+    def compensate(self, disturbance: float) -> float:
+        return self.gain * disturbance
+
+
+class IntegralRejection:
+    """积分补偿：累积历史扰动。"""
+    def __init__(self, ki: float = 0.5) -> None:
+        self.ki = ki
+        self._integral = 0.0
+
+    def compensate(self, disturbance: float) -> float:
+        self._integral += disturbance
+        return self.ki * self._integral
+
+
+class FlightController:
+    def __init__(self, strategy: DisturbanceRejection | None = None) -> None:
+        self.strategy = strategy or NoRejection()
+        self._disturbances: list[float] = []
+
+    def add_disturbance(self, d: float) -> None:
+        self._disturbances.append(d)
+
+    def compute_compensation(self) -> float:
+        total = sum(self.strategy.compensate(d) for d in self._disturbances)
+        return total
+
+
+# 无补偿
+fc1 = FlightController()
+fc1.add_disturbance(5.0)
+fc1.add_disturbance(3.0)
+print(f"无补偿: {fc1.compute_compensation()}")  # 输出：无补偿: 0.0
+
+# 比例补偿（增益 2.0）
+fc2 = FlightController(ProportionalRejection(gain=2.0))
+fc2.add_disturbance(5.0)
+fc2.add_disturbance(3.0)
+print(f"比例补偿: {fc2.compute_compensation()}")  # 输出：比例补偿: 16.0
+
+# 积分补偿
+fc3 = FlightController(IntegralRejection(ki=0.5))
+fc3.add_disturbance(5.0)
+fc3.add_disturbance(3.0)
+print(f"积分补偿: {fc3.compute_compensation()}")  # 输出：积分补偿: 6.5
+```
+
+只要新的补偿类实现了 `compensate(disturbance)` 方法，就能直接接入，无需修改 `FlightController`——这就是"对扩展开放、对修改关闭"。
+
+### 内置多态：`len`、`print`、`for`
+
+Python 内置函数的多态性源于魔术方法：
+
+```py title="Python"
+
+
+class SignalBuffer:
+    """环形信号缓冲区：演示内置协议的多态。"""
+    def __init__(self, capacity: int = 10) -> None:
+        self._capacity = capacity
+        self._data: list[float] = []
+
+    def append(self, value: float) -> None:
+        if len(self._data) >= self._capacity:
+            self._data.pop(0)
+        self._data.append(value)
+
+    def __len__(self) -> int:           # 支持 len()
+        return len(self._data)
+
+    def __getitem__(self, i):           # 支持下标访问、切片、for 循环
+        return self._data[i]
+
+    def __contains__(self, item):       # 支持 in
+        return item in self._data
+
+    def __iter__(self):                 # 支持 iter()、for
+        return iter(self._data)
+
+    def __str__(self) -> str:           # 支持 print
+        return f"SignalBuffer({self._data})"
+
+buf = SignalBuffer(capacity=5)
+for v in [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]:
+    buf.append(v)
+
+print(len(buf))       # 输出：5  ← 多态：list、str、dict、SignalBuffer 都能用 len
+print(buf[2])          # 输出：4.0  ← 多态：list、tuple、str 都支持 [i]
+print(4.0 in buf)      # 输出：True
+print(buf[1:3])        # 输出：[3.0, 4.0]  ← 切片
+print(buf)             # 输出：SignalBuffer([2.0, 3.0, 4.0, 5.0, 6.0])
+for x in buf:
+    print(x, end=" ")  # 输出：2.0 3.0 4.0 5.0 6.0
+print()
+```
+
+## 实战：飞行控制系统
+
+综合运用协议、方法重写、运算符重载，实现一个完整的飞行控制系统：
+
+```py title="Python"
+from typing import Protocol
+
+
+class Controllable(Protocol):
+    """可控制协议：任何实现了 control 方法的对象都可以参与飞行控制。"""
+    def control(self, state: np.ndarray, target: np.ndarray) -> float: ...
+
+
+class Controller:
+    """控制器基类。"""
+    def __init__(self, name: str = "Base") -> None:
+        self.name = name
+
+    def control(self, state: np.ndarray, target: np.ndarray) -> float:
+        raise NotImplementedError
+
+    def describe(self) -> str:
+        return f"[{self.name}]"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(name={self.name!r})"
+
+    # 运算符重载：控制器 + 控制器 = 组合控制器
+    def __add__(self, other: "Controller") -> "CompositeController":
+        return CompositeController(self, other)
+
+
+class PIDController(Controller):
+    """PID 控制器：经典反馈控制。"""
+    def __init__(self, kp: float = 1.0, ki: float = 0.1, kd: float = 0.05) -> None:
+        super().__init__(f"PID(kp={kp})")
+        self.kp, self.ki, self.kd = kp, ki, kd
+        self._integral = 0.0
+        self._prev_error = 0.0
+
+    def control(self, state: np.ndarray, target: np.ndarray) -> float:
+        error = float(np.linalg.norm(target - state))
+        self._integral += error
+        derivative = error - self._prev_error
+        self._prev_error = error
+        return self.kp * error + self.ki * self._integral + self.kd * derivative
+
+
+class LQRController(Controller):
+    """LQR 最优控制器：基于状态反馈。"""
+    def __init__(self, Q: float = 1.0, R: float = 0.1) -> None:
+        super().__init__(f"LQR(Q={Q})")
+        self.Q, self.R = Q, R
+
+    def control(self, state: np.ndarray, target: np.ndarray) -> float:
+        error = float(np.linalg.norm(target - state))
+        gain = np.sqrt(self.Q / self.R)
+        return gain * error
+
+
+class MPCController(Controller):
+    """MPC 预测控制器：有限时域优化。"""
+    def __init__(self, horizon: int = 10) -> None:
+        super().__init__(f"MPC(horizon={horizon})")
+        self.horizon = horizon
+
+    def control(self, state: np.ndarray, target: np.ndarray) -> float:
+        error = float(np.linalg.norm(target - state))
+        return error / np.sqrt(self.horizon)
+
+
+class CompositeController:
+    """组合控制器：由多个控制器组成，本身也可参与控制。"""
+    def __init__(self, *controllers: Controller) -> None:
+        self.controllers: list[Controller] = list(controllers)
+
+    def control(self, state: np.ndarray, target: np.ndarray) -> float:
+        return sum(c.control(state, target) for c in self.controllers)
+
+    def describe(self) -> str:
+        names = " + ".join(c.describe() for c in self.controllers)
+        return names + f" = {self.control(np.zeros(3), np.zeros(3)):.4f}"
+
+    def __repr__(self) -> str:
+        return f"CompositeController({self.controllers})"
+
+    # 让 CompositeController 也支持 + 运算
+    def __add__(self, other: Controller) -> "CompositeController":
+        return CompositeController(*self.controllers, other)
+
+
+# 控制函数：依赖 Controllable 协议，不关心具体类型
+def run_control(items: list[Controllable], state: np.ndarray, target: np.ndarray) -> None:
+    print("=== 控制输出 ===")
+    for item in items:
+        output = item.control(state, target)
+        print(f"  {type(item).__name__:15} 输出 = {output:.4f}")
+
+
+# 创建控制器
+pid = PIDController(1.0, 0.1, 0.05)
+lqr = LQRController(1.0, 0.1)
+mpc = MPCController(10)
+
+# 当前状态：偏移 + 有速度 + 有姿态偏差
+state = np.array([2.0, 1.0, 0.5])
+target = np.array([0.0, 0.0, 0.0])
+
+# 单个控制器输出
+run_control([pid, lqr, mpc], state, target)
+# 输出：
+# === 控制输出 ===
+#   PIDController    输出 = 0.2575
+#   LQRController    输出 = 3.8079
+#   MPCController    输出 = 0.3808
+
+# 用 + 运算符组合控制器（多态 + 运算符重载）
+combo = pid + lqr + mpc  # 实际是 CompositeController(pid, lqr, mpc)
+print("\n--- 组合控制器 ---")
+print(f"组合输出 = {combo.control(state, target):.4f}")
+# 输出：组合输出 = 4.4462
+
+# 组合控制器也可以当作 Controllable 使用
+run_control([pid, combo], state, target)
+# 输出：
+# === 控制输出 ===
+#   PIDController       输出 = 0.2575
+#   CompositeController 输出 = 4.4462
+
+# 控制量统计也表现出多态
+all_ctrls: list = [pid, lqr, mpc, combo]
+print("\n--- 控制量统计 ---")
+total = 0.0
+for c in all_ctrls:
+    output = c.control(state, target)
+    print(f"{type(c).__name__:15} 输出 = {output:.4f}")
+    total += output
+print(f"控制量总和：{total:.4f}")
+```
+
+:::tip 组合优于继承
+注意 `CompositeController` 并没有继承 `Controller`，而是通过实现相同的 `control()` 方法满足 `Controllable` 协议——这是"组合优于继承"原则的体现。这样既能让 `CompositeController` 装下任意 `Controller`，又避免了为它强行捏造一个父类层级。
+:::
+
+## 🎯 动手练习
+
+1. **导航策略**：实现 `NavigationStrategy` 协议，支持 `DirectPath`、`ObstacleAvoidance`、`FuelOptimal` 三种导航方式，在 `Autopilot` 类中切换导航策略
+2. **可比较的传感器**：实现 `Sensor` 类，支持按精度、采样率、延迟比较，使用 `__lt__`、`__eq__`、`__gt__` 等魔术方法
+3. **插件系统**：设计 `Module` 协议，实现 `SensorModule`、`ActuatorModule`、`CommsModule`，在 `FlightSystem` 中动态加载模块
+4. **反向运算符**：实现 `Attitude` 类，支持 `Attitude + float` 和 `float + Attitude` 两种加法方式
+
+## 📚 延伸阅读
+
+- **设计模式**：策略模式、观察者模式、工厂模式在 Python 中的实现
+- **魔术方法**：完整的运算符重载清单，`__getattr__` vs `__getattribute__`
+- **类型系统进阶**：`typing.Generic` 泛型、`typing.TypeVar` 类型变量、`typing.overload` 重载
+- **ABC vs Protocol**：何时用名义子类型（ABC），何时用结构子类型（Protocol）
+
+## 📊 速查表
+
+| 概念 | 说明 | 示例 |
+|------|------|------|
+| 鸭子类型 | 关注行为而非类型 | 有 `compute()` 就能调用 |
+| Protocol | 结构化子类型 | `class Controller(Protocol): def compute(...) -> float: ...` |
+| runtime_checkable | 协议支持 isinstance | `@runtime_checkable class X(Protocol): ...` |
+| 动态分派 | 运行时决定调用哪个方法 | `obj.method()` 根据实际类型 |
+| 方法重写 | 子类重新定义父类方法 | `def compute(self, state, target) -> float: ...` |
+| 运算符重载 | 魔术方法支持运算符 | `__add__`、`__eq__`、`__lt__` |
+| 反向运算符 | 左操作数不支持时调用 | `__radd__` 处理 `float + obj` |
+| 策略模式 | 封装算法，替换对象切换策略 | `DisturbanceRejection.compensate(disturbance)` |
+| 组合优于继承 | 用 has-a 替代 is-a | `CompositeController` 实现 `Controllable` 协议 |
+| EAFP 原则 | 请求原谅比许可容易 | `try: obj.method() except AttributeError: ...` |
+
+## 📝 本节总结
+
+本节我们学习了多态机制，核心要点包括：
+
+- **鸭子类型是 Python 多态的核心**：不要求继承关系，只要有需要的方法就能用
+- **Protocol 描述行为契约**：`typing.Protocol` 让静态类型检查器理解结构化子类型
+- **运行时多态靠动态分派**：方法调用在运行时根据对象实际类型决定执行哪个实现
+- **方法重写是经典多态**：子类重写父类方法，同一接口表现出不同行为
+- **运算符重载扩展多态**：通过魔术方法让自定义对象支持内置运算符
+- **多态提升代码可扩展性**：新增类型无需修改调用方代码，对扩展开放、对修改关闭
+- **优先用协议而非 isinstance**：让对象自己实现统一接口，避免硬编码类型判断
+
+掌握多态后，你将能够写出高度灵活、易于扩展的代码。下一节将介绍**魔术方法**——Python 对象协议的核心，让自定义类像内置类型一样自然。
+
+:::info 🔗 延伸学习
+本节介绍了 `typing.Protocol` 的基础用法。如需深入了解 Protocol 的高级特性（如回调协议、可运行时检查的协议、Protocol 继承等），请参阅 **[类型提示与 Protocol](/docs/advanced/type-hints)** 章节。
+:::

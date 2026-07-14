@@ -1,0 +1,381 @@
+---
+sidebar_position: 6
+sidebar_label: 'eval 函数'
+title: 🚀 eval 函数与字符串解析
+description: 深入理解 eval 函数的原理、使用场景及安全风险，掌握字符串与代码边界的处理方法。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🚀 eval 函数与字符串解析
+
+`eval` 函数是 Python 中一个强大但危险的工具。它能将字符串作为 Python 代码执行，这既是它的"魔法"所在，也是潜在的安全隐患。本章深入探讨 `eval` 的原理、使用场景和安全替代方案。
+
+:::tip 🎯 本节要点
+- **eval 二次解析**：把字符串作为 Python 表达式解析并执行
+- **引号决定语义**：引号内是字符串，引号外是代码
+- **禁止 eval 用户输入**：存在代码注入风险
+- **ast.literal_eval**：安全的字面量解析器，适合处理配置数据
+- **json.loads**：处理 JSON 格式数据的最佳选择
+:::
+
+<PyodideRunner title="eval 函数快速体验">
+
+```python
+import ast
+
+# eval 执行表达式
+result = eval("2 + 3 * 4")
+print(f"eval 结果: {result}")
+
+# ast.literal_eval 安全解析字面量
+data = ast.literal_eval("{'name': '张三', 'age': 25}")
+print(f"安全解析: {data}")
+
+# ast.literal_eval 只接受字面量
+try:
+    ast.literal_eval("__import__('os').system('ls')")
+except ValueError as e:
+    print(f"安全拒绝: {e}")
+
+# 字符串转表达式
+def calculate(expression):
+    """安全地计算数学表达式"""
+    try:
+        # 只允许数字和基本运算符
+        allowed_chars = set("0123456789+-*/(). ")
+        if not all(c in allowed_chars for c in expression):
+            return "不允许的字符"
+        return eval(expression)
+    except Exception as e:
+        return f"计算错误: {e}"
+
+print(calculate("2 + 3"))
+print(calculate("10 * (5 - 2)"))
+print(calculate("import os"))  # 被拒绝
+```
+
+</PyodideRunner>
+
+## 问题背景
+
+```py title="Python"
+m = "1,2,3"
+
+# 写法 1：eval 方式
+a = eval("[" + m + "]")
+print(a)  # [1, 2, 3]
+
+# 写法 2：直接列表
+b = ["1,2,3"]
+print(b)  # ['1,2,3']
+
+# 写法 3：错误尝试
+c = [" + m + "]
+print(c)  # [' + m + ']
+```
+
+为什么三种写法结果不同？核心在于**字符串层级**和**代码层级**的区别。
+
+## eval 函数原理
+
+`eval(expression)` 将字符串作为 Python 表达式解析并执行：
+
+```py title="Python"
+eval("1 + 2")  # 3      —— 算术表达式
+eval("[1, 2, 3]")  # [1, 2, 3] —— 列表字面量
+eval("max(1, 2, 3)")  # 3      —— 函数调用
+```
+
+`eval` 会把字符串**二次解析**为 Python 代码，这是它的"魔法"也是危险所在。
+
+## 为什么三种写法结果不同？
+
+### 写法 1：`eval("[" + m + "]")`
+
+```py title="Python"
+m = "1,2,3"
+eval("[" + m + "]")
+```
+
+执行过程：
+
+1. **字符串拼接**：`"[" + "1,2,3" + "]"` → `"[1,2,3]"`（字符串）
+2. **eval 解析**：把字符串 `"[1,2,3]"` 当作**Python 代码**解析
+   - `[` 和 `]` → 列表边界
+   - `1, 2, 3` → 三个整数（逗号是分隔符）
+3. **返回**：真实的 list 对象 `[1, 2, 3]`
+
+### 写法 2：`["1,2,3"]`
+
+```py title="Python"
+a = ["1,2,3"]
+```
+
+Python 直接解析为列表字面量：
+- `[` 和 `]` → 列表边界
+- `"1,2,3"` → 一个字符串元素（引号内整体是字符串）
+- 结果：`['1,2,3']`（列表里有 1 个字符串元素）
+
+### 写法 3：`[" + m + "]`
+
+```py title="Python"
+c = [" + m + "]
+```
+
+Python 解析为列表字面量：
+- `" + m + "` → 一个字符串元素（引号内的 `m` 是字符，不是变量）
+- 结果：`[' + m + ']`
+
+### 类型对比
+
+| 写法 | 结果 | 元素类型 | 元素数量 |
+|------|------|----------|----------|
+| `eval("[" + m + "]")` | `[1, 2, 3]` | `int` | 3 |
+| `["1,2,3"]` | `['1,2,3']` | `str` | 1 |
+| `[" + m + "]` | `[' + m + ']` | `str` | 1 |
+
+## eval 的安全风险 ⚠️
+
+`eval` 的最大问题是它会执行任意 Python 代码。如果传入的字符串来自用户输入，可能导致严重的安全漏洞：
+
+```py title="Python"
+# 用户输入：1] + __import__('os').system('rm -rf /') + [1
+# 拼接后：[1] + __import__('os').system('rm -rf /') + [1]
+# eval 会执行系统命令！
+```
+
+:::danger 安全警告
+**禁止用 eval 处理用户输入**！恶意用户可以通过构造特殊字符串来执行任意代码，包括删除文件、获取系统信息等危险操作。
+:::
+
+## 安全替代方案
+
+### 方案 1：split() + 类型转换（推荐）
+
+对于简单的数据格式，使用 `split()` 配合类型转换是最安全、最清晰的方式：
+
+```py title="Python"
+m = "1,2,3"
+
+# 方案 1：split() + int()（推荐）
+a = [int(x) for x in m.split(",")]
+print(a)  # [1, 2, 3]
+
+# 处理浮点数
+m2 = "1.5,2.7,3.9"
+a2 = [float(x) for x in m2.split(",")]
+print(a2)  # [1.5, 2.7, 3.9]
+```
+
+### 方案 2：ast.literal_eval（仅解析字面量）
+
+`ast.literal_eval` 是 `eval` 的安全版本，它只解析 Python 字面量（字符串、数字、列表、字典、元组、布尔值、None），不执行任意代码：
+
+```py title="Python"
+import ast
+
+m = "1,2,3"
+a = list(ast.literal_eval(m))
+print(a)  # [1, 2, 3]
+
+# 支持更复杂的字面量
+data = '{"name": "Alice", "age": 25}'
+obj = ast.literal_eval(data)
+print(obj)  # {'name': 'Alice', 'age': 25}
+
+# 不会执行函数调用
+# ast.literal_eval("print('hello')")  # ValueError
+```
+
+:::tip ast.literal_eval vs eval
+`ast.literal_eval` 比 `eval` 安全，因为它只解析字面量，不执行函数调用或表达式求值。但它仍然能解析嵌套的字面量结构，是处理配置数据等场景的好选择。
+:::
+
+### 方案 3：json.loads（处理 JSON 格式）
+
+如果数据符合 JSON 格式，使用 `json.loads` 是最佳选择：
+
+```py title="Python"
+import json
+
+data = '[1, 2, 3]'
+a = json.loads(data)
+print(a)  # [1, 2, 3]
+
+data2 = '{"name": "Alice", "age": 25}'
+obj = json.loads(data2)
+print(obj)  # {'name': 'Alice', 'age': 25}
+```
+
+## eval 的合理使用场景
+
+虽然有安全风险，但 `eval` 在某些场景下仍然有用：
+
+### 场景 1：数学表达式计算器
+
+```py title="Python"
+def calculate(expression: str) -> float:
+    """简单的数学表达式计算器。"""
+    # 限制只能包含数字和运算符
+    allowed_chars = set("0123456789.+-*/() ")
+    if not all(c in allowed_chars for c in expression):
+        raise ValueError("不支持的字符")
+    
+    return eval(expression)
+
+
+print(calculate("1 + 2 * 3"))  # 7
+print(calculate("(1 + 2) * 3"))  # 9
+```
+
+### 场景 2：动态配置（内部使用）
+
+```py title="Python"
+# 内部配置文件，非用户输入
+config_str = """{
+    "debug": True,
+    "timeout": 30,
+    "threshold": 0.8
+}"""
+
+config = eval(config_str)
+print(config["debug"])  # True
+```
+
+### 场景 3：代码生成与测试（谨慎使用）
+
+:::warning `exec()` 的风险
+`exec()` 比 `eval()` 更危险，因为它可以执行任意语句（包括赋值、导入、循环等）。在生产代码中应尽量避免使用。
+:::
+
+```py title="Python"
+# 生成测试用例（仅用于演示，生产代码不推荐）
+for i in range(1, 6):
+    code = f"def test_{i}(): return {i} * 2"
+    exec(code)
+
+print(test_1())  # 2
+print(test_3())  # 6
+
+# ✅ 推荐方案：使用函数工厂模式替代 exec
+def make_test_func(multiplier):
+    def test_func():
+        return multiplier * 2
+    return test_func
+
+test_funcs = {f"test_{i}": make_test_func(i) for i in range(1, 6)}
+print(test_funcs["test_1"]())  # 2
+```
+
+## 常见误区
+
+### 误区 1：滥用 eval
+
+```py title="Python"
+# ❌ 错误：安全风险
+user_input = input("输入：")
+result = eval(user_input)
+
+# ✅ 正确：按需解析
+user_input = "1,2,3"
+result = [int(x) for x in user_input.split(",")]
+```
+
+### 误区 2：混淆字符串和代码
+
+```py title="Python"
+# ❌ 错误：字符串不会自动变成代码
+m = "1,2,3"
+a = ["1,2,3"]  # ['1,2,3'] 不是 [1, 2, 3]
+
+# ✅ 正确：显式转换
+a = [int(x) for x in m.split(",")]  # [1, 2, 3]
+```
+
+### 误区 3：用 eval 处理 JSON
+
+```py title="Python"
+# ❌ 不推荐：JSON 和 Python 语法有差异
+data = '{"name": "Alice", "age": 25}'
+obj = eval(data)  # 可能出错
+
+# ✅ 推荐：使用 json 模块
+import json
+obj = json.loads(data)
+```
+
+## 实战：安全的配置解析器
+
+```py title="Python"
+import ast
+from typing import Any
+
+
+def safe_parse_config(config_str: str) -> Any:
+    """安全解析配置字符串。"""
+    try:
+        return ast.literal_eval(config_str)
+    except (ValueError, SyntaxError):
+        raise ValueError(f"无效的配置格式: {config_str!r}")
+
+
+def parse_list_of_ints(input_str: str, delimiter: str = ",") -> list[int]:
+    """解析逗号分隔的整数列表。"""
+    parts = input_str.split(delimiter)
+    return [int(part.strip()) for part in parts if part.strip()]
+
+
+# 测试
+print(safe_parse_config('[1, 2, 3]'))  # [1, 2, 3]
+print(safe_parse_config('{"key": "value"}'))  # {'key': 'value'}
+print(parse_list_of_ints("10, 20, 30, 40"))  # [10, 20, 30, 40]
+
+# 安全测试
+try:
+    safe_parse_config("__import__('os').system('rm -rf /')")
+except ValueError as e:
+    print(f"安全拦截: {e}")
+```
+
+运行结果：
+
+```text title="输出"
+[1, 2, 3]
+{'key': 'value'}
+[10, 20, 30, 40]
+安全拦截: 无效的配置格式: "__import__('os').system('rm -rf /')"
+```
+
+## 🎯 动手练习
+
+1. **安全解析**：用 `ast.literal_eval` 替代 `eval` 解析用户输入的列表字符串
+2. **JSON 处理**：用 `json.loads` 解析 JSON 格式的字符串配置
+3. **字符串分割**：用 `split()` + 类型转换处理逗号分隔的数字字符串
+4. **风险评估**：分析一段使用 `eval` 的代码，指出潜在的安全风险
+
+## 📊 速查表
+
+| 操作 | 方法 | 安全性 | 适用场景 |
+|------|------|--------|----------|
+| 危险解析 | `eval(s)` | ❌ 危险 | 禁止用于用户输入 |
+| 安全解析 | `ast.literal_eval(s)` | ✅ 安全 | 字面量：列表、字典、元组 |
+| JSON 解析 | `json.loads(s)` | ✅ 安全 | JSON 格式数据 |
+| 字符串分割 | `s.split(',')` | ✅ 安全 | 简单分隔符数据 |
+| 类型转换 | `int(s)` / `float(s)` | ✅ 安全 | 单个数值转换 |
+
+## 📚 延伸阅读
+
+- **[eval() 官方文档](https://docs.python.org/zh-cn/3/library/functions.html#eval)** - 内置函数
+- **[ast.literal_eval](https://docs.python.org/zh-cn/3/library/ast.html#ast.literal_eval)** - 安全解析
+- **[json 模块](https://docs.python.org/zh-cn/3/library/json.html)** - JSON 处理
+
+## 📝 本节总结
+
+- **`eval` 会把字符串二次解析为 Python 代码**，这是它的"魔法"也是危险所在
+- **引号决定了语义**：引号内的内容是字符串，引号外的内容是代码
+- **禁止用 eval 处理用户输入**，改用 `split()` + 类型转换或 `ast.literal_eval`
+- **`ast.literal_eval` 是安全的字面量解析器**，适合处理配置数据
+- **`json.loads` 是处理 JSON 格式数据的最佳选择**
+
+理解字符串与代码的边界，能让你写出更安全、更清晰的代码。下一章我们将学习 Python 的哈希机制。

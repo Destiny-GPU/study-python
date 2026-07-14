@@ -1,0 +1,687 @@
+---
+sidebar_position: 3
+sidebar_label: 'collections'
+title: 🧰 collections 容器扩展
+description: 掌握 namedtuple、deque、ChainMap、Counter、OrderedDict、defaultdict 及 UserDict/UserList/UserString，写出更简洁高效的容器代码。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🧰 collections 容器扩展
+
+Python 内置的 `list`、`dict`、`set`、`tuple` 已经很强大，但在很多场景下仍需要更专门的容器：计数、双端队列、命名元组、默认值字典、链式查询字典……`collections` 模块正是这些"专精容器"的集合。本章逐一介绍它们，并对比 Python 3.7+ 字典天然有序这一关键变化。
+
+:::tip 🎯 本节要点
+- **namedtuple**：给元组起字段名，提升可读性；新代码推荐 `@dataclass(frozen=True)`
+- **deque**：双端队列，两端增删 O(1)，支持 `maxlen` 自动淘汰，适合队列/滑动窗口
+- **Counter**：计数器，`most_common` 取 Top-N，支持加减与集合运算
+- **defaultdict**：自动生成默认值，避免 `KeyError`，适合分组、计数、累积
+- **OrderedDict**：仍用于 LRU 缓存（`move_to_end`）、顺序敏感比较
+- **ChainMap**：串联多个字典，不复制数据，适合配置层级覆盖
+- **UserDict/UserList/UserString**：包装类扩展更安全，避免直接继承内置类型的"快捷路径"陷阱
+:::
+
+<PyodideRunner title="collections 快速体验">
+
+```python
+from collections import Counter, defaultdict, deque, namedtuple
+
+# Counter 计数器
+text = "hello world"
+counter = Counter(text)
+print(f"字符计数: {counter.most_common(3)}")
+
+# defaultdict 默认值字典
+word_groups = defaultdict(list)
+words = ["apple", "banana", "avocado", "blueberry", "cherry"]
+for word in words:
+    word_groups[word[0]].append(word)
+print(f"按首字母分组: {dict(word_groups)}")
+
+# deque 双端队列
+dq = deque([1, 2, 3])
+dq.appendleft(0)
+dq.append(4)
+print(f"deque: {dq}")
+print(f"左端弹出: {dq.popleft()}")
+
+# namedtuple 具名元组
+Point = namedtuple("Point", ["x", "y"])
+p = Point(3, 4)
+print(f"点: {p}, x={p.x}, y={p.y}")
+```
+
+</PyodideRunner>
+
+## namedtuple：具名元组
+
+普通元组用索引访问元素，可读性差：`point[0]` 是什么含义很难一眼看出。`namedtuple` 给元组的每个位置起一个名字：
+
+```py title="Python"
+from collections import namedtuple
+
+# 定义一个具名元组类型
+Point = namedtuple("Point", ["x", "y"])
+
+p = Point(3, 4)
+print(p.x, p.y)       # 3 4
+print(p[0], p[1])      # 3 4  仍可用索引
+print(p._asdict())     # {'x': 3, 'y': 4}  转字典
+print(p._fields)       # ('x', 'y')  字段名
+
+# 替换某字段（返回新对象，原对象不变）
+p2 = p._replace(x=10)
+print(p2)  # Point(x=10, y=4)
+print(p)   # Point(x=3, y=4)
+```
+
+### 用法场景
+
+```py title="Python"
+from collections import namedtuple
+
+# CSV / 数据库记录
+Employee = namedtuple("Employee", ["name", "department", "salary"])
+emp = Employee("Alice", "Engineering", 12000)
+print(f"{emp.name} 在 {emp.department}，月薪 {emp.salary}")
+
+# 用可读字段名替代魔法索引
+Color = namedtuple("Color", ["red", "green", "blue"])
+white = Color(255, 255, 255)
+print(f"白色 RGB=({white.red}, {white.green}, {white.blue})")
+```
+
+:::tip 优先用 dataclass
+`namedtuple` 仍然是元组，不可变且内存紧凑。但需要默认值、方法、类型注解时，`dataclass` 更现代：
+
+```py title="Python"
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Point:
+    x: float
+    y: float
+
+p = Point(3, 4)
+print(p.x, p.y)
+```
+
+`frozen=True` 让 dataclass 不可变，行为类似 namedtuple，但支持类型注解和默认值。新代码推荐 dataclass， namedtuple 适合与需要元组协议的旧代码交互。
+:::
+
+### 默认值与 _make
+
+```py title="Python"
+from collections import namedtuple
+
+# 默认值：用 defaults 参数，从右往左匹配
+Person = namedtuple("Person", ["name", "age", "city"])
+Person.__new__.__defaults__ = (18, "Beijing")
+# 等价于 namedtuple("Person", ..., defaults=[18, "Beijing"])
+
+p = Person("Alice")
+print(p)  # Person(name='Alice', age=18, city='Beijing')
+
+# 从可迭代对象创建
+data = ("Bob", 25, "Shanghai")
+p2 = Person._make(data)
+print(p2)  # Person(name='Bob', age=25, city='Shanghai')
+```
+
+## deque：双端队列
+
+`list` 在头部插入、删除是 O(n)，`deque`（double-ended queue）在两端都是 O(1)，适合队列、栈等场景：
+
+```py title="Python"
+from collections import deque
+
+# 创建
+d = deque([1, 2, 3])
+d.append(4)        # 右端入队：deque([1, 2, 3, 4])
+d.appendleft(0)    # 左端入队：deque([0, 1, 2, 3, 4])
+
+print(d.pop())         # 4  右端出队
+print(d.popleft())     # 0  左端出队
+print(d)               # deque([1, 2, 3])
+
+# 扩展
+d.extend([4, 5])       # 右端批量
+d.extendleft([0, -1])  # 左端批量（注意顺序：结果 [-1, 0, 1, 2, 3, 4, 5])
+print(d)  # deque([-1, 0, 1, 2, 3, 4, 5])
+```
+
+### 固定长度：自动淘汰旧元素
+
+`deque` 可以指定 `maxlen`，超过容量时自动从另一端丢弃元素，特别适合"保留最近 N 条记录"：
+
+```py title="Python"
+from collections import deque
+
+# 最多保留 3 条
+recent = deque(maxlen=3)
+for i in range(5):
+    recent.append(i)
+    print(recent)
+# deque([0], maxlen=3)
+# deque([0, 1], maxlen=3)
+# deque([0, 1, 2], maxlen=3)
+# deque([1, 2, 3], maxlen=3)
+# deque([2, 3, 4], maxlen=3)
+```
+
+### 旋转：rotate
+
+```py title="Python"
+from collections import deque
+
+d = deque([1, 2, 3, 4, 5])
+d.rotate(2)    # 右转 2 位
+print(d)  # deque([4, 5, 1, 2, 3])
+
+d.rotate(-1)   # 左转 1 位
+print(d)  # deque([5, 1, 2, 3, 4])
+```
+
+:::tip deque 的局限
+`deque` 中间插入、删除仍是 O(n)，不如 `list` 那样支持切片（`d[1:3]` 不行）。需要随机访问、切片操作就用 `list`；需要频繁头尾增删就用 `deque`。
+:::
+
+## Counter：计数器
+
+`Counter` 是 `dict` 的子类，专为"统计元素出现次数"设计：
+
+```py title="Python"
+from collections import Counter
+
+# 从可迭代对象创建
+c = Counter("abracadabra")
+print(c)  # Counter({'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1})
+
+# 从序列创建
+words = Counter(["apple", "banana", "apple", "cherry", "banana", "apple"])
+print(words)  # Counter({'apple': 3, 'banana': 2, 'cherry': 1})
+
+# 访问：不存在的键返回 0（不抛 KeyError）
+print(c["z"])  # 0
+
+# 最常见的 N 个
+print(c.most_common(3))  # [('a', 5), ('b', 2), ('r', 2)]
+```
+
+### 计数运算
+
+`Counter` 支持加减、交集、并集运算：
+
+```py title="Python"
+from collections import Counter
+
+a = Counter(a=3, b=2, c=1)
+b = Counter(a=1, b=2, d=4)
+
+# 加法：对应键计数相加
+print(a + b)  # Counter({'d': 4, 'a': 4, 'b': 4, 'c': 1})
+
+# 减法：计数相减，结果中保留非正数
+print(a - b)  # Counter({'a': 2, 'c': 1})
+
+# 交集：取较小计数
+print(a & b)  # Counter({'b': 2, 'a': 1})
+
+# 并集：取较大计数
+print(a | b)  # Counter({'d': 4, 'a': 3, 'b': 2, 'c': 1})
+```
+
+### 更新与删除
+
+```py title="Python"
+from collections import Counter
+
+c = Counter("aabbc")
+c.update("ab")        # 增加计数
+print(c)  # Counter({'a': 3, 'b': 3, 'c': 1})
+
+c.subtract("ab")      # 减少计数（可以变负数）
+print(c)  # Counter({'a': 2, 'b': 2, 'c': 1})
+
+del c["c"]            # 删除某键
+print(c)  # Counter({'a': 2, 'b': 2})
+
+c.clear()             # 清空
+print(c)  # Counter()
+```
+
+## defaultdict：默认值字典
+
+`dict` 访问不存在的键会抛 `KeyError`，`defaultdict` 在创建时指定"默认值工厂"，缺失时自动生成：
+
+```py title="Python"
+from collections import defaultdict
+
+# 默认值为 0
+counts = defaultdict(int)
+for word in ["apple", "banana", "apple"]:
+    counts[word] += 1   # 不存在时自动创建 0
+print(counts)  # defaultdict(<class 'int'>, {'apple': 2, 'banana': 1})
+
+# 默认值为空列表
+groups = defaultdict(list)
+pairs = [("fruit", "apple"), ("fruit", "banana"), ("veg", "carrot")]
+for category, item in pairs:
+    groups[category].append(item)
+print(groups)
+# defaultdict(<class 'list'>, {'fruit': ['apple', 'banana'], 'veg': ['carrot']})
+
+# 默认值为空集合
+unique = defaultdict(set)
+for word in ["apple", "banana", "apple"]:
+    unique[len(word)].add(word)
+print(unique)  # defaultdict(<class 'set'>, {5: {'apple'}, 6: {'banana'}})
+```
+
+### 自定义默认值工厂
+
+```py title="Python"
+from collections import defaultdict
+
+# 用 lambda 提供任意默认值
+config = defaultdict(lambda: "<unknown>")
+print(config["name"])  # <unknown>
+print(config["age"])   # <unknown>
+
+# 默认值为常量（注意：可变对象要小心）
+constant = defaultdict(lambda: 42)
+print(constant["x"])  # 42
+print(constant["y"])  # 42
+```
+
+:::warning 可变默认值的陷阱
+`defaultdict(list)` 每次创建新列表是安全的。但用 `defaultdict(lambda: some_shared_list)` 会让所有缺失键共享同一个对象，容易引发意外修改。需要常量默认值时用 `lambda`，需要独立容器时用对应类型。
+:::
+
+## OrderedDict：有序字典
+
+### dict 已有序
+
+普通 `dict` **保证插入顺序**——这与 `OrderedDict` 行为一致。多数场景下不需要再用 `OrderedDict`：
+
+```py title="Python"
+# 普通 dict 已保持插入顺序
+d = {}
+d["banana"] = 2
+d["apple"] = 1
+d["cherry"] = 3
+print(list(d.keys()))  # ['banana', 'apple', 'cherry']
+```
+
+### OrderedDict 仍有用武之地
+
+`OrderedDict` 仍有一些 `dict` 没有的功能：
+
+```py title="Python"
+from collections import OrderedDict
+
+od = OrderedDict()
+od["a"] = 1
+od["b"] = 2
+od["c"] = 3
+
+# move_to_end：把某键移到队首或队尾
+od.move_to_end("a")           # 移到末尾
+print(list(od.keys()))         # ['b', 'c', 'a']
+
+od.move_to_end("a", last=False)  # 移到开头
+print(list(od.keys()))         # ['a', 'b', 'c']
+
+# popitem：从指定端弹出
+print(od.popitem(last=True))   # ('c', 3)  从末尾弹
+print(od.popitem(last=False))  # ('a', 1)  从开头弹
+
+# 相等判断：OrderedDict 顺序敏感，dict 不敏感
+od1 = OrderedDict([("a", 1), ("b", 2)])
+od2 = OrderedDict([("b", 2), ("a", 1)])
+print(od1 == od2)  # False  顺序不同
+
+d1 = {"a": 1, "b": 2}
+d2 = {"b": 2, "a": 1}
+print(d1 == d2)  # True  普通字典忽略顺序
+```
+
+:::tip 何时仍用 OrderedDict
+- 需要 `move_to_end` 实现 LRU 缓存
+- 需要顺序敏感的相等判断
+- 需要明确表达"顺序是数据语义的一部分"
+
+实现 LRU 缓存时 `OrderedDict.move_to_end` 仍是关键工具。
+:::
+
+## ChainMap：链式查询字典
+
+`ChainMap` 把多个字典"串联"起来，查询时按顺序查找第一个出现的键：
+
+```py title="Python"
+from collections import ChainMap
+
+defaults = {"theme": "light", "lang": "en", "timeout": 30}
+user_config = {"theme": "dark"}
+runtime_config = {"timeout": 60}
+
+# 优先级：runtime > user > defaults
+config = ChainMap(runtime_config, user_config, defaults)
+
+print(config["theme"])    # dark（来自 user_config）
+print(config["lang"])      # en（来自 defaults）
+print(config["timeout"])   # 60（来自 runtime_config）
+
+# 修改只影响第一个映射
+config["lang"] = "zh"
+print(runtime_config)  # {'timeout': 60, 'lang': 'zh'}
+print(user_config)     # {'theme': 'dark'}  未受影响
+```
+
+### 适用场景
+
+```py title="Python"
+from collections import ChainMap
+import os
+
+# 配置优先级：环境变量 > 配置文件 > 默认值
+defaults = {"db_host": "localhost", "db_port": "5432", "debug": "false"}
+config_file = {"db_host": "db.prod", "debug": "true"}
+env_overrides = {k: v for k, v in os.environ.items() if k.startswith("APP_")}
+# 假设环境变量 APP_DB_HOST=...
+
+config = ChainMap(env_overrides, config_file, defaults)
+print(config["db_host"])
+```
+
+:::tip ChainMap vs dict 合并
+`{**a, **b, **c}` 也会合并字典，但会创建新字典，修改不会反映回原字典。`ChainMap` 不复制数据，仅维护查找链，修改也只作用于第一个映射。需要"配置层级覆盖"时 `ChainMap` 更合适。
+:::
+
+## UserDict / UserList / UserString
+
+直接继承 `dict` / `list` / `str` 时，子类必须重写所有修改方法才能让自定义逻辑生效——内置类型有 C 加速的"快捷路径"会绕过 `__setitem__`。`UserDict` 等包装类把内部数据存为 `data` 属性，所有操作都经过 `data`，方便扩展：
+
+```py title="Python"
+from collections import UserDict
+
+
+class CaseInsensitiveDict(UserDict):
+    """键不区分大小写的字典。"""
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key.lower(), value)
+
+    def __getitem__(self, key):
+        return super().__getitem__(key.lower())
+
+    def __contains__(self, key):
+        return super().__contains__(key.lower())
+
+    def __delitem__(self, key):
+        super().__delitem__(key.lower())
+
+
+d = CaseInsensitiveDict()
+d["Name"] = "Alice"
+print(d["name"])     # Alice
+print(d["NAME"])     # Alice
+print("NAME" in d)    # True
+del d["NaMe"]
+print("name" in d)   # False
+```
+
+:::warning 为什么不直接继承 dict
+直接继承 `dict` 时，`update()`、`__init__()`、`setdefault()` 等方法可能不走你重写的 `__setitem__`，导致大小写转换失效：
+
+```py title="Python"
+class BadDict(dict):
+    def __setitem__(self, key, value):
+        super().__setitem__(key.lower(), value)
+
+d = BadDict()
+d.update({"Name": "Alice"})  # update 没调用 __setitem__！
+print("name" in d)  # False  失败
+print("Name" in d)  # True  原样保留
+```
+
+`UserDict` 通过 `self.data` 间接保存，所有方法都经过它，扩展更安全。需要自定义字典行为时优先用 `UserDict`。
+:::
+
+### UserList 与 UserString
+
+```py title="Python"
+from collections import UserList, UserString
+
+
+class SortedList(UserList):
+    """始终保持有序的列表。"""
+    def append(self, item):
+        import bisect
+        bisect.insort(self.data, item)
+
+    def extend(self, other):
+        for item in other:
+            self.append(item)
+
+
+sl = SortedList([3, 1, 2])
+sl.append(1.5)
+print(sl)  # [1, 1.5, 2, 3]
+
+
+class WordString(UserString):
+    """字符串，提供单词计数。"""
+    @property
+    def word_count(self) -> int:
+        return len(self.data.split())
+
+
+s = WordString("hello world from python")
+print(s.word_count)  # 4
+print(s.upper())     # HELLO WORLD FROM PYTHON（继承字符串方法）
+```
+
+## 实战：LRU 缓存与词频统计
+
+下面用一个综合示例展示 `OrderedDict` 实现 LRU 缓存、`Counter` 做词频分析：
+
+```py title="Python"
+from collections import OrderedDict, Counter
+from time import time
+
+
+class LRUCache:
+    """
+    基于 OrderedDict 的 LRU（最近最少使用）缓存。
+    访问或写入会刷新条目的"最近使用"状态。
+    超过容量时淘汰最久未使用的条目。
+    """
+
+    def __init__(self, capacity: int):
+        self.capacity = capacity
+        self._data: OrderedDict = OrderedDict()
+        self.hits = 0
+        self.misses = 0
+
+    def __getitem__(self, key):
+        if key in self._data:
+            # 命中：移到末尾表示"最近使用"
+            self._data.move_to_end(key)
+            self.hits += 1
+            return self._data[key]
+        self.misses += 1
+        raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        if key in self._data:
+            # 已存在：更新值并移到末尾
+            self._data[key] = value
+            self._data.move_to_end(key)
+        else:
+            # 新键：可能需要淘汰
+            if len(self._data) >= self.capacity:
+                # popitem(last=False) 弹出最久未使用的（队首）
+                evicted_key, evicted_value = self._data.popitem(last=False)
+                print(f"  [淘汰] {evicted_key!r} -> {evicted_value!r}")
+            self._data[key] = value
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __len__(self):
+        return len(self._data)
+
+    def stats(self) -> dict:
+        total = self.hits + self.misses
+        hit_rate = self.hits / total if total else 0
+        return {
+            "size": len(self._data),
+            "capacity": self.capacity,
+            "hits": self.hits,
+            "misses": self.misses,
+            "hit_rate": f"{hit_rate:.1%}",
+        }
+
+
+# === 词频统计与 Top-N ===
+def analyze_text(text: str, top_n: int = 5) -> dict:
+    """统计文本词频，返回 Top-N 词与停用词过滤结果。"""
+    stop_words = {"the", "a", "an", "is", "of", "and", "to", "in", "it", "that"}
+
+    # 统计前规范化
+    words = (
+        text.lower()
+        .replace(",", " ")
+        .replace(".", " ")
+        .split()
+    )
+
+    # Counter 一步完成计数
+    counter = Counter(words)
+
+    # 减去停用词（Counter 减法）
+    stop_counter = Counter({w: counter[w] for w in stop_words if w in counter})
+    meaningful = counter - stop_counter
+
+    return {
+        "total_words": sum(counter.values()),
+        "unique_words": len(counter),
+        "top_words": meaningful.most_common(top_n),
+        "stop_word_count": sum(stop_counter.values()),
+    }
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("LRU 缓存测试")
+    print("=" * 60)
+    cache = LRUCache(capacity=3)
+
+    cache["a"] = 1
+    cache["b"] = 2
+    cache["c"] = 3
+    print("插入 a/b/c 后:", list(cache._data.keys()))
+
+    # 访问 a，a 变为最近使用
+    print("访问 a:", cache["a"])
+    print("访问 a 后:", list(cache._data.keys()))
+
+    # 插入 d，淘汰最久未使用的（b）
+    cache["d"] = 4
+    print("插入 d 后:", list(cache._data.keys()))
+
+    # 测试 b 是否已被淘汰
+    try:
+        cache["b"]
+    except KeyError:
+        print("b 已被淘汰")
+
+    # 再次访问 a 和 c
+    cache["a"]
+    cache["c"]
+    print("统计:", cache.stats())
+
+    print()
+    print("=" * 60)
+    print("词频统计测试")
+    print("=" * 60)
+    text = """
+    Python is a popular programming language. Python is used for
+    web development, data science, and automation. The language of
+    Python is known for its readability. Many developers love Python
+    because it is concise and powerful.
+    """
+    result = analyze_text(text, top_n=5)
+    for k, v in result.items():
+        print(f"{k}: {v}")
+```
+
+输出：
+
+```text title="输出"
+============================================================
+LRU 缓存测试
+============================================================
+插入 a/b/c 后: ['a', 'b', 'c']
+访问 a: 1
+访问 a 后: ['b', 'c', 'a']
+  [淘汰] 'b' -> 2
+插入 d 后: ['c', 'a', 'd']
+b 已被淘汰
+统计: {'size': 3, 'capacity': 3, 'hits': 4, 'misses': 1, 'hit_rate': '80.0%'}
+
+============================================================
+词频统计测试
+============================================================
+total_words: 36
+unique_words: 28
+top_words: [('python', 4), ('is', 3), ('language', 2), ('development,', 1), ('data', 1)]
+stop_word_count: 9
+```
+
+:::tip LRU 与 functools.lru_cache
+标准库 `functools.lru_cache` 已实现了带装饰器的 LRU 缓存，本章实现是为展示 `OrderedDict.move_to_end` 的原理。实际开发直接用 `@lru_cache` 装饰器即可。
+:::
+
+## 🎯 动手练习
+
+1. **词频统计**：用 `Counter` 统计一段英文文本的词频，过滤停用词后输出 Top-5
+2. **滑动窗口**：用 `deque(maxlen=N)` 实现滑动窗口平均值计算
+3. **配置管理**：用 `ChainMap` 实现"环境变量 > 配置文件 > 默认值"三级配置系统
+4. **不区分大小写字典**：用 `UserDict` 实现键不区分大小写的字典类
+
+## 📊 速查表
+
+| 容器 | 用途 | 关键特性 |
+|------|------|----------|
+| `namedtuple` | 具名元组 | 不可变、字段名访问、内存紧凑 |
+| `deque` | 双端队列 | 两端 O(1)、`maxlen` 自动淘汰 |
+| `Counter` | 计数器 | `most_common`、加减运算 |
+| `defaultdict` | 默认值字典 | 自动创建缺失键、避免 `KeyError` |
+| `OrderedDict` | 有序字典 | `move_to_end`、顺序敏感比较 |
+| `ChainMap` | 链式字典 | 多层级查询、不复制数据 |
+| `UserDict` | 字典包装类 | 安全扩展、所有方法经过 `data` |
+| `UserList` | 列表包装类 | 安全扩展、支持自定义 `append` |
+| `UserString` | 字符串包装类 | 安全扩展、可添加自定义方法 |
+
+## 📚 延伸阅读
+
+- **[collections 官方文档](https://docs.python.org/zh-cn/3/library/collections.html)** - 完整 API 参考
+- **[dataclass 文档](https://docs.python.org/zh-cn/3/library/dataclasses.html)** - 现代数据类替代 namedtuple
+- **[functools.lru_cache](https://docs.python.org/zh-cn/3/library/functools.html#functools.lru_cache)** - 标准库 LRU 缓存装饰器
+- **[Python 字典实现原理](https://docs.python.org/zh-cn/3/c-api/dict.html)** - CPython 字典底层机制
+
+## 📝 本节总结
+
+- **`namedtuple` 给元组起字段名**，提升可读性；新代码推荐 `@dataclass(frozen=True)` 替代
+- **`deque` 双端队列两端增删 O(1)**，支持 `maxlen` 自动淘汰，适合队列、栈、滑动窗口
+- **`Counter` 计数器**，`most_common` 取 Top-N，支持加减与集合运算（`&` 交集、`|` 并集）
+- **`defaultdict` 自动生成默认值**，避免 `KeyError`，适合分组、计数、累积场景
+- **`OrderedDict` 仍用于 LRU 缓存**（`move_to_end`）、顺序敏感比较；普通 `dict` 已在 3.7+ 保证插入顺序
+- **`ChainMap` 串联多个字典**，不复制数据，适合配置层级覆盖（环境变量 > 配置文件 > 默认值）
+- **`UserDict/UserList/UserString` 包装类扩展更安全**，所有方法都经过内部 `data`，避免直接继承内置类型的"快捷路径"陷阱
+
+理解字典和集合的底层哈希机制，请参阅[哈希机制详解](../advanced/hash-mechanism.mdx)一章。
+
+下一节将学习 `itertools` 模块——`chain`、`product`、`combinations`、`groupby` 等迭代工具，让迭代代码更简洁高效。

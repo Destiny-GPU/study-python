@@ -1,0 +1,434 @@
+---
+sidebar_position: 2
+sidebar_label: '第一个程序'
+title: 🛠️ 第一个 Python 程序
+description: 编写并运行你的第一个 Python 程序，认识 print 函数、注释与 REPL 交互式环境。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🛠️ 第一个 Python 程序
+
+环境搭好之后，我们来真正写一段代码。本章会带你完成三件事：写出第一个 Python 程序、读懂它的每一行、并学会用 REPL 进行即时实验。
+
+:::tip 🎯 本节要点
+- `print()` 是最常用的内置函数，支持 `sep`、`end` 等参数
+- f-string（`f"..."`）是现代 Python 推荐的字符串格式化方式
+- 注释：单行用 `#`，多行用三引号字符串（本质是字符串字面量）
+- 文档字符串（docstring）放在函数/类/模块开头，可通过 `help()` 访问
+- 运行程序：`python3 文件名.py` 或通过 shebang 直接执行
+- `sys.argv` 接收命令行参数，`argv[0]` 是脚本名
+- REPL 交互式环境适合快速实验，`python3` 进入，`exit()` 退出
+:::
+
+## 编写 Hello, World!
+
+在你喜欢的目录下新建一个文件，命名为 `hello.py`，输入下面这行代码：
+
+```py title="Python"
+print("Hello, World!")
+```
+
+保存后，在终端中切换到该文件所在目录，执行：
+
+```bash title="Shell"
+python3 hello.py
+```
+
+你会看到：
+
+```text title="输出"
+Hello, World!
+```
+
+恭喜你，这就是你的第一个 Python 程序！虽然只有一行，但它已经是一个完整、可运行的 Python 程序。
+
+:::tip 文件命名建议
+Python 源文件以 `.py` 为扩展名。文件名应使用小写字母加下划线（snake_case），如 `hello_world.py`、`calc_tax.py`，避免使用空格和中文字符。
+:::
+
+## 认识 print 函数
+
+`print()` 是 Python 中最常用的内置函数之一，用于向标准输出（通常是终端）打印内容。它远比看上去灵活：
+
+```py title="Python"
+# 1. 打印字符串
+print("你好，Python")
+
+# 2. 打印多个值（默认用空格分隔）
+print("姓名:", "张三", "年龄:", 18)
+# 输出：姓名: 张三 年龄: 18
+
+# 3. 自定义分隔符 sep
+print("2025", "07", "10", sep="-")
+# 输出：2025-07-10
+
+# 4. 自定义结尾符 end（默认是换行 \n）
+print("加载中", end="...")
+print("完成")
+# 输出：加载中...完成
+
+# 5. 打印任意类型
+print(3.14)
+print([1, 2, 3])
+print({"name": "Tom", "role": "admin"})
+```
+
+运行结果：
+
+```text title="输出"
+你好，Python
+姓名: 张三 年龄: 18
+2025-07-10
+加载中...完成
+3.14
+[1, 2, 3]
+{'name': 'Tom', 'role': 'admin'}
+```
+
+### f-string：格式化字符串
+
+打印变量最方便的方式是 f-string。在字符串前加 `f`，并用 `{}` 包裹表达式即可：
+
+```py title="Python"
+name = "张三"
+age = 18
+height = 1.75
+
+# 基本用法：{} 内可放变量或表达式
+print(f"我叫{name}，今年{age}岁")
+
+# 支持表达式和格式说明符
+print(f"明年我{age + 1}岁")
+print(f"身高 {height:.2f} 米")   # 保留两位小数
+print(f"{'居中':=^10}")           # 用 = 填充并居中，宽度 10
+```
+
+输出：
+
+```text title="输出"
+我叫张三，今年18岁
+明年我19岁
+身高 1.75 米
+===居中====
+```
+
+:::tip Python 3.12 f-string 增强
+从 3.12 起，f-string 内部的引号不再受外层限制，可以嵌套同样的引号：
+
+```py title="Python"
+names = ["张三", "李四"]
+print(f"名单：{", ".join(names)}")
+# 输出：名单：张三, 李四
+```
+
+在 3.12 之前，上面这行会报错，必须用不同引号区分内外层。
+:::
+
+## 注释
+
+注释是写给"未来的自己"和"同事"看的，解释器会忽略它们。Python 支持**单行注释**和**多行注释**两种形式。
+
+### 单行注释
+
+以 `#` 开头，从 `#` 到行末的内容都被忽略：
+
+```py title="Python"
+# 这是一行注释，解释器会忽略它
+print("hello")  # 行尾注释：打印问候语
+```
+
+### 多行注释（字符串字面量）
+
+Python 没有专门的多行注释语法，通常用三个引号包裹的字符串来充当：
+
+```py title="Python"
+"""
+这是一段多行注释。
+通常用于描述脚本的功能、作者、用法等。
+解释器会把它当作一个普通的字符串字面量。
+"""
+print("程序开始运行")
+```
+
+:::warning 多行注释的本质
+严格来说，三个引号包裹的是**字符串字面量**，并不是真正的注释。当它作为模块/函数/类的第一条语句时，会变成**文档字符串（docstring）**，可以通过 `help()` 或 `__doc__` 访问。如果你只是想注释掉一段代码，每行加 `#` 更安全。
+:::
+
+### 文档字符串（docstring）
+
+把多行字符串放在函数、类或模块的开头，就成了文档字符串。它是 Python 推荐"代码即文档"的体现：
+
+```py title="Python"
+def greet(name: str) -> str:
+    """返回一句问候语。
+
+    Args:
+        name: 被问候者的名字。
+
+    Returns:
+        一句问候字符串。
+    """
+    return f"你好，{name}！"
+
+print(greet("世界"))
+# 在交互式环境输入 help(greet) 可以看到上面的文档
+```
+
+## 运行程序
+
+### 命令行运行
+
+最常见的方式是用 `python3` 命令执行脚本文件：
+
+```bash title="Shell"
+python3 hello.py
+```
+
+你也可以在文件名前加 `./` 让脚本直接可执行（仅限类 Unix 系统）。在文件第一行加入 **shebang**，并赋予可执行权限：
+
+```py title="Python"
+#!/usr/bin/env python3
+
+print("Hello, World!")
+```
+
+```bash title="Shell"
+chmod +x hello.py
+./hello.py
+```
+
+### 传递命令行参数
+
+`sys.argv` 是一个列表，保存了命令行传入的参数。`argv[0]` 是脚本名，`argv[1]` 起是后续参数：
+
+```py title="Python"
+import sys
+
+print(f"脚本名：{sys.argv[0]}")
+print(f"参数列表：{sys.argv[1:]}")
+```
+
+运行：
+
+```bash title="Shell"
+python3 args_demo.py alice 30 admin
+```
+
+输出：
+
+```text title="输出"
+脚本名：args_demo.py
+参数列表：['alice', '30', 'admin']
+```
+
+:::note 更优雅的命令行工具
+手动解析 `sys.argv` 适合简单场景。对于复杂参数，推荐使用标准库 `argparse`，或第三方库 `typer`。后续"模块与包"章节会专门讲解。
+:::
+
+## REPL：交互式环境
+
+除了写文件再运行，Python 还提供了一个**交互式解释器**，叫 REPL（Read-Eval-Print Loop，读取-求值-打印 循环）。在终端输入 `python3` 不带任何参数即可进入：
+
+```bash title="Shell"
+python3
+```
+
+你会看到类似这样的提示符：
+
+```text title="输出"
+Python 3.12.7 (main, Oct  1 2024, 08:00:00) [GCC 13.2.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+```
+
+`>>>` 是主提示符，表示可以输入语句；在缩进的代码块内部会变成 `...`（次要提示符）。直接输入表达式即可看到结果：
+
+```py title="Python"
+>>> 2 + 3
+5
+>>> print("hello")
+hello
+>>> name = "Python"
+>>> name.upper()
+'PYTHON'
+```
+
+:::tip Python 3.13 REPL 大升级
+Python 3.13 大幅改进了 REPL 体验：
+
+- 支持**多行编辑**（按方向键移动光标）
+- 默认带**彩色**输出
+- 可以用 `Ctrl+R` 历史搜索
+- 直接输入 `exit` / `quit` 即可退出（不再需要括号）
+- 粘贴大段代码时自动禁用 `...` 提示符
+:::
+
+### REPL 中的实用技巧
+
+```py title="Python"
+# 1. 查看一个对象的所有方法
+>>> name = "Python"
+>>> dir(name)
+['__add__', '__class__', ... 'upper', 'zfill']
+
+# 2. 查看帮助
+>>> help(str.upper)
+
+# 3. 使用下划线 _ 引用上一个表达式的结果
+>>> 100 * 2
+200
+>>> _ + 1
+201
+
+# 4. 退出
+>>> exit()
+```
+
+:::warning 缩进错误
+REPL 中输入多行结构（如函数、循环）时，必须保持一致的缩进。结束多行输入后，按一次回车即可执行：
+
+```py title="Python"
+>>> for i in range(3):
+...     print(i)
+...
+0
+1
+2
+```
+
+注意 `...` 后面的空格缩进，以及最后一行额外的空回车。
+:::
+
+## 实战：个性化问候程序
+
+把学到的 `print`、f-string、注释、命令行参数组合起来，写一个个性化问候小程序。新建 `greeting.py`：
+
+```py title="Python"
+#!/usr/bin/env python3
+"""个性化问候小程序。
+
+用法：
+    python3 greeting.py [名字]
+"""
+
+import sys
+import datetime
+
+
+def main() -> None:
+    # 从命令行参数获取名字，缺省时用"世界"
+    name = sys.argv[1] if len(sys.argv) > 1 else "世界"
+
+    # 根据当前小时判断时段
+    hour = datetime.datetime.now().hour
+    if 5 <= hour < 12:
+        period = "早上好"
+    elif 12 <= hour < 18:
+        period = "下午好"
+    else:
+        period = "晚上好"
+
+    # 用 f-string 拼接并打印
+    print(f"{period}，{name}！👋")
+    print(f"现在是 {datetime.datetime.now():%Y-%m-%d %H:%M:%S}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+运行效果：
+
+```bash title="Shell"
+# 不传参数
+python3 greeting.py
+# 输出示例：
+# 晚上好，世界！👋
+# 现在是 2025-07-10 20:35:12
+
+# 传参数
+python3 greeting.py 张三
+# 输出示例：
+# 晚上好，张三！👋
+# 现在是 2025-07-10 20:35:20
+```
+
+:::info if __name__ == "__main__" 是什么
+这行是 Python 的"程序入口"惯用写法。当一个 `.py` 文件被直接运行时，它的 `__name__` 等于 `"__main__"`，于是 `main()` 会被执行；而当它被其他模块 `import` 时，`__name__` 是模块名，`main()` 不会自动执行。这样可以让同一个文件既能作为脚本运行，又能作为模块被复用。后续"模块与包"章节会深入讲解。
+:::
+
+## 🎯 动手练习
+
+1. **Hello 程序**：创建 `hello.py`，打印 "Hello, 你的名字！"，使用 f-string 插入名字变量
+2. **打印实验**：尝试 `print()` 的 `sep` 和 `end` 参数，打印九九乘法表的前三行
+3. **REPL 探索**：在 REPL 中输入 `import this`，阅读 Python 之禅，尝试 `dir(str)` 查看字符串方法
+4. **命令行参数**：编写脚本接收 2 个参数（名字和年龄），打印 "名字: xxx, 年龄: xxx"
+
+<PyodideRunner title="Hello World 与 f-string">
+
+```python
+# 1. 基本 Hello World
+print("Hello, World!")
+
+# 2. 使用 f-string 插入变量
+name = "Python 学习者"
+language = "Python"
+print(f"你好，{name}！欢迎学习 {language}！")
+
+# 3. f-string 表达式与格式化
+age = 18
+height = 1.75
+print(f"我今年 {age} 岁")
+print(f"明年我 {age + 1} 岁")
+print(f"身高 {height:.2f} 米")
+
+# 4. print 的 sep 和 end 参数
+print("2025", "07", "15", sep="-")
+print("加载中", end="...")
+print("完成")
+```
+
+</PyodideRunner>
+
+## 📚 延伸阅读
+
+- **Python 之禅**：`import this` 查看 Python 设计哲学
+- **argparse**：标准库，用于构建复杂的命令行参数解析
+- **typer**：第三方库，用类型注解自动生成 CLI 应用
+- **REPL 增强工具**：`ipython`、`bpython` 提供更强大的交互式体验
+
+## 📊 速查表
+
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 打印字符串 | `print("text")` | `print("Hello")` |
+| 多值打印 | `print(a, b, c)` | `print("姓名:", name)` |
+| 自定义分隔符 | `sep="..."` | `print(2025, 7, 10, sep="-")` |
+| 自定义结尾 | `end="..."` | `print("加载中", end="...")` |
+| f-string | `f"{var}"` | `f"我叫{name}"` |
+| 格式化数字 | `f"{val:.2f}"` | `f"{3.14159:.2f}"` → `"3.14"` |
+| 单行注释 | `# 注释` | `# 这是一行注释` |
+| 多行注释 | `"""..."""` | `"""多行注释"""` |
+| 文档字符串 | 函数/类第一行 | `def f(): """doc"""` |
+| 运行脚本 | `python3 file.py` | `python3 hello.py` |
+| 命令行参数 | `sys.argv` | `sys.argv[1]` 第一个参数 |
+| 进入 REPL | `python3` | 交互式解释器 |
+| 退出 REPL | `exit()` | 或 `quit()` |
+| 查看方法 | `dir(obj)` | `dir("hello")` |
+| 查看帮助 | `help(func)` | `help(print)` |
+| 上次结果 | `_` | `100 * 2` → `200`，`_ + 1` → `201` |
+
+## 📝 本节总结
+
+本节我们编写了第一个 Python 程序，核心要点包括：
+
+- **`print()` 函数**：向终端输出内容，支持 `sep`（分隔符）和 `end`（结尾符）参数
+- **f-string 格式化**：`f"..."` 是最简洁的字符串格式化方式，3.12+ 支持嵌套引号
+- **注释与文档**：单行 `#`，多行三引号；函数/类开头的字符串变成 docstring
+- **运行方式**：`python3 文件名.py` 最常见，也可用 shebang + `chmod +x` 直接执行
+- **命令行参数**：`sys.argv` 列表接收参数，`argv[0]` 是脚本名
+- **REPL 交互式**：`python3` 进入，适合快速实验，`_` 引用上次结果
+- **入口惯用法**：`if __name__ == "__main__":` 让文件既能运行又能被导入
+
+下一步，前往 [IDE 配置](./ide-setup.mdx) 为你的开发环境配置一个趁手的编辑器。

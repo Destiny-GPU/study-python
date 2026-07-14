@@ -1,0 +1,421 @@
+---
+sidebar_position: 1
+sidebar_label: '安装 Python'
+title: 🛠️ 安装 Python 环境
+description: 在 Linux、Windows、macOS 上安装 Python 3.12+，并掌握 pyenv 多版本管理与 uv 现代包管理器。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🛠️ 安装 Python 环境
+
+写 Python 代码的第一步，是拥有一套可用的 Python 运行环境。本章将带你完成以下几件事：
+
+- 在 Linux、Windows、macOS 三大平台上安装 Python 3.12+
+- 验证安装是否成功
+- 使用 `pyenv` 管理多个 Python 版本
+- 体验新一代包管理器 `uv`
+
+:::tip 选哪个版本？
+本教程要求 **Python 3.12 或更高版本**。如果你愿意尝鲜，3.13 / 3.14 都可以使用；但若用于生产环境，建议优先选择已经稳定一段时间的版本（如 3.12、3.13）。
+:::
+
+:::tip 🎯 本节要点
+- Python 3.12+ 是本教程最低要求，推荐使用稳定版本
+- 各平台安装方式：Linux（apt/dnf）、Windows（官网安装包/winget）、macOS（Homebrew）
+- 验证安装：`python3 --version` 和 `python3 -m pip --version`
+- 包管理器 `pip` 用于安装第三方库，但应避免污染系统环境
+- 虚拟环境 `venv` 隔离项目依赖，避免版本冲突
+- `pyenv` 管理多个 Python 版本，`uv` 是现代一体化工具（替代 pyenv+venv+pip）
+:::
+
+## 在各平台上安装 Python
+
+### Linux（Ubuntu / Debian）
+
+Ubuntu 24.04 及以上版本的官方源里通常已经包含较新的 Python。可以先检查一下：
+
+```bash title="Shell"
+# 查看仓库里可用的 Python 3 版本
+apt list --installed 2>/dev/null | grep python3
+
+# 查看当前版本
+python3 --version
+```
+
+如果版本低于 3.12，可以添加 `deadsnakes` PPA 安装更新版本：
+
+```bash title="Shell"
+# 更新包索引并安装基础工具
+sudo apt update
+sudo apt install -y software-properties-common
+
+# 添加 deadsnakes PPA（社区维护的 Python 源）
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt update
+
+# 安装 Python 3.12 及 venv 模块
+sudo apt install -y python3.12 python3.12-venv python3.12-dev
+
+# 验证
+python3.12 --version
+```
+
+:::warning 不要动系统的 python3
+Linux 发行版很多系统工具（如 `apt`、`gnome-terminal`）依赖 `python3`。请勿将其替换为更高版本，否则可能导致系统异常。建议通过 `python3.12` 这样的带版本号命令调用，或用 `pyenv` 管理。
+:::
+
+#### CentOS / RHEL / Fedora
+
+```bash title="Shell"
+# Fedora（较新版本自带 Python 3.12+）
+sudo dnf install -y python3 python3-pip
+
+# CentOS Stream 9 / RHEL 9（必要时启用 EPEL 与 dnf 模块）
+sudo dnf install -y epel-release
+sudo dnf module reset -y python3
+sudo dnf module enable -y python3.12
+sudo dnf install -y python3 python3-pip
+```
+
+### Windows
+
+#### 方式一：官网安装包
+
+1. 访问 [Python 官网下载页](https://www.python.org/downloads/windows/)，选择 Python 3.12+ 的可执行安装包。
+2. 双击运行安装程序，**务必勾选 "Add python.exe to PATH"**。
+3. 选择 **Install Now**，等待安装完成。
+
+:::warning 务必勾选加入 PATH
+安装界面最下方有一个 "Add python.exe to PATH" 复选框，默认未勾选。如果漏勾，安装后命令行将无法直接使用 `python` 命令。万一漏勾了，可以重新运行安装程序选择 Modify，或手动把安装目录加入系统环境变量。
+:::
+
+#### 方式二：winget（Windows 包管理器）
+
+```powershell title="PowerShell"
+# 安装最新稳定版 Python
+winget install Python.Python.3.12
+
+# 验证
+python --version
+```
+
+#### 方式三：Microsoft Store
+
+在 Microsoft Store 搜索 "Python"，选择 3.12 版本安装。这种方式的好处是自动处理 PATH，但路径较长，部分场景下不建议使用。
+
+### macOS
+
+#### 方式一：Homebrew（推荐）
+
+```bash title="Shell"
+# 安装 Homebrew（如未安装）
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 安装 Python 3.12
+brew install python@3.12
+
+# 验证
+python3.12 --version
+```
+
+#### 方式二：官网安装包
+
+从 [Python 官网 macOS 页面](https://www.python.org/downloads/macos/) 下载 `.pkg` 安装包，双击按提示安装即可。安装后会自动放在 `/Library/Frameworks/Python.framework`，并创建 `/usr/local/bin/python3`（Intel）或 `/opt/homebrew/bin/python3`（Apple Silicon）的链接。
+
+## 验证安装
+
+无论使用哪种平台，安装完成后都应通过下面的命令确认版本和包管理工具可用：
+
+```bash title="Shell"
+# 查看 Python 版本
+python3 --version
+# 期望输出类似：Python 3.12.x 或更高
+
+# 查看 pip 版本（Python 的包管理工具）
+python3 -m pip --version
+
+# 进入交互式解释器
+python3
+```
+
+:::tip python 与 python3 的区别
+- 在 Linux/macOS 上，`python` 通常不指向 Python 3，需要使用 `python3`。
+- 在 Windows 上，安装时勾选 PATH 后，`python` 即为 Python 3。
+- 本教程为统一，命令示例统一使用 `python3`；Windows 用户可直接使用 `python`。
+:::
+
+## 包管理工具：pip
+
+`pip` 是 Python 官方的包管理器，用于从 [PyPI](https://pypi.org/) 安装第三方库。
+
+```bash title="Shell"
+# 安装一个包
+python3 -m pip install requests
+
+# 查看已安装的包
+python3 -m pip list
+
+# 升级一个包
+python3 -m pip install --upgrade requests
+
+# 卸载一个包
+python3 -m pip uninstall requests
+```
+
+:::warning 不要直接在系统环境安装包
+直接使用 `pip install` 往全局环境装包，会污染系统 Python，也可能触发 `externally-managed-environment` 错误（PEP 668）。推荐始终使用虚拟环境，详见下文 `uv` 一节。
+:::
+
+## 虚拟环境：venv
+
+虚拟环境能为每个项目隔离依赖，避免不同项目之间的库版本冲突。Python 自带 `venv` 模块：
+
+```bash title="Shell"
+# 在项目目录下创建虚拟环境（名为 .venv）
+python3 -m venv .venv
+
+# 激活虚拟环境
+# Linux / macOS
+source .venv/bin/activate
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
+
+# 激活后，命令行前会出现 (.venv) 标记，此时 pip 安装的包只作用于该环境
+pip install requests
+
+# 退出虚拟环境
+deactivate
+```
+
+## 使用 pyenv 管理多个版本
+
+当需要在不同项目之间切换 Python 版本时，[`pyenv`](https://github.com/pyenv/pyenv) 是最常用的工具。它通过在用户目录下编译多个 Python 解释器来实现版本切换，**不会影响系统的 Python**。
+
+### 安装 pyenv
+
+```bash title="Shell"
+# Linux / macOS（推荐一键安装脚本）
+curl https://pyenv.run | bash
+```
+
+安装完成后，按提示把以下几行加入你的 shell 配置（`~/.bashrc` 或 `~/.zshrc`）：
+
+```bash title="Shell"
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+# 让 pyenv 在进入目录时自动切换版本
+eval "$(pyenv init -)"
+```
+
+然后重启终端使其生效。
+
+:::note Windows 用户
+`pyenv` 原版只支持类 Unix 系统。Windows 上可使用 [pyenv-win](https://github.com/pyenv-win/pyenv-win)，安装与命令大同小异。
+:::
+
+### 常用命令
+
+```bash title="Shell"
+# 查看所有可安装的版本
+pyenv install --list | grep 3.12
+
+# 安装某个版本（编译需要几分钟）
+pyenv install 3.12.7
+
+# 查看已安装版本
+pyenv versions
+
+# 设置全局默认版本
+pyenv global 3.12.7
+
+# 为当前目录设置版本（会写入 .python-version 文件）
+pyenv local 3.12.7
+```
+
+:::tip 编译依赖
+`pyenv install` 会从源码编译 Python，需要先安装编译依赖。Ubuntu 上执行：
+
+```bash title="Shell"
+sudo apt install -y build-essential libssl-dev zlib1g-dev \
+  libbz2-dev libreadline-dev libsqlite3-dev curl git \
+  libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+```
+:::
+
+## 使用 uv 管理项目与依赖
+
+[`uv`](https://github.com/astral-sh/uv) 是由 [Astral](https://astral.sh/) 团队用 Rust 编写的新一代 Python 包与项目管理器。它的速度比 `pip` 快 10 到 100 倍，并且集成了虚拟环境、版本管理、项目脚本运行等功能，是现代 Python 开发的首选工具。
+
+### 安装 uv
+
+```bash title="Shell"
+# Linux / macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 通过 pip 安装（适用于所有平台）
+python3 -m pip install uv
+
+# 验证
+uv --version
+```
+
+### uv 核心能力速览
+
+```bash title="Shell"
+# 1. 创建项目（自动生成 pyproject.toml）
+uv init my-project
+cd my-project
+
+# 2. 添加依赖（自动创建并管理 .venv）
+uv add requests
+uv add --dev pytest
+
+# 3. 同步依赖（按 pyproject.toml 重建环境）
+uv sync
+
+# 4. 在项目环境里运行脚本或命令
+uv run python main.py
+uv run pytest
+
+# 5. 安装指定版本的 Python（uv 自带构建好的发行版，无需编译）
+uv python install 3.12 3.13
+
+# 6. 把项目构建成可分发的包
+uv build
+```
+
+:::info uv 与 pyenv 的关系
+`uv` 内置了"安装指定版本 Python"的能力，并且不需要编译源码——它直接下载官方预构建的二进制。对于大多数用户来说，**一个 `uv` 就能同时替代 `pyenv` + `venv` + `pip` + `pip-tools`**。本教程后续示例也会大量使用 `uv`。
+:::
+
+### 实战：用 uv 创建第一个项目
+
+```bash title="Shell"
+# 创建项目骨架
+uv init hello-uv
+cd hello-uv
+
+# 查看自动生成的文件
+ls -la
+# 预期看到：pyproject.toml、main.py、README.md、.python-version 等
+
+# 运行入口脚本
+uv run main.py
+```
+
+打开 `main.py`，你会看到 `uv` 已经为你写好了入口：
+
+```py title="Python"
+def main() -> None:
+    print("Hello from hello-uv!")
+
+if __name__ == "__main__":
+    main()
+```
+
+修改一下，加点颜色：
+
+```py title="Python"
+def main() -> None:
+    print("Hello from hello-uv! 🚀")
+
+if __name__ == "__main__":
+    main()
+```
+
+再次运行：
+
+```bash title="Shell"
+uv run main.py
+# 输出：Hello from hello-uv! 🚀
+```
+
+## 推荐的工具组合
+
+针对不同读者，我们推荐两套配置：
+
+| 人群 | 推荐组合 | 说明 |
+| --- | --- | --- |
+| **初学者** | 官方安装包 + `venv` + `pip` | 简单直接，不引入额外概念 |
+| **进阶 / 工程师** | `uv` 一站式 | 速度快、跨平台一致、依赖锁定 |
+
+:::tip 接下来
+环境装好后，前往 [第一个 Python 程序](./first-program.mdx) 编写并运行你的第一段代码。
+:::
+
+## 🎯 动手练习
+
+1. **安装验证**：在你的系统上安装 Python 3.12+，验证 `python3 --version` 和 `python3 -m pip --version` 输出正确
+2. **虚拟环境实践**：创建两个项目目录，分别创建虚拟环境，安装不同版本的 `requests`，验证隔离效果
+3. **uv 项目创建**：使用 `uv init my-project` 创建项目，添加依赖，运行脚本，体验现代工作流
+4. **版本切换**：安装 `pyenv`，安装两个不同版本的 Python，在不同目录下设置不同版本
+
+<PyodideRunner title="Python 版本与环境检查">
+
+```python
+import sys
+
+# 检查 Python 版本
+version = sys.version_info
+print(f"Python 版本: {version.major}.{version.minor}.{version.micro}")
+print(f"版本要求 >= 3.12: {version >= (3, 12)}")
+
+# 检查平台信息
+print(f"运行平台: {sys.platform}")
+
+# 检查可用的标准库模块
+import venv
+print(f"venv 模块可用: {hasattr(venv, 'create')}")
+
+# 检查 pip 是否可用（通过导入确保）
+try:
+    import pip
+    print(f"pip 版本: {pip.__version__}")
+except ImportError:
+    print("pip 未安装")
+```
+
+</PyodideRunner>
+
+## 📚 延伸阅读
+
+- **PEP 668**：Externally Managed Environments，理解为什么不能直接 pip install
+- **pyproject.toml**：现代 Python 项目配置标准，替代 setup.py
+- **uv 高级用法**：依赖锁定（uv lock）、工作区（workspace）、脚本运行
+- **Docker 与 Python**：在容器化环境中使用 Python 的最佳实践
+
+## 📊 速查表
+
+| 操作 | 命令 | 说明 |
+|------|------|------|
+| 检查版本 | `python3 --version` | 确认 Python 版本 |
+| 检查 pip | `python3 -m pip --version` | 确认包管理器可用 |
+| 安装包 | `pip install package` | 安装第三方库 |
+| 创建虚拟环境 | `python3 -m venv .venv` | 隔离项目依赖 |
+| 激活虚拟环境 | `source .venv/bin/activate` | Linux/macOS |
+| 激活虚拟环境 | `.venv\Scripts\Activate.ps1` | Windows PowerShell |
+| 退出虚拟环境 | `deactivate` | 退出当前虚拟环境 |
+| pyenv 安装版本 | `pyenv install 3.12.7` | 从源码编译安装 |
+| pyenv 设置全局 | `pyenv global 3.12.7` | 设置全局默认版本 |
+| pyenv 设置局部 | `pyenv local 3.12.7` | 为当前目录设置版本 |
+| uv 创建项目 | `uv init my-project` | 生成项目骨架 |
+| uv 添加依赖 | `uv add requests` | 自动管理虚拟环境 |
+| uv 运行脚本 | `uv run python main.py` | 在项目环境中运行 |
+| uv 安装 Python | `uv python install 3.12` | 下载预构建二进制 |
+
+## 📝 本节总结
+
+本节我们学习了 Python 环境的安装与配置，核心要点包括：
+
+- **选择合适版本**：Python 3.12+ 是本教程最低要求，生产环境推荐稳定版本
+- **各平台安装**：Linux 用 apt/dnf，Windows 用官网安装包或 winget，macOS 用 Homebrew
+- **验证安装**：`python3 --version` 和 `python3 -m pip --version` 确认环境可用
+- **虚拟环境隔离**：使用 `venv` 为每个项目创建独立环境，避免依赖冲突
+- **pyenv 管理多版本**：适合需要在不同项目间切换 Python 版本的开发者
+- **uv 现代工具**：一体化解决方案，速度快 10-100 倍，替代 pyenv+venv+pip 组合
+
+环境装好后，你将能够运行和开发 Python 程序。下一节将带你编写**第一个 Python 程序**，体验 Python 的简洁与优雅。

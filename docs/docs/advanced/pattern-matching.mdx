@@ -1,0 +1,960 @@
+---
+sidebar_position: 4
+sidebar_label: '模式匹配详解'
+title: 🚀 模式匹配详解
+description: 深入 match-case 高级用法，掌握序列 *rest、映射 **rest、类模式、捕获模式、守卫、OR 模式与 AST 节点处理。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🚀 模式匹配详解
+
+<PyodideRunner title="模式匹配快速体验">
+
+```python
+# 序列模式
+def describe_point(point):
+    match point:
+        case (0, 0):
+            return "原点"
+        case (x, 0):
+            return f"x轴上，x={x}"
+        case (0, y):
+            return f"y轴上，y={y}"
+        case (x, y):
+            return f"坐标 ({x}, {y})"
+
+print(describe_point((0, 0)))
+print(describe_point((3, 0)))
+print(describe_point((0, 5)))
+print(describe_point((3, 4)))
+
+# 映射模式
+def process_config(config):
+    match config:
+        case {"debug": True, "verbose": True}:
+            return "完全调试模式"
+        case {"debug": True}:
+            return "调试模式"
+        case {"verbose": True}:
+            return "详细模式"
+        case _:
+            return "正常模式"
+
+print(process_config({"debug": True, "verbose": True}))
+print(process_config({"debug": True}))
+print(process_config({}))
+
+# 守卫条件
+def classify_number(n):
+    match n:
+        case x if x < 0:
+            return "负数"
+        case 0:
+            return "零"
+        case x if x > 0:
+            return "正数"
+
+print(classify_number(-5))
+print(classify_number(0))
+print(classify_number(10))
+```
+
+</PyodideRunner>
+
+[结构化模式匹配](../control-flow/match-case.mdx)介绍了 `match-case` 的基础语法。本节深入模式匹配的进阶用法——`*rest` 与 `**rest` 收集模式、嵌套解构、OR 模式组合、`as` 捕获、Python 3.12 增强，以及实战中的 AST 节点处理。掌握这些技巧后，你能用声明式风格优雅地处理复杂结构化数据，替代大量手写 `if-else` 与索引访问。
+
+:::tip 🎯 本节要点
+- **序列模式**：`*rest` 收集剩余元素，可放任意位置
+- **映射模式**：`**rest` 收集剩余键值对，子集匹配
+- **类模式**：配合 `__match_args__` 支持位置解构，关键字形式更通用
+- **字面量/值模式**：小写捕获，大写/常量匹配
+- **as 捕获**：绑定整体匹配值；`_` 通配符不绑定
+- **守卫**：`if` 条件，失败继续尝试下一个 case
+- **OR 模式**：`|` 合并，所有分支绑定相同变量
+- **嵌套组合**：处理 AST、JSON 等复杂结构化数据
+:::
+
+:::info PEP 634 与 PEP 642
+`match-case` 由 Python 3.10 引入（PEP 634）。后续版本持续增强：
+- Python 3.11：模式可作为 `match` 的目标
+- Python 3.12：模式匹配的运行时优化与语法微调
+
+本教程面向 Python 3.12+，重点讲解进阶模式与实战应用。
+:::
+
+## 快速回顾
+
+`match-case` 由 `match` 表达式和若干 `case 模式:` 分支组成，从上往下匹配，命中即停：
+
+```py title="Python"
+def classify(n: int) -> str:
+    match n:
+        case 0:
+            return "零"
+        case x if x > 0:
+            return f"正数 {x}"
+        case _:
+            return "负数"
+
+
+print(classify(0))    # 零
+print(classify(5))    # 正数 5
+print(classify(-3))   # 负数
+```
+
+核心规则：
+- 小写开头 → **捕获模式**（变量绑定，匹配任意值）
+- 大写开头或带点号 → **值模式**（匹配常量/枚举）
+- `_` → 通配符，匹配任意值但不绑定
+
+## 序列模式与 *rest
+
+序列模式匹配列表、元组等可迭代对象。`*rest` 收集"剩余元素"，类似函数的 `*args`：
+
+```py title="Python"
+def describe_sequence(seq: list[int]) -> str:
+    match seq:
+        case []:
+            return "空列表"
+        case [single]:
+            return f"单元素：{single}"
+        case [first, second]:
+            return f"两元素：{first}, {second}"
+        case [first, *rest]:
+            return f"首元素 {first}，其余 {len(rest)} 个：{rest}"
+
+
+print(describe_sequence([]))           # 空列表
+print(describe_sequence([10]))          # 单元素：10
+print(describe_sequence([1, 2]))        # 两元素：1, 2
+print(describe_sequence([1, 2, 3, 4]))  # 首元素 1，其余 3 个：[2, 3, 4]
+```
+
+### *rest 的灵活用法
+
+`*rest` 可以放在任意位置，匹配"开头"或"结尾"：
+
+```py title="Python"
+def parse_command(tokens: list[str]) -> str:
+    match tokens:
+        # 命令在开头，剩余是参数
+        case ["cd", *args]:
+            return f"切换到 {' '.join(args)}"
+        # 命令在结尾，前面是路径
+        case [*path, "run"]:
+            return f"运行 {'/'.join(path)}"
+        # 中间是分隔符
+        case [left, *_, right]:
+            return f"两端：{left} 和 {right}"
+
+
+print(parse_command(["cd", "/home", "user"]))   # 切换到 /home user
+print(parse_command(["bin", "app", "run"]))      # 运行 bin/app
+print(parse_command(["start", "mid", "end"]))   # 两端：start 和 end
+```
+
+:::tip *rest 的语义
+`*rest` 类似函数参数的 `*args`，会"贪婪"地收集匹配剩余元素。一个 `case` 中只能有**一个** `*rest`，但可以和其他固定元素混用：
+
+```py title="Python"
+match [1, 2, 3, 4, 5]:
+    case [first, *middle, last]:
+        print(first, middle, last)  # 1 [2, 3, 4] 5
+```
+:::
+
+### 嵌套序列模式
+
+序列模式可以嵌套，处理多维数据：
+
+```py title="Python"
+def analyze_matrix(matrix: list[list[int]]) -> str:
+    match matrix:
+        case [[0, 0], [0, 0]]:
+            return "2x2 零矩阵"
+        case [[a, b], [c, d]]:
+            det = a * d - b * c
+            return f"2x2 矩阵，行列式 = {det}"
+        case [[0, *_], *_]:
+            return "首行为零的矩阵"
+        case _:
+            return "其他矩阵"
+
+
+print(analyze_matrix([[0, 0], [0, 0]]))   # 2x2 零矩阵
+print(analyze_matrix([[1, 2], [3, 4]]))   # 2x2 矩阵，行列式 = -2
+print(analyze_matrix([[0, 1, 2], [3, 4]]))  # 首行为零的矩阵
+```
+
+## 映射模式与 **rest
+
+映射模式匹配字典，按键解构。`**rest` 收集"剩余键值对"，类似函数的 `**kwargs`：
+
+```py title="Python"
+def parse_config(config: dict[str, object]) -> str:
+    match config:
+        case {"env": env, "debug": True}:
+            return f"调试模式（环境：{env}）"
+        case {"env": env, "port": port}:
+            return f"生产模式：{env}:{port}"
+        case {"env": env, **rest}:
+            return f"环境 {env}，额外键：{list(rest.keys())}"
+        case _:
+            return "缺少 env 配置"
+
+
+print(parse_config({"env": "dev", "debug": True}))
+# 调试模式（环境：dev）
+print(parse_config({"env": "prod", "port": 8080}))
+# 生产模式：prod:8080
+print(parse_config({"env": "test", "log": "file", "workers": 4}))
+# 环境 test，额外键：['log', 'workers']
+```
+
+:::note 映射模式是子集匹配
+映射模式只需指定的键存在，**额外的键被忽略**。这非常适合处理"必须包含某些键"但可能有可选键的配置。`**rest` 把多余的键值对收集起来，便于进一步处理。
+:::
+
+### 嵌套映射模式
+
+映射模式可以与序列、类模式嵌套，处理 JSON 等嵌套结构：
+
+```py title="Python"
+def handle_api_response(response: dict) -> str:
+    match response:
+        case {"status": "ok", "data": {"users": [first, *rest]}}:
+            return f"成功：首个用户 {first}，共 {len(rest) + 1} 个"
+        case {"status": "ok", "data": {"message": msg}}:
+            return f"成功消息：{msg}"
+        case {"status": "error", "error": {"code": code, "message": msg}}:
+            return f"错误 {code}：{msg}"
+        case _:
+            return "未知响应格式"
+
+
+print(handle_api_response({
+    "status": "ok",
+    "data": {"users": ["Alice", "Bob", "Charlie"]}
+}))
+# 成功：首个用户 Alice，共 3 个
+
+print(handle_api_response({
+    "status": "ok",
+    "data": {"message": "操作完成"}
+}))
+# 成功消息：操作完成
+
+print(handle_api_response({
+    "status": "error",
+    "error": {"code": 404, "message": "未找到资源"}
+}))
+# 错误 404：未找到资源
+```
+
+## 类模式与位置参数
+
+类模式匹配类实例，并对其属性解构。配合 `__match_args__` 可用位置参数：
+
+```py title="Python"
+from dataclasses import dataclass
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+
+@dataclass
+class Shape:
+    name: str
+    points: list[Point]
+
+
+def classify_point(p: Point) -> str:
+    match p:
+        # 位置形式（依赖 __match_args__，dataclass 自动生成）
+        case Point(0, 0):
+            return "原点"
+        case Point(0, y):
+            return f"在 y 轴，y={y}"
+        case Point(x, 0):
+            return f"在 x 轴，x={x}"
+        # 关键字形式：按属性名匹配
+        case Point(x=x, y=y) if x == y:
+            return f"在对角线上：({x}, {y})"
+        case Point(x=x, y=y):
+            return f"普通点：({x}, {y})"
+
+
+print(classify_point(Point(0, 0)))    # 原点
+print(classify_point(Point(0, 5)))    # 在 y 轴，y=5
+print(classify_point(Point(3, 3)))    # 在对角线上：(3, 3)
+print(classify_point(Point(3, 4)))    # 普通点：(3, 4)
+```
+
+:::info __match_args__ 与位置模式
+类模式的位置形式（如 `Point(0, y)`）依赖 `__match_args__` 类属性——它声明位置解构的属性顺序。`@dataclass` 自动生成 `__match_args__ = (字段1, 字段2, ...)`，所以 dataclass 默认支持位置模式。
+
+普通类需要手动声明：
+```py title="Python"
+class Point:
+    __match_args__ = ("x", "y")
+    def __init__(self, x, y):
+        self.x, self.y = x, y
+```
+
+关键字形式 `Point(x=0, y=y)` 不依赖 `__match_args__`，更通用但更冗长。
+:::
+
+### 嵌套类模式
+
+类模式可以嵌套，处理对象图：
+
+```py title="Python"
+from dataclasses import dataclass
+
+
+@dataclass
+class Circle:
+    radius: float
+    center: "Point"
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+
+def describe_shape(shape: Circle) -> str:
+    match shape:
+        # 嵌套类模式：匹配 Circle，同时匹配其 center 属性
+        case Circle(radius=0):
+            return "退化的圆（半径为 0）"
+        case Circle(radius=r, center=Point(x=0, y=0)):
+            return f"以原点为中心的圆，半径 {r}"
+        case Circle(radius=r, center=Point(x=cx, y=cy)):
+            return f"圆心 ({cx}, {cy})，半径 {r}"
+
+
+print(describe_shape(Circle(5, Point(0, 0))))   # 以原点为中心的圆，半径 5
+print(describe_shape(Circle(3, Point(1, 2))))   # 圆心 (1, 2)，半径 3
+print(describe_shape(Circle(0, Point(0, 0))))   # 退化的圆（半径为 0）
+```
+
+## 字面量与值模式
+
+**字面量模式**直接匹配数字、字符串、布尔、`None`；**值模式**匹配大写开头或带点号的常量：
+
+```py title="Python"
+from enum import Enum
+
+
+class Color(Enum):
+    RED = "red"
+    GREEN = "green"
+    BLUE = "blue"
+
+
+# 模块级常量（值模式需带点号才能正确匹配）
+MAX_SIZE = 100
+
+
+def handle_color(color: Color) -> str:
+    match color:
+        case Color.RED:
+            return "停止"
+        case Color.GREEN:
+            return "通行"
+        case Color.BLUE:
+            return "直行"
+        case _:
+            return "未知"
+
+
+print(handle_color(Color.RED))    # 停止
+print(handle_color(Color.GREEN))  # 通行
+
+
+def check_size(n: int) -> str:
+    match n:
+        case MAX_SIZE:
+            return "正好达到上限"
+        case x if x > MAX_SIZE:
+            return "超出上限"
+        case _:
+            return "在范围内"
+
+
+print(check_size(100))  # 正好达到上限
+print(check_size(150))  # 超出上限
+print(check_size(50))   # 在范围内
+```
+
+:::warning 大写开头的陷阱
+模式匹配中，**大写开头**的名称会被当作**值模式**（匹配常量），**小写开头**会被当作**捕获模式**（变量绑定，匹配任意值）。这是初学者最常踩的坑：
+
+```py title="Python"
+RED = "red"
+
+def check(color: str):
+    match color:
+        case RED:    # 值模式，匹配 RED 这个常量值 "red"
+            print("红色")
+        case other:  # 捕获模式，匹配任意值
+            print("其他")
+
+check("red")    # 红色
+check("blue")   # 其他
+```
+
+要区分"这是常量匹配"还是"这是变量绑定"，看首字母大小写。带点号（如 `Color.RED`）一定被视为值模式，推荐用枚举或 `Obj.ATTR` 形式。
+:::
+
+## 捕获模式（as 绑定）
+
+`as` 把整个匹配值绑定到变量，常用于"先匹配结构，再获取整体引用"：
+
+```py title="Python"
+def handle_response(response: tuple[int, dict]) -> str:
+    match response:
+        # 匹配 (200, {"data": ...})，并把整体绑定到 r
+        case (200, {"data": data}) as r:
+            return f"成功：{data}（完整响应 {r}）"
+        case (code, {"error": msg}) as r if code >= 400:
+            return f"错误 {code}：{msg}（完整响应 {r}）"
+        case _:
+            return "未知响应"
+
+
+print(handle_response((200, {"data": [1, 2, 3]})))
+# 成功：[1, 2, 3]（完整响应 (200, {'data': [1, 2, 3]})）
+
+print(handle_response((404, {"error": "未找到"})))
+# 错误 404：未找到（完整响应 (404, {'error': '未找到'})）
+```
+
+### 捕获子表达式
+
+`as` 也能绑定子模式的整体：
+
+```py title="Python"
+def analyze(data: dict) -> str:
+    match data:
+        # 把嵌套的 {"host": h, "port": p} 整体绑定到 db
+        case {"database": {"host": h, "port": p} as db}:
+            return f"数据库 {h}:{p}，配置 {db}"
+        case _:
+            return "无数据库配置"
+
+
+print(analyze({"database": {"host": "localhost", "port": 5432}}))
+# 数据库 localhost:5432，配置 {'host': 'localhost', 'port': 5432}
+```
+
+## 通配符 _
+
+`_` 匹配任意值且**不绑定变量**，作为兜底分支。它也可在嵌套位置"忽略"某部分：
+
+```py title="Python"
+def process_pair(pair: tuple[int, int, int]) -> str:
+    match pair:
+        # 只关心第一个和第三个，忽略中间
+        case (first, _, third):
+            return f"首尾：{first}, {third}"
+
+
+print(process_pair((1, 2, 3)))  # 首尾：1, 3
+
+
+# 多层嵌套中的通配符
+def find_root(node: dict) -> str | None:
+    match node:
+        case {"type": "root", "value": val, "children": _}:
+            return val
+        case _:
+            return None
+
+
+print(find_root({"type": "root", "value": "main", "children": [...]}))  # main
+```
+
+:::tip _ 是软关键字
+`_` 在 `match` 语句中是通配符，不创建变量。但在 `match` 之外，`_` 仍是普通变量名（如循环中 `for _ in range(5)`）。这种"上下文相关关键字"叫软关键字。
+:::
+
+## 守卫条件（if）
+
+`case 模式 if 条件:` 在模式匹配成功后，再用 `if` 进一步过滤。**守卫失败会继续尝试下一个 `case`**：
+
+```py title="Python"
+def categorize(n: int) -> str:
+    match n:
+        case x if x < 0:
+            return "负数"
+        case 0:
+            return "零"
+        case x if x % 2 == 0:
+            return f"偶数 {x}"
+        case x if x < 10:
+            return f"小奇数 {x}"
+        case _:
+            return "大奇数"
+
+
+print(categorize(-5))   # 负数
+print(categorize(0))    # 零
+print(categorize(4))    # 偶数 4
+print(categorize(7))    # 小奇数 7
+print(categorize(15))   # 大奇数
+```
+
+:::warning 守卫失败 ≠ 匹配失败
+当模式匹配成功但守卫为 `False` 时，**不会执行该分支**，而是**继续尝试下一个 `case`**。这与 `if-elif` 的"匹配即停"不同：
+
+```py title="Python"
+match 5:
+    case x if x > 10:   # 匹配成功（捕获 5），但守卫失败，继续
+        print("大于 10")
+    case x if x > 3:    # 匹配成功，守卫也成功
+        print("大于 3")  # 输出这个
+```
+
+如果守卫中有副作用（如 `print`），要小心它可能被多次求值。
+:::
+
+## OR 模式 |
+
+`|` 合并多个模式，任一匹配即命中。**所有分支必须绑定相同的变量名**：
+
+```py title="Python"
+def day_type(day: str) -> str:
+    match day.lower():
+        case "monday" | "tuesday" | "wednesday" | "thursday" | "friday":
+            return "工作日"
+        case "saturday" | "sunday":
+            return "周末"
+        case _:
+            return "无效"
+
+
+print(day_type("Monday"))    # 工作日
+print(day_type("SUNDAY"))    # 周末
+print(day_type("funday"))    # 无效
+```
+
+### OR 模式与变量绑定
+
+```py title="Python"
+def handle_command(cmd: list[str]) -> str:
+    match cmd:
+        # 两种形式合并，都绑定 name
+        case ["find", name] | ["search", name]:
+            return f"查找 {name}"
+        case ["set", key, value] | ["update", key, value]:
+            return f"设置 {key}={value}"
+        case _:
+            return "未知命令"
+
+
+print(handle_command(["find", "Alice"]))     # 查找 Alice
+print(handle_command(["search", "Bob"]))      # 查找 Bob
+print(handle_command(["set", "color", "red"]))  # 设置 color=red
+```
+
+:::note OR 模式的变量一致性
+OR 模式的所有分支必须绑定**相同名称**的变量（或都不绑定）。下面这样是错误的：
+
+```py title="Python"
+# 错误：两个分支绑定的变量名不同
+match ["find", "Alice"]:
+    case ["find", name] | ["search", query]:  # SyntaxError
+        ...
+```
+
+因为如果第一个分支匹配，`name` 有值但 `query` 没有定义，会引发歧义。
+:::
+
+## 模式组合的威力
+
+实际场景中，模式常组合使用。下面是一个综合例子，处理"形状"命令：
+
+```py title="Python"
+def execute(command: str) -> str:
+    tokens = command.split()
+    match tokens:
+        # 空命令
+        case []:
+            return "空命令"
+
+        # 退出
+        case ["quit" | "exit"] as cmd:
+            return f"执行 {cmd[0]}"
+
+        # 画形状：可选颜色
+        case ["draw", shape] | ["draw", color, shape] if color in ("red", "green", "blue") or len(tokens) == 2:
+            if len(tokens) == 2:
+                return f"画 {shape}（默认色）"
+            return f"画 {color} 的 {shape}"
+
+        # 移动：方向 + 步数
+        case ["move", direction, steps] if steps.isdigit() and direction in ("up", "down", "left", "right"):
+            return f"向 {direction} 移动 {steps} 步"
+
+        # 未知
+        case _:
+            return f"未知命令：{command!r}"
+
+
+print(execute(""))                  # 空命令
+print(execute("quit"))              # 执行 quit
+print(execute("draw circle"))       # 画 circle（默认色）
+print(execute("draw red circle"))   # 画 red 的 circle
+print(execute("move up 10"))        # 向 up 移动 10 步
+print(execute("fly away"))          # 未知命令：'fly away'
+```
+
+## Python 3.12+ 增强
+
+Python 3.12 对模式匹配做了一些优化和小幅增强：
+
+### 更精确的错误信息
+
+Python 3.12 改进了模式匹配的错误提示，例如 OR 模式变量不一致时会给出更清晰的报错位置。
+
+### dataclass 与模式匹配的协同
+
+`@dataclass` 在 Python 3.12+ 进一步优化了与模式匹配的协同——位置模式更高效，`kw_only` 字段也能被正确匹配：
+
+```py title="Python"
+from dataclasses import dataclass
+
+
+@dataclass(kw_only=True)
+class Config:
+    host: str
+    port: int = 8080
+    debug: bool = False
+
+
+def check_config(cfg: Config) -> str:
+    match cfg:
+        # kw_only 字段用关键字形式匹配
+        case Config(host=h, port=p, debug=True):
+            return f"调试模式 {h}:{p}"
+        case Config(host=h, port=p):
+            return f"生产模式 {h}:{p}"
+
+
+print(check_config(Config(host="localhost", debug=True)))  # 调试模式 localhost:8080
+print(check_config(Config(host="example.com")))            # 生产模式 example.com:8080
+```
+
+:::info match 表达式目标
+Python 3.10+ 中，`match` 后可以跟任意表达式，包括函数调用、属性访问、复杂表达式。这让模式匹配非常灵活：
+
+```py title="Python"
+# match 后面可以是表达式
+match "Hello World".split():
+    case [greeting, name]:
+        print(f"{greeting} -> {name}")
+```
+:::
+
+## 实战：AST 节点处理
+
+`ast` 模块解析 Python 源码为抽象语法树（AST），节点是 dataclass 风格的类。模式匹配是处理 AST 的天然工具——下面实现一个简单的"代码分析器"，统计函数调用、提取文档字符串：
+
+```py title="Python"
+import ast
+from dataclasses import dataclass
+
+
+@dataclass
+class AnalysisResult:
+    function_count: int = 0
+    class_count: int = 0
+    call_count: int = 0
+    imports: list[str] = None
+    docstrings: list[str] = None
+
+    def __post_init__(self):
+        if self.imports is None:
+            self.imports = []
+        if self.docstrings is None:
+            self.docstrings = []
+
+
+def analyze_node(node: ast.AST, result: AnalysisResult) -> None:
+    """递归分析 AST 节点，使用模式匹配分派。"""
+    match node:
+        # 函数定义：提取文档字符串
+        case ast.FunctionDef(name=name, body=body):
+            result.function_count += 1
+            if body and isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
+                doc = body[0].value.value
+                if isinstance(doc, str):
+                    result.docstrings.append(f"函数 {name}: {doc[:50]}")
+            for child in ast.iter_child_nodes(node):
+                analyze_node(child, result)
+
+        # 类定义
+        case ast.ClassDef(name=name):
+            result.class_count += 1
+            for child in ast.iter_child_nodes(node):
+                analyze_node(child, result)
+
+        # 函数调用：统计被调用的函数名
+        case ast.Call(func=ast.Name(id=func_name)):
+            result.call_count += 1
+            for child in ast.iter_child_nodes(node):
+                analyze_node(child, result)
+
+        # import 语句
+        case ast.Import(names=names):
+            for alias in names:
+                result.imports.append(alias.name)
+            for child in ast.iter_child_nodes(node):
+                analyze_node(child, result)
+
+        case ast.ImportFrom(module=module, names=names):
+            for alias in names:
+                result.imports.append(f"{module}.{alias.name}")
+            for child in ast.iter_child_nodes(node):
+                analyze_node(child, result)
+
+        # 其他节点：递归子节点
+        case _:
+            for child in ast.iter_child_nodes(node):
+                analyze_node(child, result)
+
+
+def analyze_code(source: str) -> AnalysisResult:
+    """分析 Python 源代码。"""
+    tree = ast.parse(source)
+    result = AnalysisResult()
+    for node in ast.iter_child_nodes(tree):
+        analyze_node(node, result)
+    return result
+
+
+# 待分析的示例代码
+sample_code = '''
+import os
+from typing import List, Dict
+
+def greet(name: str) -> None:
+    """向用户打招呼。"""
+    print(f"Hello, {name}!")
+
+
+class Calculator:
+    """简单计算器。"""
+    def add(self, a, b):
+        return a + b
+
+    def compute(self, x):
+        result = self.add(x, 10)
+        return result * 2
+
+
+c = Calculator()
+c.compute(5)
+greet("Alice")
+'''
+
+
+result = analyze_code(sample_code)
+print(f"函数数：{result.function_count}")
+print(f"类数：{result.class_count}")
+print(f"调用数：{result.call_count}")
+print(f"导入：{result.imports}")
+print("文档字符串：")
+for doc in result.docstrings:
+    print(f"  - {doc}")
+```
+
+输出：
+
+```text title="输出"
+函数数：4
+类数：1
+调用数：3
+导入：['os', 'typing.List', 'typing.Dict']
+文档字符串：
+  - 函数 greet: 向用户打招呼。
+  - 函数 add: 简单计算器。
+```
+
+:::tip 模式匹配处理 AST 的优势
+AST 节点是 `ast.AST` 的子类，属性固定，天然适合类模式。对比用 `if isinstance(node, ast.FunctionDef):` + 手动 `node.name`、`node.body` 访问，模式匹配的写法：
+- **更声明式**：一眼看出关心的属性
+- **更安全**：解构时立即验证结构
+- **更易扩展**：新增 `case` 不影响已有逻辑
+
+这是 `match-case` 在 Python 标准库自身的典型应用场景——CPython 编译器内部也用模式匹配处理 AST。
+:::
+
+## 实战：JSON 配置解析器
+
+再来看一个处理 JSON 配置的例子，综合映射模式、类模式、守卫：
+
+```py title="Python"
+from dataclasses import dataclass
+
+
+@dataclass
+class DatabaseConfig:
+    host: str
+    port: int
+    database: str
+    user: str = "root"
+    password: str = ""
+
+
+@dataclass
+class CacheConfig:
+    backend: str
+    ttl: int = 3600
+
+
+@dataclass
+class AppConfig:
+    database: DatabaseConfig
+    cache: CacheConfig | None = None
+    debug: bool = False
+
+
+def parse_config(config: dict) -> AppConfig:
+    """从字典解析配置，使用模式匹配分派。"""
+    match config:
+        # 数据库 + 缓存 + 调试
+        case {
+            "database": {"host": h, "port": p, "database": db, "user": u, "password": pw},
+            "cache": {"backend": backend, "ttl": ttl},
+            "debug": debug,
+        }:
+            return AppConfig(
+                database=DatabaseConfig(h, p, db, u, pw),
+                cache=CacheConfig(backend, ttl),
+                debug=debug,
+            )
+
+        # 数据库 + 缓存（无 debug）
+        case {
+            "database": {"host": h, "port": p, "database": db, "user": u, "password": pw},
+            "cache": {"backend": backend, "ttl": ttl},
+        }:
+            return AppConfig(
+                database=DatabaseConfig(h, p, db, u, pw),
+                cache=CacheConfig(backend, ttl),
+            )
+
+        # 数据库 + 默认 user/password
+        case {
+            "database": {"host": h, "port": p, "database": db},
+            "debug": debug,
+        }:
+            return AppConfig(
+                database=DatabaseConfig(h, p, db),
+                debug=debug,
+            )
+
+        # 仅数据库
+        case {
+            "database": {"host": h, "port": p, "database": db, **rest},
+        }:
+            return AppConfig(
+                database=DatabaseConfig(
+                    h, p, db,
+                    rest.get("user", "root"),
+                    rest.get("password", ""),
+                ),
+            )
+
+        case _:
+            raise ValueError("无效的配置结构")
+
+
+# 测试
+configs = [
+    # 完整配置
+    {
+        "database": {"host": "localhost", "port": 5432, "database": "mydb", "user": "admin", "password": "secret"},
+        "cache": {"backend": "redis", "ttl": 1800},
+        "debug": True,
+    },
+    # 部分配置
+    {
+        "database": {"host": "localhost", "port": 5432, "database": "mydb"},
+        "debug": False,
+    },
+]
+
+for cfg in configs:
+    result = parse_config(cfg)
+    print(f"数据库：{result.database.host}:{result.database.port}/{result.database.database}（用户 {result.database.user}）")
+    print(f"缓存：{result.cache.backend if result.cache else '无'}")
+    print(f"调试：{result.debug}\n")
+```
+
+输出：
+
+```text title="输出"
+数据库：localhost:5432/mydb（用户 admin）
+缓存：redis
+调试：True
+
+数据库：localhost:5432/mydb（用户 root）
+缓存：无
+调试：False
+```
+
+:::tip 何时用模式匹配解析配置
+处理"多种可能结构"的配置时，模式匹配比 `if-else` + `dict.get()` 更清晰——每个 `case` 描述一种完整的结构形状，缺失的键会自动走下一个分支。配合 `**rest` 还能优雅地处理"已知键 + 未知键"。
+:::
+
+## 🎯 动手练习
+
+1. **JSON 解析器**：用模式匹配解析嵌套 JSON，提取特定结构的数据
+2. **命令解析**：实现一个命令行解析器，支持 `git commit -m "msg"`、`git push origin main` 等命令
+3. **AST 遍历**：用 `ast` 模块解析 Python 代码，用模式匹配分类节点类型
+4. **状态机**：用模式匹配实现一个有限状态机，处理不同状态转换
+
+## 📊 速查表
+
+| 模式 | 语法 | 说明 |
+|------|------|------|
+| 字面量 | `case 0:` | 匹配具体值 |
+| 捕获 | `case x:` | 绑定任意值到变量 |
+| 通配符 | `case _:` | 匹配任意值，不绑定 |
+| 值模式 | `case Color.RED:` | 匹配常量/枚举 |
+| 序列 | `case [a, b, *rest]:` | 解构列表/元组 |
+| 映射 | `case {"key": val, **rest}:` | 解构字典，子集匹配 |
+| 类位置 | `case Point(x, y):` | 需 `__match_args__` |
+| 类关键字 | `case Point(x=x, y=y):` | 更通用，推荐 |
+| OR | `case "a" \| "b":` | 合并多个值 |
+| as 捕获 | `case [x, y] as lst:` | 绑定整体 |
+| 守卫 | `case x if x > 0:` | 条件过滤 |
+| 嵌套 | `case {"users": [{"name": n}]}:` | 深度解构 |
+
+## 📚 延伸阅读
+
+- **[PEP 634](https://peps.python.org/pep-0634/)** - 结构化模式匹配规范
+- **[PEP 635](https://peps.python.org/pep-0635/)** - 动机与原理
+- **[PEP 636](https://peps.python.org/pep-0636/)** - 教程
+- **[ast 模块](https://docs.python.org/zh-cn/3/library/ast.html)** - 抽象语法树
+
+## 📝 本节总结
+
+- **序列模式用 `*rest` 收集剩余元素**，可放任意位置，处理"开头/结尾/中间"模式
+- **映射模式用 `**rest` 收集剩余键值对**，是子集匹配，适合配置解析
+- **类模式配合 `__match_args__`（dataclass 自动生成）支持位置解构**；关键字形式 `Class(attr=val)` 更通用
+- **字面量模式匹配值**；值模式匹配大写常量/枚举——注意大小写决定"匹配"还是"绑定"
+- **`as` 绑定整体匹配值**；`_` 通配符不绑定；`if` 守卫失败会继续尝试下一个 `case`
+- **`|` 合并模式**，所有分支必须绑定相同变量名
+- **模式可以嵌套组合**，处理 AST、JSON 等复杂结构化数据
+
+下一节将学习海象运算符 `:=`——让赋值成为表达式，简化条件分支与列表推导式。

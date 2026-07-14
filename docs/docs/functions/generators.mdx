@@ -1,0 +1,733 @@
+---
+sidebar_position: 7
+sidebar_label: '生成器与 yield'
+title: ⚙️ 生成器与 yield
+description: 学习迭代器协议、yield 关键字、生成器函数与生成器表达式、惰性求值、yield from 以及生成器管道
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# ⚙️ 生成器与 yield
+
+生成器（generator）是 Python 中一种特殊的迭代器，它使用 `yield` 关键字在函数执行过程中**暂停**并返回一个值，下次被调用时从暂停处继续。生成器最大的优势是**惰性求值**——只在需要时计算下一个值，从而节省内存。它特别适合处理流式信号数据、实时传感器采样和连续信号处理流水线。
+
+<PyodideRunner title="生成器快速体验">
+
+```python
+from itertools import islice
+
+# 生成器函数：斐波那契数列
+def fibonacci_gen():
+    """无限生成斐波那契数"""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+
+# 使用 islice 取前 10 个
+fib_nums = list(islice(fibonacci_gen(), 10))
+print(f"斐波那契数列前 10 项: {fib_nums}")
+
+# 生成器管道
+def square_gen(numbers):
+    for n in numbers:
+        yield n ** 2
+
+def filter_even(gen):
+    for n in gen:
+        if n % 2 == 0:
+            yield n
+
+# 组合生成器管道
+numbers = range(1, 21)
+pipeline = filter_even(square_gen(numbers))
+result = list(pipeline)
+print(f"1-20 的平方中的偶数: {result}")
+
+# 内存对比
+import sys
+
+big_list = [x ** 2 for x in range(1000000)]
+big_gen = (x ** 2 for x in range(1000000))
+
+print(f"\n列表占用内存: {sys.getsizeof(big_list):,} bytes")
+print(f"生成器占用内存: {sys.getsizeof(big_gen)} bytes")
+```
+
+</PyodideRunner>
+
+## 迭代器协议
+
+在了解生成器之前，先理解迭代器协议。一个对象要成为迭代器，必须实现两个方法：
+
+- `__iter__()`：返回迭代器自身
+- `__next__()`：返回下一个值，没有更多值时抛出 `StopIteration`
+
+```py title="Python"
+class ImuFrameIterator:
+    """手动实现的 IMU 数据帧迭代器"""
+    def __init__(self, frames: list[dict[str, float]]):
+        self._frames = frames
+        self._index = 0
+
+    def __iter__(self):
+        return self  # 迭代器自身
+
+    def __next__(self):
+        if self._index >= len(self._frames):
+            raise StopIteration
+        frame = self._frames[self._index]
+        self._index += 1
+        return frame
+
+# 使用
+frames = [
+    {"timestamp": 0.0, "ax": 0.1, "ay": -0.3, "gz": 1.2},
+    {"timestamp": 0.01, "ax": 0.2, "ay": -0.1, "gz": 0.8},
+    {"timestamp": 0.02, "ax": 0.0, "ay": 0.5, "gz": -0.5},
+]
+
+for frame in ImuFrameIterator(frames):
+    print(f"t={frame['timestamp']:.2f}s  ax={frame['ax']:.1f}")
+# 输出：
+# t=0.00s  ax=0.1
+# t=0.01s  ax=0.2
+# t=0.02s  ax=0.0
+
+# 也可以手动调用 next()
+it = ImuFrameIterator(frames)
+print(next(it))  # 输出：{'timestamp': 0.0, 'ax': 0.1, 'ay': -0.3, 'gz': 1.2}
+print(next(it))  # 输出：{'timestamp': 0.01, 'ax': 0.2, 'ay': -0.1, 'gz': 0.8}
+# print(next(it))  # StopIteration
+```
+
+:::info 可迭代对象 vs 迭代器
+- **可迭代对象（Iterable）**：实现了 `__iter__` 方法，能返回一个迭代器。如 list、tuple、str
+- **迭代器（Iterator）**：实现了 `__iter__` 和 `__next__`，能逐个产生值
+- 迭代器是"一次性"的，遍历完就空了；可迭代对象每次调用 `iter()` 都能得到新的迭代器
+
+```py title="Python"
+frames = [{"ax": 0.1}, {"ax": 0.2}, {"ax": 0.3}]
+it = iter(frames)  # 获取迭代器
+print(next(it))  # 输出：{'ax': 0.1}
+print(next(it))  # 输出：{'ax': 0.2}
+```
+:::
+
+## yield 关键字
+
+包含 `yield` 的函数叫**生成器函数**。调用它不会立即执行函数体，而是返回一个生成器对象。每次 `next()` 时执行到 `yield` 暂停并返回值，下次 `next()` 从暂停处继续。
+
+```py title="Python"
+def stream_imu_data():
+    """从 IMU 传感器逐帧读取数据"""
+    print("传感器初始化")
+    yield {"timestamp": 0.0, "ax": 0.12, "gy": 0.56}
+    print("读取第二帧")
+    yield {"timestamp": 0.01, "ax": 0.15, "gy": 0.61}
+    print("传感器关闭")
+
+gen = stream_imu_data()
+print(type(gen))   # 输出：<class 'generator'>
+
+print(next(gen))   # 输出：传感器初始化 / {'timestamp': 0.0, ...}
+print(next(gen))   # 输出：读取第二帧 / {'timestamp': 0.01, ...}
+print(next(gen))   # 输出：传感器关闭 / StopIteration
+```
+
+### 用 for 循环遍历生成器
+
+实际开发中通常用 `for` 循环消费生成器，它会自动处理 `StopIteration`：
+
+```py title="Python"
+def count_samples(total: int):
+    """逐帧采样计数器"""
+    for i in range(total):
+        yield i
+
+for sample_idx in count_samples(5):
+    print(f"采样 #{sample_idx}", end="  ")
+# 输出：采样 #0  采样 #1  采样 #2  采样 #3  采样 #4
+print()
+```
+
+### yield 的执行流程
+
+```py title="Python"
+def calibration_phase():
+    """传感器校准阶段"""
+    print("开始校准")
+    bias = yield {"phase": "init"}
+    print(f"检测到偏置: {bias}")
+    result = yield {"phase": "calibrated"}
+    print(f"校准完成，缩放因子: {result}")
+
+gen = calibration_phase()
+# 第一次 next：执行到第一个 yield
+print(next(gen))      # 输出：开始校准 / {'phase': 'init'}
+
+# send 方法：传值给 yield 表达式并继续
+print(gen.send(0.05))   # 输出：检测到偏置: 0.05 / {'phase': 'calibrated'}
+print(gen.send(1.02))   # 输出：校准完成，缩放因子: 1.02
+```
+
+:::tip send() 方法
+`gen.send(value)` 能将值传回生成器内部，作为 `yield` 表达式的返回值。注意**第一次**必须用 `next()` 或 `gen.send(None)` 启动生成器，因为第一个 yield 还没"接收"任何值。
+:::
+
+## 生成器函数 vs 生成器表达式
+
+### 生成器函数
+
+使用 `def` + `yield` 定义的函数：
+
+```py title="Python"
+def rms_values(signal):
+    """逐帧计算滑动 RMS 值"""
+    squared_sum = 0.0
+    count = 0
+    for sample in signal:
+        squared_sum += sample ** 2
+        count += 1
+        yield (squared_sum / count) ** 0.5
+
+samples = [0.1, 0.5, -0.3, 0.8, 0.0]
+gen = rms_values(samples)
+print(list(gen))  # 输出：[0.1, 0.316..., 0.316..., 0.419..., 0.387...]
+```
+
+### 生成器表达式
+
+类似列表推导式，但用圆括号 `()` 包裹，返回生成器：
+
+```py title="Python"
+import math
+
+# 列表推导式（立即生成所有频率点）
+freqs_list = [round(i * 50.0 / 100, 1) for i in range(100)]
+print(type(freqs_list))  # 输出：<class 'list'>
+print(freqs_list[:5])    # 输出：[0.0, 0.5, 1.0, 1.5, 2.0]
+
+# 生成器表达式（惰性求值）
+freqs_gen = (round(i * 50.0 / 100, 1) for i in range(100))
+print(type(freqs_gen))  # 输出：<class 'generator'>
+
+# 转换为列表才能看到所有元素
+print(list(freqs_gen)[:5])  # 输出：[0.0, 0.5, 1.0, 1.5, 2.0]
+
+# 直接迭代：计算总功率
+magnitudes = [0.1, 0.3, 0.8, 0.2, 0.05]
+total_power = sum(mag ** 2 for mag in magnitudes)  # 注意：函数调用时括号可省略
+print(f"总功率: {total_power:.4f}")  # 输出：总功率: 0.7825
+```
+
+:::info 何时用函数，何时用表达式
+- **生成器表达式**：单行就能写完的简单转换/过滤
+- **生成器函数**：需要多个 yield、循环嵌套、复杂逻辑或接收外部参数
+
+```py title="Python"
+# 简单场景：用表达式
+high_mags = (mag for mag in magnitudes if mag > 0.2)
+
+# 复杂场景：用函数
+def white_noise(variance: float = 1.0):
+    """无限白噪声源"""
+    import random
+    while True:
+        yield random.gauss(0, variance ** 0.5)
+```
+:::
+
+## 惰性求值
+
+生成器最大的特点是**惰性求值**——只有在被消费时才计算下一个值。这带来两个重要优势：
+
+1. **节省内存**：不需要预先生成全部数据
+2. **支持无限序列**：理论上可以产生无限个值
+
+### 内存对比
+
+```py title="Python"
+import sys
+import numpy as np
+
+# 列表：预先存储所有采样点
+big_list = [np.sin(2 * np.pi * i / 1000) for i in range(1_000_000)]
+print(f"列表占用：{sys.getsizeof(big_list)} bytes")  # 大约 8MB+
+
+# 生成器：只存储当前状态
+big_gen = (np.sin(2 * np.pi * i / 1000) for i in range(1_000_000))
+print(f"生成器占用：{sys.getsizeof(big_gen)} bytes")  # 大约 200 bytes
+```
+
+:::warning 生成器是一次性的
+生成器迭代完就"空"了，不能重用：
+```py title="Python"
+import numpy as np
+
+gen = (np.random.randn() for _ in range(3))
+print(list(gen))  # 输出：[0.12, -0.45, 0.78]
+print(list(gen))  # 输出：[]  ← 已经空了
+```
+如果需要多次遍历，用 `list()` 物化为列表，或者重新创建生成器。
+:::
+
+## 无限序列
+
+生成器可以表示无限序列，因为它不需要真的生成所有元素：
+
+```py title="Python"
+import numpy as np
+
+def white_noise(variance: float = 1.0):
+    """无限高斯白噪声源：每次 yield 一个样本"""
+    while True:
+        yield np.random.randn() * variance ** 0.5
+
+# 必须配合 break 或 islice 使用
+from itertools import islice
+
+for i, sample in enumerate(white_noise()):
+    if i >= 5:
+        break
+    print(f"t={i}: {sample:.4f}", end="  ")
+# 输出：t=0: 0.3421  t=1: -1.2345  t=2: 0.6789  ...
+print()
+
+# 使用 itertools.islice 取前 N 个
+first_10 = list(islice(white_noise(), 10))
+print(f"前 10 个噪声样本: {[round(x, 3) for x in first_10]}")
+```
+
+### 经典：带滑动窗口的信号帧生成
+
+```py title="Python"
+import numpy as np
+from itertools import islice
+
+def sliding_window(signal: list[float], window_size: int = 64, step: int = 32):
+    """将连续信号切分为重叠窗口帧（信号处理经典操作）"""
+    for start in range(0, len(signal) - window_size + 1, step):
+        yield signal[start:start + window_size]
+
+# 模拟一段传感器信号
+signal = np.sin(2 * np.pi * np.linspace(0, 1, 512))
+
+# 取前 3 帧
+frames = list(islice(sliding_window(signal.tolist(), window_size=64, step=32), 3))
+for i, frame in enumerate(frames):
+    print(f"帧 {i}: 长度={len(frame)}, 峰值={max(frame):.3f}")
+
+# 利用滑动窗口做帧级 FFT 分析
+def frame_fft(frame):
+    """对单帧执行 FFT 并返回频率幅度谱"""
+    return np.abs(np.fft.rfft(frame))
+
+for i, frame in enumerate(islice(sliding_window(signal.tolist(), 64, 32), 3)):
+    spectrum = frame_fft(np.array(frame))
+    dominant_bin = np.argmax(spectrum)
+    print(f"帧 {i}: 主频 bin={dominant_bin}, 最大幅值={spectrum[dominant_bin]:.2f}")
+```
+
+## yield from
+
+`yield from` 用于从一个生成器中**委托**产出另一个生成器（或可迭代对象）的所有值：
+
+```py title="Python"
+def channel_1():
+    yield 0.1
+    yield 0.3
+    yield 0.5
+
+def channel_2():
+    yield 0.2
+    yield 0.4
+    yield 0.6
+
+def multiplex_channels():
+    """合并多路传感器通道数据"""
+    yield "channel_1"
+    yield from channel_1()
+    yield "channel_2"
+    yield from channel_2()
+
+print(list(multiplex_channels()))
+# 输出：['channel_1', 0.1, 0.3, 0.5, 'channel_2', 0.2, 0.4, 0.6]
+```
+
+### yield from 的优势
+
+相比手动 for 循环 yield，`yield from`：
+
+1. 代码更简洁
+2. 能正确传递 `send()` 和 `throw()` 调用
+3. 是实现协程（async/await）的基础
+
+```py title="Python"
+# 手动写法
+def merge_signals_manual(*signals):
+    for sig in signals:
+        for sample in sig:
+            yield sample
+
+# yield from 写法
+def merge_signals(*signals):
+    """合并多路信号流"""
+    for sig in signals:
+        yield from sig  # 委托给每路信号的迭代器
+
+ch1 = [0.1, 0.3, 0.5]
+ch2 = [0.2, 0.4, 0.6]
+ch3 = [0.0, 0.0, 1.0]
+print(list(merge_signals(ch1, ch2, ch3)))
+# 输出：[0.1, 0.3, 0.5, 0.2, 0.4, 0.6, 0.0, 0.0, 1.0]
+```
+
+:::tip yield from 与递归
+`yield from` 与递归结合是处理嵌套结构的利器。递归调用返回生成器时，用 `yield from` 把它的所有值"展开"传给外层，避免在调用者处再嵌套一层。
+:::
+
+## 生成器管道
+
+生成器可以像 Unix 管道一样串联起来：每个生成器处理前一阶段的输出，整个管道**惰性求值**——只在最终消费时才真正计算。
+
+```py title="Python"
+import numpy as np
+
+def raw_signal():
+    """产生原始传感器信号（含噪声和偏置）"""
+    for i in range(100):
+        yield 2.5 + 0.5 * np.sin(2 * np.pi * i / 20) + 0.1 * np.random.randn()
+
+def remove_dc(source):
+    """去除直流偏置（均值）。
+
+    注意：这是一个两遍扫描的近似方法，第一遍计算均值需要缓存所有数据。
+    实时场景应使用运行均值估算。
+    """
+    samples = list(source)
+    mean_val = np.mean(samples)
+    for s in samples:
+        yield s - mean_val
+
+def amplitude_gate(source, low=0.3, high=0.7):
+    """幅值门限过滤（保留指定幅值范围的样本）。"""
+    for s in source:
+        if low <= abs(s) <= high:
+            yield s
+
+def take_n(source, n):
+    """只取前 n 个"""
+    count = 0
+    for x in source:
+        if count >= n:
+            break
+        yield x
+        count += 1
+
+# 串联管道：原始信号 → 去直流 → 幅值门限 → 取前 5 个
+pipeline = take_n(amplitude_gate(remove_dc(raw_signal()), 0.3, 0.7), 5)
+print(list(pipeline))
+# 输出：经过三步处理的信号值列表（每次运行因噪声略有不同）
+```
+
+:::info 管道的内存优势
+管道在每一步都只处理一个元素，**整条管道同一时刻只占一个元素的内存**。处理上亿条传感器采样数据时，这点至关重要——你不需要为每一步都分配完整列表。
+:::
+
+## yield 双向通信
+
+生成器不仅能产出值，还能接收外部传入的值。通过 `send()` 方法可以向生成器内部发送数据，实现双向通信：
+
+```py title="Python"
+def running_average():
+    """实时计算运行均值——接收新样本，返回当前均值"""
+    total = 0.0
+    count = 0
+    while True:
+        sample = yield
+        total += sample
+        count += 1
+        yield total / count
+
+avg_gen = running_average()
+next(avg_gen)  # 启动生成器，执行到 yield 暂停
+
+print(avg_gen.send(1.0))   # 1.0
+print(avg_gen.send(3.0))   # 2.0
+print(avg_gen.send(5.0))   # 3.0
+```
+
+### 带返回值的双向通信
+
+```py title="Python"
+def threshold_detector(threshold: float):
+    """接收样本，返回是否超过阈值及当前值"""
+    triggered = False
+    while True:
+        value = yield triggered
+        if value is None:
+            break
+        triggered = abs(value) > threshold
+        yield triggered
+
+det = threshold_detector(threshold=0.5)
+next(det)  # 启动
+
+print(det.send(0.1))    # False — 未触发
+print(det.send(0.8))    # True  — 超过阈值
+print(det.send(0.3))    # False — 回落
+det.close()
+```
+
+### 生成器状态机
+
+生成器天然适合实现状态机——每次 `yield` 暂停时保留当前状态，下次恢复时继续：
+
+```py title="Python"
+from enum import Enum
+
+class SensorState(Enum):
+    IDLE = "空闲"
+    WARMING_UP = "预热中"
+    CALIBRATING = "校准中"
+    STREAMING = "采集中"
+
+class SensorStateMachine:
+    def __init__(self):
+        self.state = SensorState.IDLE
+        self._gen = self._run()
+        next(self._gen)
+
+    def _run(self):
+        while True:
+            event = yield self.state
+
+            if self.state == SensorState.IDLE:
+                if event == "power_on":
+                    self.state = SensorState.WARMING_UP
+                    yield self.state
+                    self.state = SensorState.CALIBRATING
+                elif event == "shutdown":
+                    break
+
+            elif self.state == SensorState.STREAMING:
+                if event == "stop":
+                    self.state = SensorState.IDLE
+                elif event == "data":
+                    yield self.state
+
+    def process(self, event: str) -> SensorState:
+        return self._gen.send(event)
+
+fsm = SensorStateMachine()
+print(fsm.process("power_on"))   # SensorState.WARMING_UP
+print(fsm.process(""))           # SensorState.CALIBRATING
+print(fsm.process("data"))       # SensorState.STREAMING
+print(fsm.process("data"))       # SensorState.STREAMING
+print(fsm.process("stop"))       # SensorState.IDLE
+```
+
+## 内存优势
+
+### 对比：处理大段信号
+
+```py title="Python"
+import numpy as np
+
+# 错误：把整段信号载入内存
+def analyze_signal_bad(signal):
+    data = np.array(signal)  # 全部载入
+    return np.fft.rfft(data)
+
+# 正确：逐帧处理
+def fft_bins(signal, frame_size=256):
+    """逐帧计算 FFT 频率 bin"""
+    for i in range(0, len(signal) - frame_size + 1, frame_size):
+        frame = np.array(signal[i:i + frame_size])
+        yield np.abs(np.fft.rfft(frame))
+
+# 生成器版本：流式处理，只保留当前帧
+def stream_fft(signal, frame_size=256):
+    """流式 FFT，一次只处理一帧"""
+    for i in range(0, len(signal) - frame_size + 1, frame_size):
+        yield np.abs(np.fft.rfft(signal[i:i + frame_size]))
+```
+
+### 对比：处理大序列
+
+```py title="Python"
+import numpy as np
+
+# 列表版本（占用大量内存）
+def process_list():
+    data = [np.sin(2 * np.pi * i / 1000) for i in range(10_000_000)]  # ~240MB（Python 列表）
+    result = [x for x in data if abs(x) > 0.5]
+    total = sum(x ** 2 for x in result)
+    return total
+
+# 生成器版本（几乎不占内存）
+def process_gen():
+    data = (np.sin(2 * np.pi * i / 1000) for i in range(10_000_000))  # 生成器
+    result = (x for x in data if abs(x) > 0.5)                         # 生成器
+    total = sum(x ** 2 for x in result)                                # 只在这里求值
+    return total
+
+# 两者结果相同，但内存占用天差地别
+```
+
+## 实战：信号处理流水线
+
+### 实战 1：IMU 传感器数据流处理
+
+```py title="Python"
+from collections.abc import Iterator
+
+def read_imu_stream(raw_data: list[dict[str, float]]) -> Iterator[dict[str, float]]:
+    """逐帧读取 IMU 传感器原始数据，返回字典迭代器。
+
+    假设每帧包含：timestamp, ax, ay, az, gx, gy, gz
+    """
+    for frame in raw_data:
+        if all(k in frame for k in ("timestamp", "ax", "ay", "az")):
+            yield frame
+
+
+def compute_accel_magnitude(frames: Iterator[dict]) -> Iterator[dict]:
+    """计算每帧的加速度合量 |a| = sqrt(ax² + ay² + az²)"""
+    import math
+    for frame in frames:
+        mag = math.sqrt(frame["ax"]**2 + frame["ay"]**2 + frame["az"]**2)
+        yield {"timestamp": frame["timestamp"], "magnitude": mag}
+
+
+def detect_spikes(
+    frames: Iterator[dict], threshold: float = 2.0
+) -> Iterator[dict]:
+    """检测超过阈值的加速度尖峰"""
+    for frame in frames:
+        if frame["magnitude"] > threshold:
+            yield frame
+
+
+# 演示
+def demo():
+    import math
+
+    # 模拟 IMU 数据（含一个尖峰）
+    raw_data = [
+        {"timestamp": 0.0, "ax": 0.1, "ay": 0.0, "az": 9.8},
+        {"timestamp": 0.01, "ax": 0.2, "ay": -0.1, "az": 9.9},
+        {"timestamp": 0.02, "ax": 5.0, "ay": 3.0, "az": 12.0},  # 尖峰
+        {"timestamp": 0.03, "ax": 0.0, "ay": 0.1, "az": 9.8},
+        {"timestamp": 0.04, "ax": -0.1, "ay": 0.2, "az": 9.7},
+    ]
+
+    # 管道：原始数据 → 计算加速度 → 检测尖峰
+    pipeline = detect_spikes(compute_accel_magnitude(read_imu_stream(raw_data)))
+
+    print("检测到的加速度尖峰：")
+    for spike in pipeline:
+        print(f"  t={spike['timestamp']:.2f}s  |a|={spike['magnitude']:.2f} m/s²")
+    # 输出：
+    #   t=0.02s  |a|=13.89 m/s²
+
+
+demo()
+```
+
+### 实战 2：频谱分析生成器
+
+```py title="Python"
+import numpy as np
+from itertools import islice
+
+
+def fft_bins(signal: np.ndarray, frame_size: int = 256, sample_rate: float = 1000.0):
+    """逐帧计算 FFT，产出 (频率数组, 幅度谱) 元组。
+
+    Args:
+        signal: 输入信号数组
+        frame_size: 每帧采样点数
+        sample_rate: 采样率 (Hz)
+
+    Yields:
+        (freqs, magnitudes) 元组。
+    """
+    for start in range(0, len(signal) - frame_size + 1, frame_size):
+        frame = signal[start:start + frame_size]
+        spectrum = np.abs(np.fft.rfft(frame))
+        freqs = np.fft.rfftfreq(frame_size, d=1.0 / sample_rate)
+        yield freqs, spectrum
+
+
+# 生成测试信号：100Hz 正弦 + 250Hz 正弦 + 噪声
+sample_rate = 1000.0
+t = np.linspace(0, 1, int(sample_rate), endpoint=False)
+signal = np.sin(2 * np.pi * 100 * t) + 0.5 * np.sin(2 * np.pi * 250 * t)
+signal += 0.1 * np.random.randn(len(signal))
+
+# 逐帧分析
+print("帧级频谱分析：")
+for i, (freqs, mags) in enumerate(islice(fft_bins(signal, 256, sample_rate), 3)):
+    peak_idx = np.argmax(mags)
+    print(f"  帧 {i}: 主频={freqs[peak_idx]:.0f}Hz, 幅值={mags[peak_idx]:.2f}")
+
+# 找出所有超过阈值的频率分量
+def significant_bins(gen, min_magnitude: float = 5.0):
+    """过滤出幅度超过阈值的频率 bin"""
+    for freqs, mags in gen:
+        mask = mags > min_magnitude
+        if np.any(mask):
+            yield freqs[mask], mags[mask]
+
+print("\n显著频率分量：")
+for freqs, mags in significant_bins(fft_bins(signal, 256, sample_rate)):
+    for f, m in zip(freqs, mags):
+        print(f"  {f:.0f}Hz → 幅值={m:.2f}")
+```
+
+:::tip 生成器与协程
+`yield` 还可以用于**协程**——一种能暂停/恢复、可双向传递数据的并发单元。Python 早期的协程基于 `yield` + `send()`，现代异步编程（`async`/`await`）虽然语法不同，但本质思想相同。生成器是理解 Python 异步编程的基础。
+:::
+
+## 🎯 动手练习
+
+1. **无限噪声源**：实现一个生成器产生高斯白噪声，配合 `islice` 取前 N 个样本
+2. **滑动窗口**：编写生成器管道将连续信号切分为重叠帧，并对每帧做 FFT 分析
+3. **多通道合并**：使用 `yield from` 将多路 IMU 通道数据交错合并为单一数据流
+4. **内存对比**：对比列表推导式和生成器表达式处理 1000 万个正弦采样点时的内存占用差异
+
+## 📚 延伸阅读
+
+- [迭代器类型文档](https://docs.python.org/zh-cn/3/library/stdtypes.html#iterator-types) - 迭代器协议详解
+- [生成器文档](https://docs.python.org/zh-cn/3/tutorial/classes.html#generators) - 官方生成器教程
+- [itertools 模块](https://docs.python.org/zh-cn/3/library/itertools.html) - 高效迭代器工具
+- [PEP 380 - yield from](https://peps.python.org/pep-0380/) - `yield from` 语法规范
+
+## 📊 速查表
+
+| 概念 | 语法 | 示例 |
+|------|------|------|
+| 迭代器协议 | `__iter__` + `__next__` | `for x in iterable` |
+| 生成器函数 | `def` + `yield` | `def stream_imu(): yield frame` |
+| 生成器表达式 | `(x for x in iter)` | `(s**2 for s in signal)` |
+| 惰性求值 | 按需计算 | `sum(s**2 for s in signal)` |
+| yield from | 委托产出 | `yield from channel_1()` |
+| send() | 向生成器传值 | `gen.send(sample)` |
+| close() | 关闭生成器 | `gen.close()` |
+| 无限序列 | `while True: yield` | `def noise(): while True: yield randn()` |
+| 管道串联 | 生成器嵌套 | `take_n(bandpass(raw(), 0.3, 0.7), 5)` |
+| 帧切分 | 滑动窗口 | `sliding_window(signal, 64, 32)` |
+
+## ✅ 本节总结
+
+- 迭代器协议要求实现 `__iter__` 和 `__next__`，没有更多值时抛出 `StopIteration`
+- 含 `yield` 的函数是生成器函数，调用它返回一个生成器对象，不会立即执行
+- 每次 `next()` 执行到 `yield` 暂停并返回值，下次从暂停处继续
+- 生成器表达式 `(x for x in ...)` 是生成器函数的简写，适合简单转换
+- **惰性求值**让生成器只占很少内存，能表示无限序列
+- `yield from` 委托其他生成器/可迭代对象产出值，是递归处理嵌套结构的利器
+- 生成器管道像 Unix 管道一样串联处理数据流，每步只占一个元素的内存
+- 流式信号处理中，生成器天然适配 IMU 数据帧读取、FFT 逐帧分析、噪声源等场景
+- 生成器是一次性的，迭代完就"空"了，不能重用

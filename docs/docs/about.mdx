@@ -1,0 +1,175 @@
+---
+title: 关于作者
+sidebar_position: 999
+description: 自动控制 + 强化学习博士，专注于智能控制与深度强化学习的研究
+---
+
+import { HeroSection, CardGrid } from '@site/src/components';
+
+<HeroSection
+  avatarUrl="/img/头像.png"
+  title="Destiny"
+  subtitle="自动控制 + 强化学习博士 | 飞行器智能控制"
+  description="探索智能控制与深度强化学习的前沿，致力于将理论转化为实际应用。分享 Python 的优雅与强大，让更多人爱上编程。"
+  variant="light"
+  buttons={[
+    { text: '开始学习', to: '/docs/intro', variant: 'primary' },
+    { text: '查看源码', to: 'https://github.com', variant: 'secondary' },
+  ]}
+/>
+
+<div className="about-story">
+
+## 为什么创建 Study Python？
+
+在学习 Python 的过程中，我发现大多数教程都用"Hello World"、计算器、猜数字这样的玩具例子来教学。这些例子虽然简单，但离真实应用太远——**学完之后，你还是不知道怎么用 Python 解决实际问题**。
+
+作为自动控制方向的博士生，我每天都在用 Python 做信号处理、数据分析、算法验证。我深知：**真正掌握一门语言，需要看到它在真实场景中的样子**。
+
+所以我想做一件事：
+
+> 用飞行器智能控制领域的真实案例，重新讲解 Python 的每一个知识点。  
+> 让你学到的不只是语法，而是**能直接用在科研和工程中的技能**。
+
+这个项目还在不断完善中。如果你觉得有帮助，欢迎 Star 或分享给更多人。
+
+</div>
+
+<div className="about-section-alt about-research">
+
+## 我的研究
+
+<CardGrid
+  items={[
+    {
+      id: 'rl',
+      icon: '🧠',
+      title: '深度强化学习',
+      content: '多智能体强化学习（MARL）、离线强化学习（Offline RL）、模型驱动 RL、安全强化学习',
+    },
+    {
+      id: 'control',
+      icon: '✈️',
+      title: '飞行控制',
+      content: '无人机自主控制、飞行器姿态控制、自适应控制与鲁棒控制、实时决策系统',
+    },
+    {
+      id: 'dl',
+      icon: '🔬',
+      title: '深度学习',
+      content: 'PyTorch 深度学习框架、神经网络架构设计、时序预测与序列建模、可解释 AI',
+    },
+  ]}
+  cols={3}
+/>
+
+</div>
+
+<div className="about-tech">
+
+## 技术栈
+
+<CardGrid
+  items={[
+    { id: 'python', icon: '🐍', title: '核心语言', content: 'Python（精通） · C/C++ · MATLAB · Julia' },
+    { id: 'framework', icon: '⚙️', title: '深度学习框架', content: 'PyTorch · TensorFlow · JAX · MxNet' },
+    { id: 'rl', icon: '🎮', title: '强化学习', content: 'Stable Baselines · Ray RLlib · tianshou · 自研框架' },
+    { id: 'dev', icon: '⚡', title: '开发工具', content: 'uv · Ruff · mypy · pytest · Git · Docker' },
+  ]}
+  cols={2}
+/>
+
+</div>
+
+<div className="about-section-alt about-education">
+
+## 教育经历
+
+<CardGrid
+  items={[
+    {
+      id: 'phd',
+      logo: '/img/北京航空航天大学-logo.svg',
+      title: '博士 · 北京航空航天大学',
+      content: (
+        <>
+          <span className="edu-field"><span className="edu-label">专业</span>导航、制导与控制</span>
+          <span className="edu-field"><span className="edu-label">方向</span>小型飞行器智能控制</span>
+        </>
+      ),
+      href: 'https://www.buaa.edu.cn/',
+    },
+    {
+      id: 'master',
+      logo: '/img/哈尔滨工业大学-logo.svg',
+      title: '硕士 · 哈尔滨工业大学',
+      content: (
+        <>
+          <span className="edu-field"><span className="edu-label">专业</span>导航、制导与控制</span>
+          <span className="edu-field"><span className="edu-label">方向</span>小型飞行器抗扰控制</span>
+        </>
+      ),
+      href: 'https://www.hit.edu.cn/',
+    },
+    {
+      id: 'bachelor',
+      logo: '/img/沈阳航空航天大学-logo.svg',
+      title: '本科 · 沈阳航空航天大学',
+      content: (
+        <>
+          <span className="edu-field"><span className="edu-label">专业</span>探测制导与控制技术</span>
+          <span className="edu-field"><span className="edu-label">方向</span>飞行器制导控制</span>
+        </>
+      ),
+      href: 'https://www.sau.edu.cn/',
+    },
+  ]}
+  cols={3}
+/>
+
+</div>
+
+<div className="about-connect">
+
+## 一起交流
+
+<CardGrid
+  items={[
+    {
+      id: 'github',
+      icon: '💻',
+      title: 'GitHub',
+      content: '开源项目、代码示例、研究笔记',
+      button: { text: '访问主页', to: 'https://github.com' },
+    },
+    {
+      id: 'blog',
+      icon: '✍️',
+      title: '技术博客',
+      content: '深度学习、强化学习、Python 编程经验',
+      button: { text: '阅读博客', to: 'https://blog.csdn.net' },
+    },
+    {
+      id: 'public',
+      icon: '📱',
+      title: '公众号',
+      content: '定期更新技术文章、学习资源、项目分享',
+      button: { text: '扫码关注', to: 'pathname:///img/公众号.jpg' },
+    },
+  ]}
+  cols={3}
+/>
+
+</div>
+
+<div className="about-email">
+
+**联系邮箱**：zhangjian_destiny@qq.com
+
+</div>
+
+<div className="about-footer-quote">
+
+*我相信知识应该被分享，代码应该被开源。如果你从本站内容中受益，欢迎 Star、Fork 或分享给更多人。*
+
+</div>

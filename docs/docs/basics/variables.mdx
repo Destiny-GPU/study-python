@@ -1,0 +1,393 @@
+---
+sidebar_position: 1
+sidebar_label: '变量与类型'
+title: 📝 变量与数据类型
+description: 学习 Python 变量命名规则、动态类型机制、基本数据类型总览，以及类型注解的基础用法。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 📝 变量与数据类型
+
+变量是程序中用来存储数据的"名字"。Python 的变量机制非常灵活：它采用**动态类型**，同一个变量可以在不同时刻引用不同类型的对象。本节将系统讲解 Python 变量的命名规则、赋值方式、内置基本数据类型，以及 Python 3.10+ 引入的类型注解基础。
+
+## 📌 本节要点
+
+学完本节后，你将掌握：
+
+- Python 变量命名规则与 PEP 8 推荐风格
+- 动态类型机制：变量无类型，对象才有类型
+- 使用 `type()` 和 `isinstance()` 查看与判断类型
+- 6 种基本数据类型：int、float、complex、str、bool、NoneType
+- 多重赋值与解包赋值（含星号 `*` 收集）
+- Python 3.10+ 类型注解基础：`int | str`、`list[str]`
+
+## 变量命名规则
+
+Python 的变量命名遵循以下规则：
+
+- 只能由字母、数字、下划线组成
+- 不能以数字开头
+- 区分大小写（`age` 与 `Age` 是不同的变量）
+- 不能使用 Python 关键字（如 `if`、`for`、`class` 等）
+
+```py title="Python"
+# 合法命名
+name = "Alice"
+user_age = 18
+_private = "秘密"
+student2 = "Bob"
+userName = "Charlie"  # 驼峰命名（Python 中更推荐下划线命名 snake_case）
+
+# 非法命名（取消注释会报错）
+# 2user = "Tom"      # 不能以数字开头
+# user-name = "Tom"  # 不能包含连字符
+# for = 10           # 不能使用关键字
+```
+
+:::tip 推荐的命名风格
+Python 官方风格指南 [PEP 8](https://peps.python.org/pep-0008/) 推荐使用 **snake_case**（下划线小写）命名变量与函数，如 `user_age`、`max_count`；类名使用 `CamelCase`（如 `MyClass`）；常量使用全大写（如 `MAX_VALUE`）。
+:::
+
+### 查看所有关键字
+
+可以使用 `keyword` 模块查看 Python 的全部保留关键字：
+
+```py title="Python"
+import keyword
+
+print(keyword.kwlist)
+# ['False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', ...]
+
+print(len(keyword.kwlist))  # 当前关键字数量
+```
+
+## 动态类型
+
+Python 是**动态类型**语言：变量本身没有类型，它只是一个"标签"，可以贴在任何类型的对象上。同一变量可在运行时引用不同类型的对象。
+
+```py title="Python"
+x = 10           # 此时 x 引用一个 int
+print(type(x))   # <class 'int'>
+
+x = "hello"      # 现在 x 引用一个 str
+print(type(x))   # <class 'str'>
+
+x = [1, 2, 3]    # 现在 x 引用一个 list
+print(type(x))   # <class 'list'>
+```
+
+:::warning 注意区分"变量无类型"与"对象有类型"
+在 Python 中，**变量没有类型，对象才有类型**。变量只是一个指向对象的引用（名字）。这也是为什么同一个变量可以反复绑定到不同类型的对象上。
+:::
+
+## 使用 type() 查看类型
+
+`type()` 是查看对象类型最直接的方式：
+
+```py title="Python"
+print(type(42))         # <class 'int'>
+print(type(3.14))       # <class 'float'>
+print(type("Python"))   # <class 'str'>
+print(type(True))       # <class 'bool'>
+print(type(None))       # <class 'NoneType'>
+```
+
+如果要做"类型判断"，推荐使用 `isinstance()` 而不是直接比较 `type()`：
+
+```py title="Python"
+x = 5
+
+# ❌ 不推荐：不支持子类判断
+print(type(x) == int)  # 输出: True
+
+# ✅ 推荐：支持继承关系判断
+print(isinstance(x, int))  # 输出: True
+
+# isinstance 支持传入元组判断多种类型
+print(isinstance(x, (int, float, str)))  # 输出: True
+```
+
+:::tip 核心概念：isinstance vs type
+| 场景 | 推荐 ✅ | 不推荐 ❌ |
+|------|---------|-----------|
+| 类型判断 | `isinstance(x, int)` | `type(x) == int` |
+| 多类型判断 | `isinstance(x, (int, str))` | `type(x) in (int, str)` |
+| 空值检查 | `x is None` | `x == None` |
+
+`isinstance()` 会考虑继承关系，例如 `True` 既是 `bool` 也是 `int` 的实例（`bool` 是 `int` 的子类）；而 `type(True) == int` 返回 `False`。一般做类型判断时优先用 `isinstance()`。
+:::
+
+## 基本数据类型总览
+
+Python 内置的基本数据类型如下：
+
+| 类型名        | 类型         | 示例                          |
+| ------------- | ------------ | ----------------------------- |
+| `int`         | 整数         | `42`, `0`, `-7`, `1_000_000`  |
+| `float`       | 浮点数       | `3.14`, `-0.5`, `2.0`         |
+| `complex`     | 复数         | `1+2j`, `3j`                  |
+| `str`         | 字符串       | `"hello"`, `'a'`              |
+| `bool`        | 布尔值       | `True`, `False`               |
+| `NoneType`    | 空值         | `None`                        |
+
+```py title="Python"
+age = 25                 # int
+height = 1.75            # float
+name = "Alice"           # str
+is_student = True        # bool
+result = None            # NoneType
+
+print(age, height, name, is_student, result)
+# 输出: 25 1.75 Alice True None
+
+print(type(age), type(height), type(name), type(is_student), type(result))
+# 输出: <class 'int'> <class 'float'> <class 'str'> <class 'bool'> <class 'NoneType'>
+```
+
+:::tip 数字下划线分隔
+Python 3.6+ 支持在数字字面量中使用下划线作为分隔符，提高大数字的可读性：`1_000_000` 等价于 `1000000`，`0xFF_FF` 等价于 `0xFFFF`。
+:::
+
+## 多重赋值
+
+Python 支持在一行内为多个变量同时赋值，这是非常实用的特性：
+
+```py title="Python"
+# 同时给多个变量赋值
+a, b, c = 1, 2, 3
+print(a, b, c)  # 输出: 1 2 3
+
+# 交换两个变量的值（无需中间变量）
+a, b = b, a
+print(a, b)  # 输出: 2 1
+
+# 给多个变量赋同一个值
+x = y = z = 0
+print(x, y, z)  # 输出: 0 0 0
+```
+
+:::warning 多重赋值数量必须一致
+多重赋值要求左右两侧的元素数量一致，否则会抛出 `ValueError`：
+
+```py title="Python"
+a, b = 1, 2, 3  # ValueError: too many values to unpack
+```
+:::
+
+## 解包赋值
+
+解包（unpacking）是 Python 中非常优雅的特性，可以从任何可迭代对象中提取元素赋给多个变量。
+
+### 列表/元组解包
+
+```py title="Python"
+point = (3, 4)
+x, y = point
+print(x, y)  # 3 4
+
+colors = ["red", "green", "blue"]
+r, g, b = colors
+print(r, g, b)  # red green blue
+```
+
+### 星号解包（*）
+
+使用 `*` 可以收集剩余的元素为一个列表：
+
+```py title="Python"
+first, *rest = [1, 2, 3, 4, 5]
+print(first)  # 1
+print(rest)   # [2, 3, 4, 5]
+
+*head, last = [1, 2, 3, 4, 5]
+print(head)  # [1, 2, 3, 4]
+print(last)  # 5
+
+first, *middle, last = [1, 2, 3, 4, 5]
+print(first, middle, last)  # 1 [2, 3, 4] 5
+```
+
+### 函数返回值解包
+
+```py title="Python"
+def get_user_info():
+    return "Alice", 25, "Beijing"
+
+name, age, city = get_user_info()
+print(name, age, city)  # Alice 25 Beijing
+```
+
+## 类型注解基础
+
+Python 依然是动态类型语言，但支持**类型注解（Type Hints）**，可以在变量、函数参数、返回值上添加类型提示。类型注解**不会影响运行**，但可以被静态类型检查工具（如 `mypy`、`pyright`）检查，提升代码可读性与可维护性。
+
+### 变量类型注解
+
+```py title="Python"
+# 基本写法：变量名: 类型 = 值
+name: str = "Alice"
+age: int = 25
+height: float = 1.75
+is_active: bool = True
+
+# 类型注解只是"提示"，运行时仍可赋其他类型（但会被检查工具警告）
+name = 123  # 运行不会报错，但 mypy 会警告
+print(name)
+```
+
+:::info 类型注解不会强制运行时检查
+类型注解**不会**在运行时强制校验类型，它只是给开发者和工具看的"说明"。要让类型真正被校验，需要使用 `mypy` 等静态检查工具。
+:::
+
+### Python 3.10+ 的联合类型语法
+
+```py title="Python"
+# Python 3.10+：使用 | 表示"或"类型
+def process(value: int | str) -> str:
+    return f"处理: {value}"
+
+print(process(42))      # 处理: 42
+print(process("hello")) # 处理: hello
+
+# 列表类型注解
+from typing import Optional
+
+def find_user(user_id: int) -> str | None:
+    if user_id == 1:
+        return "Alice"
+    return None
+
+result: str | None = find_user(2)
+print(result)  # None
+```
+
+### 容器类型注解
+
+```py title="Python"
+from typing import Sequence
+
+# 使用内置 list/dict/tuple/set 类型注解（Python 3.9+）
+names: list[str] = ["Alice", "Bob"]
+scores: dict[str, int] = {"Alice": 90, "Bob": 85}
+point: tuple[int, int] = (3, 4)
+unique_ids: set[int] = {1, 2, 3}
+
+print(names, scores, point, unique_ids)
+```
+
+## 实战：个人信息卡片
+
+下面用一个综合示例巩固本章知识，包含变量、多类型、解包与类型注解：
+
+```py title="Python"
+def build_profile(name: str, age: int, height: float, tags: list[str]) -> dict:
+    """构建用户信息字典"""
+    return {
+        "name": name,
+        "age": age,
+        "height": height,
+        "tags": tags,
+        "adult": age >= 18,
+    }
+
+
+# 解包函数返回值
+profile: dict = build_profile(
+    name="Alice",
+    age=25,
+    height=1.68,
+    tags=["python", "music"],
+)
+
+# 多重赋值 + 解包
+name, age = profile["name"], profile["age"]
+print(f"姓名: {name}, 年龄: {age}")
+
+# 星号解包
+*_, last_tag = profile["tags"]
+print(f"最后一个标签: {last_tag}")
+
+# 类型检查
+print(f"profile 类型: {type(profile).__name__}")
+print(f"age 是 int 吗: {isinstance(age, int)}")
+```
+
+运行结果：
+
+```text title="输出"
+姓名: Alice, 年龄: 25
+最后一个标签: music
+profile 类型: dict
+age 是 int 吗: True
+```
+
+## 🎯 动手练习
+
+尝试完成以下练习，巩固本节知识：
+
+1. **命名规则验证**：尝试使用非法命名（如 `2user`、`user-name`、`for`），观察 Python 的错误提示
+2. **类型探索**：使用 `type()` 查看以下值的类型：`0`、`0.0`、`""`、`[]`、`{}`、`set()`
+3. **解包练习**：创建一个包含 5 个元素的列表，使用星号解包分别获取第一个、中间三个、最后一个元素
+4. **类型注解实践**：编写一个函数 `calculate(a: int | float, b: int | float) -> int | float`，实现加减乘除运算
+
+<PyodideRunner title="变量类型探索">
+
+```python
+# 1. 查看各种值的类型
+values = [0, 0.0, "", [], {}, set(), True, None, "hello"]
+for v in values:
+    print(f"{str(v):>10} -> {type(v).__name__}")
+
+# 2. 动态类型演示
+x = 10
+print(f"\nx = {x}, type: {type(x).__name__}")
+x = "hello"
+print(f"x = {x!r}, type: {type(x).__name__}")
+x = [1, 2, 3]
+print(f"x = {x}, type: {type(x).__name__}")
+
+# 3. 多重赋值与解包
+a, b, c = 1, 2, 3
+print(f"\na={a}, b={b}, c={c}")
+a, b = b, a
+print(f"交换后: a={a}, b={b}")
+
+# 星号解包
+first, *middle, last = [10, 20, 30, 40, 50]
+print(f"\nfirst={first}, middle={middle}, last={last}")
+
+# 4. isinstance 类型判断
+print(f"\nTrue 是 int 吗? {isinstance(True, int)}")
+print(f"42 是 (int, float) 吗? {isinstance(42, (int, float))}")
+```
+
+</PyodideRunner>
+
+## 📚 延伸阅读
+
+- [PEP 8 - Python 风格指南](https://peps.python.org/pep-0008/) - 官方推荐的代码风格规范
+- [PEP 484 - 类型提示](https://peps.python.org/pep-0484/) - Python 类型注解的正式规范
+- [PEP 604 - 联合类型语法](https://peps.python.org/pep-0604/) - Python 3.10+ 的 `X | Y` 语法
+- [Python 关键字列表](https://docs.python.org/zh-cn/3/reference/lexical_analysis.html#keywords) - 官方保留字完整列表
+
+## 📊 速查表
+
+| 语法 | 含义 | 示例 |
+|------|------|------|
+| `name = value` | 变量赋值 | `age = 25` |
+| `a, b = b, a` | 交换变量 | `x, y = y, x` |
+| `first, *rest = lst` | 星号解包 | `1, [2,3,4,5]` |
+| `x: int = 10` | 类型注解 | `name: str = "Alice"` |
+| `int \| str` | 联合类型 | `def f(x: int \| str)` |
+| `list[str]` | 泛型容器 | `names: list[str] = []` |
+| `isinstance(x, T)` | 类型判断 | `isinstance(x, int)` |
+| `type(x)` | 查看类型 | `type(42)  # <class 'int'>` |
+
+## ✅ 本节总结
+
+- Python 变量命名只能用字母、数字、下划线，且不能以数字开头，不能与关键字冲突
+- Python 是**动态类型**语言：变量没有类型，对象才有类型；可用 `type()` 查看，用 `isinstance()` 判断
+- 基本数据类型包括 `int`、`float`、`complex`、`str`、`bool`、`NoneType`
+- 支持**多重赋值**和**解包赋值**（含星号 `*` 收集），让代码更简洁
+- Python 3.10+ 的类型注解（如 `int | str`、`list[str]`）能显著提升代码可读性，配合 `mypy` 等工具可实现静态类型检查

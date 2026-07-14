@@ -1,0 +1,85 @@
+.quoteBlock {
+  margin: 1.5rem 0 2rem;
+  padding: 1.25rem 1.5rem;
+  border-left: 3px solid var(--ifm-color-primary);
+  border-radius: 0 var(--ifm-radius-md) var(--ifm-radius-md) 0;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 4%, transparent),
+    color-mix(in srgb, var(--ifm-color-violet) 2%, transparent)
+  );
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .quoteBlock {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 8%, transparent),
+    color-mix(in srgb, var(--ifm-color-violet) 4%, transparent)
+  );
+}
+
+.quoteBlock::before {
+  content: '\201C';
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  font-size: 4rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: var(--ifm-color-primary);
+  opacity: 0.12;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.quoteText {
+  font-size: 1rem;
+  font-style: italic;
+  line-height: 1.8;
+  color: var(--ifm-color-text-secondary);
+  margin: 0 0 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.quoteAttribution {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  position: relative;
+  z-index: 1;
+}
+
+.quoteAuthor {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ifm-color-text-primary);
+}
+
+.quoteRole {
+  font-size: 0.8125rem;
+  color: var(--ifm-color-text-muted);
+}
+
+.quoteRole::before {
+  content: '— ';
+}
+
+@media (max-width: 768px) {
+  .quoteBlock {
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0 1.75rem;
+  }
+
+  .quoteText {
+    font-size: 0.9375rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quoteBlock {
+    transition: none;
+  }
+}

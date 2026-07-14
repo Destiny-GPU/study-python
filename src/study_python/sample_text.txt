@@ -1,0 +1,241 @@
+Beautiful is better than ugly.
+Explicit is better than implicit.
+Simple is better than complex.
+Complex is better than complicated.
+How to find pi in randomness all around you
+
+Random coin flips, floppy needles and mathematical mysteries reveal pi in new ways
+
+These three techniques will let you estimate pi out of randomness.
+
+Grab something circular, like a cup, measure the distance around the circle, and divide that by the distance across the widest part. What you’ll get is a pretty good estimate of the irrational number pi (3.14159...). But you can also find pi in a series of random coin flips or a collection of needles tossed on a wooden floor. Sometimes the reason pi shows up in randomly generated values is obvious—if there are circles or angles involved, pi is your guy. But sometimes the circle is cleverly hidden, and sometimes the reason pi pops up is a mathematical mystery!
+
+To celebrate Pi Day this year, here are three ways to estimate pi using random chance that you can try out at home. The last one, using coin flips, is brand new—published just in time for Pi Day.
+
+Perhaps the simplest way to randomly estimate pi works like this: take a square with side length 2 and place a circle with radius 1 inside so that it just touches the edges of the square. Then randomly generate points in the square. As you add more and more random points, the proportion of points which end up in the circle will approach π⁄4—the ratio between the area of the circle (pi) and the area of the square (4).
+
+The incidence of pi here is not surprising—it comes directly from the formula for the area of a circle—but the method is a classic example of a Monte Carlo simulation, in which random data are used to approximate an exact calculation.
+
+Suppose I drop a bunch of needles on a hardwood floor with lines spaced one needle length apart. What proportion of the needles can I expect to cross the lines? This question was first posed by Georges-Louis Leclerc, Comte de Buffon (or Count of Buffon) in 1733, and the answer is 2⁄π (about 2⁄3).
+
+To find out why, we need to think about a more general question: What if our needle is not a straight line but a squiggle, a square or any other line-drawn shape?
+
+This extended version of the problem is sometimes called “Buffon’s noodle” because noodles come in many more shapes than needles. It turns out that no matter what shape the needle is bent into, we can still expect it, on average, to cross the same number of lines. The expected value of the number of lines crossed is proportional to the length of the needle. In other words, we can expect a collection of needles of length n (of any shape) to cross n times as many lines as the same number of needles of length 1.
+
+So to find the answer to Buffon’s query, all you need to do is pick a clever shape for your needles. This is where the circles come in. If you have lines spaced one unit apart and a needle bent into a circle that has diameter 1, it will always cross the lines exactly twice. The length of the needle making up the circle is pi, and so the probability that a needle of length 1 will cross a line will be the expected value of the number of times the circle crosses—2—divided by the length of the circular needle, giving us 2⁄π.
+
+Pick up a coin and flip it. Record heads or tails. Repeat until you’ve gotten one more head than tails, and record the proportion of heads to total flips. For example, if your first flip was heads, stop right away and record 1. If you flip tails, heads, tails, heads, heads, stop and record ⅗. The expected value of your result, or the average of all your trials if you did infinitely many, is π⁄4. The more trials you average together, the closer you get to π⁄4.
+
+This new method for estimating pi using coin flips was introduced by James Propp, a mathematician at University of Massachusetts Lowell, in a preprint posted online at ArXiv.org last month—just in time for Pi Day! Though the math behind the method is nothing new, the idea to use it to estimate pi with coin flips is.
+
+So why do we get π⁄4? The unsatisfying answer is that somewhere in the probability calculation there is an infinite sum that happens to correspond to the values of the arcsin function—a trigonometric function closely related to pi. But mathematicians haven’t found a meaningful connection between flipping coins and pi. “Sometimes something that’s really basic has relevance to two totally disconnected branches of mathematics,” Propp says. “That’s one of the joys of mathematics, but in many respects it’s a mystery.”
+
+Vienna University of Technology mathematician Stefan Gerhold observed a very similar result, which he posted as a preprint to arXiv.org in 2025. Instead of flipping a coin until you have more heads than tails, Gerhold and his co-author were thinking about families having children and stopping when they had one more boy than girl. “It’s very mysterious,” Gerhold says. “I don’t think there is a good way to understand that [in this scenario] the expectation will involve pi.”
+
+None of these methods are particularly practical for estimating pi’s value. To get pi to the accuracy of 3.14, Propp estimates it might take up to one trillion coin flips. This is partially because sequences of coin flips can get really long before heads overtake tails, so much so that the expected value of a sequence’s length is infinity! On top of that, you can’t flip all the coins at once the same way you can drop needles—the order of heads and tails matters. That’s why Propp suggests trying it in a classroom, where many students can flip sequences of coins simultaneously.
+
+Jennifer Wilson, a mathematician at the New School, who uses similar probability models to analyze voting methods, finds the result pleasing. “It’s nice because it’s certainly something you could try with any group of students, and all you’d need is a background in calculus to understand it.”
+
+On your own, you might be flipping coins for quite a while to get an accurate read on pi. And even the other two methods might require around one million random points or needle drops to get 3.14—but you could get luckier. This Pi Day, consider joining in on the tradition of finding the value of pi in wildly inefficient ways.
+
+BEIJING — China's Foreign Ministry criticized a U.S. investigation opened this week into the trade practices of dozens of countries, calling it a "pretext for political manipulation."
+
+U.S. Trade Representative Jamieson Greer announced the investigation Wednesday into what the administration considers "excess capacity and production in manufacturing sectors" in countries and blocs including China, Mexico and the European Union. The move came after the Supreme Court last month struck down tariffs the president had imposed on imports from countries around the world. This could enable the administration to levy tariffs on goods from countries if it determines they discriminate against U.S. companies.
+
+"We oppose any form of unilateral tariff measures," Foreign Ministry spokesperson Guo Jiakun told reporters on Thursday. "The so-called issue of 'China's overcapacity' does not really exist and should not be used as a pretext for political manipulation."
+
+This comes just weeks before President Trump and Chinese President Xi Jinping are slated to meet in a high-stakes summit.
+
+It also happened as lawmakers in Beijing approved a roadmap for economic growth that continues the types of practices that have irked some of its partners.
+
+The Chinese legislature on Thursday approved what it calls a Five-Year Plan, a social and economic blueprint, which includes policies around technological self-reliance and industrial manufacturing.
+
+While the plan does not mention the U.S., it is focused on "managing what Beijing calls its 'great-power competition' with Washington," according to Yu Jie, a senior research fellow on China at London-based think tank, Chatham House.
+
+Here are key takeaways of China's plan.
+
+1. Scientific and technological self-reliance
+
+The plan calls for "substantial improvements" to China's self-reliance and strengthening of its science and technology sectors.
+
+China has long been uncomfortable with relying on foreign suppliers of high-end technology, such as aircraft engines and high-end semiconductors, Yu writes.
+
+The resolve for self-reliance hardened after the U.S. restricted sales of high-end semiconductors and advanced tech to Chinese firms.
+
+China is set to increase spending on research and development by over 7% annually.
+
+2. Global leader in tech innovation
+
+China doesn't want to just catch up with the U.S. and Europe in semiconductors and aerospace, but it also wants to lead in those areas along with future industries such as intelligent robotics, biomedicine, quantum technology and what's known as the "low-altitude" economy, ranging from drones to flying taxis.
+
+Similar ambitions in the past have raised concerns among American and European business groups in China that there will be little opportunity for them.
+
+The Chinese official news agency, Xinhua, tried to allay those fears: "Tech sovereignty is not about isolation," it said in an editorial.
+
+3. Doubling down on industrial manufacturing
+
+China wants to innovate like the U.S., and manufacture what it innovates.
+
+The plan calls on manufacturers to capitalize on the breakthroughs China made in robotics and artificial intelligence to build a "modern industrial system with advanced manufacturing as its backbone."
+
+The blueprint, however, does not address the problem of "involution," where fierce competition among manufacturers led to price wars and oversupply, affecting profits and increasing trade friction abroad.
+
+Many Chinese manufacturers have been accused of dumping their excess inventory abroad, undercutting the key industries of their trade partners.
+
+The plan also calls for strengthening China's competitive advantages in rare earths and other strategic minerals. Chinese officials used China's advantage as a leverage to pressure President Trump to back down on triple-digit tariffs on Chinese exports last year.
+
+The plan also calls for "vigorously boosting consumption."
+
+Most of China's household wealth is invested in real estate. A yearslong property slump has made Chinese consumers spend more cautiously.
+
+Consecutive U.S. administrations and European leaders have called on China to resolve its overcapacity issue by reviving its domestic consumption.
+
+"They want China to actually export less and import more, encourage local consumption, increase local wages so they can sell more to China," said Wang Dan, China director of Eurasia Group.
+
+The plan lists consumption as a key task, but it doesn't provide details on how China may address this gap.
+
+The U.S. and China have been trying to dominate semiconductor design and manufacture. But the creators of one type of semiconductor design wanted to make it free for anyone in the world to build upon.
+
+Today, when we talk about semiconductor chips, we often talk about competition between the U.S. and China and how the U.S. is trying to protect that technology through export controls. The creators behind one category of semiconductor design have a different approach. They wanted to make it open standard, free for everyone anywhere in the world to build upon. But as NPR's Emily Feng reports, this vision is increasingly at risk.
+
+EMILY FENG, BYLINE: Back in 2010, Professor Krste Asanovic and his students at the University of California, Berkeley set out to make a new instruction set for chip architecture, a set of broad standards and design principles kind of like a blueprint for a semiconductor.
+
+KRSTE ASANOVIC: There was no grand vision. It was only for ourselves and our friends.
+
+FENG: But fast forward 15 years. That architecture, known by its acronym RISC-V, has become globally adopted, in part because RISC-V is cheap. To use most other commercial chip architecture, like from Intel or U.K.-based Arm, you'd have to pay a royalty, but Asanovic says anyone can innovate on RISC-V, modifying RISC-V's blueprint for free to make their own products, like processors and software.
+
+ASANOVIC: This is going to enable more competition, more innovation because you're not relying on one vendor.
+
+FENG: One of the big adopters of RISC-V have been semiconductor design companies in China.
+
+FENG: And here, at one of the most recent RISC-V meetups in Beijing, full of coders and entrepreneurs...
+
+UNIDENTIFIED PERSON: (Non-English language spoken).
+
+FENG: ...People shared ideas and the latest products being designed by software teams in China, all based on RISC-V. Software entrepreneur Wu Wei is the head of this Beijing chapter of RISC-V...
+
+WU WEI: (Non-English language spoken).
+
+FENG: ...And tells NPR in an interview later that while there has been huge interest from Chinese companies, many are immature, disappearing once their investment funding fizzles out.
+
+WU: (Non-English language spoken).
+
+FENG: But given the ever more complex hardware and software semiconductor needs, Wu says it is imperative that experienced tech workers, including those in China, collaborate with people worldwide. Yet RISC-V's idealistic vision of global research on chips, unhindered by questions of sovereignty or geopolitics, is butting up against technology protectionism, especially in the U.S., where American lawmakers have questioned whether RISC-V is helping China innovate faster.
+
+JACOB FELDGOISE: I would argue it is helping them innovate more quickly.
+
+FENG: This is Jacob Feldgoise, a fellow at the Washington-based think tank CSET, which focuses on technology research.
+
+FELDGOISE: But it's not handing them a finished product or a finished design.
+
+FENG: Plus, Feldgoise argues, American companies on the whole benefit from being able to access a global tech standard, like they do with Wi-Fi or Bluetooth or cellular 5G, all of which are global standards.
+
+FELDGOISE: So there's a lot more transparency into the development process, into the details. There's also more opportunity for companies to take action to become involved in the development of this technology.
+
+FENG: So the solution, Feldgoise argues, is not to ban American or Chinese firms from selling RISC-V products, but to encourage more American development of RISC-V. But the shadow of the U.S.-China rivalry is long, and it has complicated RISC-V's global mission. The RISC-V Foundation ended up moving their legal registration to Switzerland a few years ago, Asanovic says, to signify their neutrality in the U.S.-China tech rivalry that started heating up in 2020.
+
+ASANOVIC: So India, Europe, Japan as well as China were very worried about U.S. controlling the technology.
+
+FENG: Asanovic says the U.S. could not effectively export-control the RISC-V standard anyways. It is online and free to use.
+
+ASANOVIC: It just doesn't make any sense, so it's just illogical.
+
+FENG: And he argues, even if the U.S. could, China would just come up with its own open-standards architecture.
+
+ASANOVIC: Building an instruction set and building an ecosystem around it takes some work, but it's been done many times in the past.
+
+FENG: But that, he says, risks the world fragmenting even more, this time along the lines of competing technology standards and designs. Emily Feng, NPR News.
+
+So you want to reclaim your time and attention by spending less time on your phone. How do you do that when your phone is designed to suck you in and keep you scrolling?
+
+Life Kit spoke to experts in behavioral science, psychology and technology for real-world advice. The key, they say, is to find effective ways to resist that constant urge to keep picking up your phone.
+
+For some people, the solution may be as simple as practicing self-awareness: Do you really need to look at your phone right now, or do you actually need something else? Others may need a little more help from blockers that limit access to apps and websites.
+
+Find the right approach with these five expert-recommended strategies.
+
+When you want to reach for your phone or check Instagram for the hundredth time today, notice how you feel at that moment, says Sammy Nickalls, author of Log Off: Self-Help for the Extremely Online.
+
+"For example, I noticed that whenever I was feeling bad about myself in some way, I would log on Twitter," she says.
+
+Then ask yourself: What can I do to address what's really going on? "Most times, it's not scrolling. It's taking a nap, talking to a friend or doing something that makes you happy," she says.
+
+Just because you have the urge to pick up your phone doesn't mean you have to act on it.
+
+"Urges are a lot like waves. They rise up, get bigger and bigger, and they come back down again," says clinical psychologist Diana Hill, co-author of I Know I Should Exercise But … 44 Reasons We Don't Move & How to Get Over Them.
+
+In addiction research, the practice of riding out an urge without doing anything about it is called "urge surfing," she says. "The more you do it, the better you get at surfing and the less you feel you have to give into the urge."
+
+If you want to break the habit of picking up your phone every few minutes, learn what it takes to make a habit.
+
+"A behavior happens when three things come together at the same moment: motivation to do the behavior, ability to do the behavior and a prompt or cue to do the behavior," says BJ Fogg, a behavioral scientist at Stanford University who studies habit formation.
+
+"If you get rid of any one of those three things, the behavior will stop," he says.
+
+There are lots of ways to do this with your phone. "I turn off tons of notifications," Fogg says. That stops the prompts that remind him to keep checking his phone.
+
+You can also decrease the motivation to use your phone by making it less visually enticing. Turn your phone black-and-white, or set up a simple home screen that has just a list of apps and no pictures.
+
+That can cut down phone time by removing the temptation to scroll before bed, in the middle of the night and when you first wake up in the morning.
+
+Plus, this change might help you sleep, says Jean Twenge, a psychologist and the author of 10 Rules for Raising Kids in a High-tech World.
+
+Research has shown that just having your phone or computer near your bed — even in airplane mode — can cause lower-quality sleep, says Twenge. When your device is nearby, it's easier to pick up. The content can keep you alert and scrolling. And the light from screens can affect your circadian rhythm, disrupting your sleep.
+
+Need an extra barrier between you and your device? Don't be afraid to get a little outside help. There are many apps available that introduce delays and reminders not to use your phone. And there are programs that allow you to temporarily block access to the apps you choose.
+
+"The more friction you introduce into your life, the harder you're making it to use all these services and devices," says Jose Briones, author of Low Tech Life: A Guide to Mindful Digital Minimalism. "Your brain is going to say it's not worth it."
+
+Email us at lifekit@npr.org with your creative and effective solutions, as well as your full name, and we may include your response in a story on NPR.org.
+
+This story was edited by Meghan Keane. We'd love to hear from you. Leave us a voicemail at 202-216-9823, or email us at LifeKit@npr.org.
+
+Listen to Life Kit on Apple Podcasts and Spotify, and sign up for our newsletter. Follow us on Instagram: @nprlifekit.
+
+Here's a question you might never have asked yourself: How do you vaccinate a bat?
+
+You can't simply ask your local vet. Nor will the bats line up outside of a clinic on their own.
+
+But a group of Chinese researchers thinks they may have an answer, one that could prove to become a new way to stop the spillover of diseases that cross from animals — like bats — into people.
+
+"Bats carry a lot of very deadly pathogens like Ebola virus, Nipah, Hendra, coronavirus, and also rabies virus," says Aihua Zheng, a virologist at the Chinese Academy of Sciences. "People are finding more and more bat-borne viruses."
+
+When such viruses are transmitted to humans, the results are often fatal — so there's a lot of interest in trying to prevent spillover in the first place.
+
+In some parts of the world, this has led to the organized culling of bats. "But when people kill the bats, basically they have more contact with the bat," says Zheng. "There are more chance[s] to get infected."
+
+And wiping out bats can have other ramifications. These flying mammals play critical roles in the environment by pollinating plants and controlling insect pests. And they're already threatened by habitat loss and their own diseases.
+
+Now, in a paper published in the journal Science Advances, Zheng and his colleagues offer evidence for a different solution to the problem of spillover — vaccinating the bats themselves against these dangerous viruses. "We not only protect the human but also protect the animals," says Zheng.
+
+They used a couple of techniques to immunize the bats, including using vaccine-carrying mosquitoes!
+
+"The advantage is if we immunize the population, the transmission of the virus will be decreased or eventually eliminated," he adds.
+
+The approach is still in early stages, but comes as an exciting development for people battling these diseases.
+
+Zheng explains that the challenge with the approach was how to vaccinate the bats.
+
+In a study a few years back, for instance, researchers applied a topical vaccine to the fur of bats so they could lick it off one another. Zheng says it worked in the lab, but "it's not easy to scale up in the real world. You have to catch a lot of bats and then release them."
+
+So instead, Zheng and his colleagues opted to enlist a squadron of tiny syringes on wings — mosquitoes. "We want to turn the mosquito into a vaccination tool," Zheng says. In particular, they feed mosquitoes blood laced with genetically engineered vaccines against one of two deadly viruses — Nipah and rabies. Those vaccines then showed up in the mosquito bodies and their salivary glands.
+
+To see if a mammal would pick up the vaccine from the mosquito, his team conducted some of their experiments on mice and other rodents. But the big tests came with actual bats. One of the first steps involved catching insect-eating bats from the suburbs of Beijing. "I like to do some exploration in the cave," says Zheng.
+
+In the lab, the researchers exposed the animals to the special insects in one of two ways: Either the mosquitoes bit the bats or the bats ate the mosquitoes.
+
+A few weeks later, when the researchers drew blood from the bats, they found antibodies. Zheng says that means the animals had mounted an immune response to the virus matching the vaccine they'd been exposed to.
+
+The researchers then infected the bats that had developed antibodies against rabies with the actual rabies virus. Such an infection would have normally been a death sentence. But for these bats, "most of them survived," says Zheng.
+
+One day, he imagines releasing these altered mosquitoes into caves where they might vaccinate wild bats. He considers using a steady current of air at the entrance to trap the insects inside while allowing the bats to come and go freely. He hopes that after a period of time, most of the bats would become vaccinated.
+
+Zheng acknowledges that the mosquito approach wouldn't work everywhere. "The real world is complicated," he explains, making it hard to release the modified insects in all environments. So the researchers came up with a Plan B: saline solution that contained an oral rabies vaccine, which the bats in their lab readily slurped up. "So when the bat drink[s] the water, they will get vaccinated," says Zheng.
+
+This too protected the animals from subsequent infection with rabies. "Yeah, it really worked!," he says. "I'm pretty excited with these result[s]."
+
+"This is an amazing study," says Ausraful Islam, a veterinarian and infectious disease specialist at icddr,b, a health research institute in Dhaka, Bangladesh. He wasn't involved in the experiments.
+
+Islam acknowledges that if the approach is successful in the wild, it could be a real boon for countries like Bangladesh that wrestle with bat-borne viruses. "They have [a] promising way of developing vaccines [for] different animals," he adds, "but I think there's still work to be done before large-scale applications" — like exploring how long immunity lasts in the bats and how feasible it would be for different countries to set up an ongoing bat vaccination campaign.
+
+As for Zheng, he and his team are already planning future studies and looking for international collaborators to help make this batty idea a reality.

@@ -1,0 +1,391 @@
+---
+sidebar_position: 4
+sidebar_label: '集合'
+title: 📦 集合（Set）
+description: 集合是 Python 的无序不重复容器，支持高效的成员测试与并交差等集合运算，是去重与关系判断的利器。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 📦 集合（Set）
+
+集合（`set`）是 Python 中**无序、不重复**的可变容器。它基于哈希表实现，最大特点是**成员测试 O(1)**与**自动去重**，并提供并、交、差、对称差等数学集合运算。当你需要"判断某元素是否出现过"或"求两个群体的交集"时，集合几乎总是最佳选择。
+
+<PyodideRunner title="集合操作快速体验">
+
+```python
+# 集合运算
+frontend_devs = {"Alice", "Bob", "Carol", "David"}
+backend_devs = {"Bob", "David", "Eve", "Frank"}
+
+# 交集：全栈开发者
+fullstack = frontend_devs & backend_devs
+print(f"全栈开发者: {fullstack}")
+
+# 并集：所有开发者
+all_devs = frontend_devs | backend_devs
+print(f"所有开发者: {all_devs}")
+
+# 差集：只做前端
+frontend_only = frontend_devs - backend_devs
+print(f"只做前端: {frontend_only}")
+
+# 对称差集：不是全栈
+not_fullstack = frontend_devs ^ backend_devs
+print(f"不是全栈: {not_fullstack}")
+
+# 去重
+numbers = [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+unique = list(dict.fromkeys(numbers))  # 保序去重
+print(f"\n原始列表: {numbers}")
+print(f"去重后: {unique}")
+```
+
+</PyodideRunner>
+
+## 创建集合
+
+```py title="Python"
+# 1. 花括号字面量（注意：{} 是空字典，不是空集合！）
+fruits = {"apple", "banana", "cherry"}
+print(fruits)  # {'apple', 'banana', 'cherry'}  顺序可能不同
+
+# 2. set() 构造器
+from_list = set([1, 2, 2, 3, 3, 3])
+print(from_list)  # {1, 2, 3}  自动去重
+
+from_string = set("hello")
+print(from_string)  # {'h', 'e', 'l', 'o'}  重复字符被合并
+
+# 3. 空集合：必须用 set()
+empty: set[int] = set()
+not_set = {}  # 这是空 dict！
+print(type(empty), type(not_set))  # <class 'set'> <class 'dict'>
+```
+
+:::warning 空集合的陷阱
+`{}` 创建的是**空字典**，不是空集合。创建空集合必须用 `set()`。这是初学者最常踩的坑之一。
+:::
+
+:::tip 元素必须可哈希
+集合元素和字典键一样，必须是可哈希对象。数字、字符串、元组（元素也要可哈希）可以；列表、字典、集合本身不能作为集合元素。
+:::
+
+```py title="Python"
+# ok = {1, "a", (2, 3)}
+# bad = {[1, 2]}  # TypeError: unhashable type: 'list'
+```
+
+## 集合运算
+
+集合最强大的能力是数学运算：并、交、差、对称差。Python 提供运算符和方法两种写法。
+
+### 运算符 vs 方法对照
+
+| 运算 | 运算符 | 方法 | 含义 |
+| --- | --- | --- | --- |
+| 并集 | `a \| b` | `a.union(b)` | 在 a 或 b 中 |
+| 交集 | `a & b` | `a.intersection(b)` | 同时在 a 和 b 中 |
+| 差集 | `a - b` | `a.difference(b)` | 在 a 但不在 b 中 |
+| 对称差 | `a ^ b` | `a.symmetric_difference(b)` | 仅在 a 或仅在 b 中 |
+
+```py title="Python"
+a = {1, 2, 3, 4, 5}
+b = {4, 5, 6, 7, 8}
+
+# 并集：所有元素
+union = a | b
+print(union)  # {1, 2, 3, 4, 5, 6, 7, 8}
+
+# 交集：共有的
+intersection = a & b
+print(intersection)  # {4, 5}
+
+# 差集：a 有但 b 没有
+difference = a - b
+print(difference)  # {1, 2, 3}
+
+# 对称差：只在其中一个集合里
+symmetric = a ^ b
+print(symmetric)  # {1, 2, 3, 6, 7, 8}
+```
+
+### 原地更新运算符
+
+对应的原地更新运算符是 `|=`、`&=`、`-=`、`^=`，方法版本是 `update`、`intersection_update` 等。
+
+```py title="Python"
+a = {1, 2, 3}
+b = {3, 4, 5}
+
+# 原地交集：a 变成 a & b
+a &= b
+print(a)  # {3}
+
+# 原地并集
+a |= {9, 10}
+print(a)  # {3, 9, 10}
+```
+
+:::info 运算符 vs 方法的差异
+运算符要求两边都是集合；方法可以接受任意可迭代对象（如列表）。例如 `a.union([1, 2])` 合法，但 `a | [1, 2]` 会报 `TypeError`。
+:::
+
+```py title="Python"
+a = {1, 2, 3}
+# a | [4, 5]      # TypeError: unsupported operand
+print(a.union([4, 5]))  # {1, 2, 3, 4, 5}  方法接受可迭代对象
+```
+
+### 子集与超集
+
+```py title="Python"
+a = {1, 2, 3}
+b = {1, 2, 3, 4, 5}
+
+print(a <= b)         # True  a 是 b 的子集
+print(a.issubset(b)) # True
+print(b >= a)         # True  b 是 a 的超集
+print(b.issuperset(a))  # True
+
+# 真子集：<
+print(a < b)  # True  a 是 b 的真子集
+print(a <= a) # True  非严格子集
+print(a < a)  # False 严格子集要求不等
+
+# 不相交判断
+print(a.isdisjoint({6, 7}))  # True  没有共同元素
+```
+
+## frozenset
+
+`set` 是可变的，因此不可哈希、不能作为字典键或集合元素。`frozenset` 是集合的**不可变版本**，创建后不能增删，但可哈希。
+
+```py title="Python"
+fs = frozenset([1, 2, 3, 2, 1])
+print(fs)         # frozenset({1, 2, 3})
+print(type(fs))  # <class 'frozenset'>
+
+# fs.add(4)  # AttributeError: 不可变
+
+# 可作为字典键或集合元素
+cache: dict[frozenset[str], int] = {
+    frozenset({"a", "b"}): 1,
+    frozenset({"c", "d"}): 2,
+}
+print(cache[frozenset({"b", "a"})])  # 1  顺序无关
+
+# 普通集合不能作为集合元素
+# nested = {{1, 2}, {3, 4}}  # TypeError
+nested = {frozenset({1, 2}), frozenset({3, 4})}  # OK
+print(nested)
+```
+
+:::tip 何时用 frozenset
+当你需要把"一组值"用作字典键、集合元素，或想表达"集合内容不可变"的契约时，用 `frozenset`。它和 `tuple` 之于 `list` 的关系类似。
+:::
+
+## 成员测试性能
+
+集合的 `in` 操作是 O(1)（平均），而列表是 O(n)。在大量数据中判断存在性时，性能差距巨大。
+
+```py title="Python"
+import timeit
+
+data = list(range(100_000))
+big_list = data
+big_set = set(data)
+
+# 在末尾找一个存在的元素
+list_time = timeit.timeit(lambda: 99_999 in big_list, number=1000)
+set_time = timeit.timeit(lambda: 99_999 in big_set, number=1000)
+
+print(f"列表查找: {list_time:.4f}s")  # 较慢
+print(f"集合查找: {set_time:.4f}s")  # 极快，通常快几个数量级
+```
+
+:::warning 别在循环里用 list 的 in
+当代码写成 `if x in some_list:` 且 `some_list` 很大、又被频繁调用时，把它转成 `set` 一次就能带来数量级的提速。这是最常见的 Python 性能优化点之一。
+:::
+
+## 去重
+
+利用集合的自动去重特性，可以一行去重。但要注意：集合无序，会丢失原始顺序。
+
+```py title="Python"
+nums = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5]
+
+# 简单去重（不保序）
+unique = list(set(nums))
+print(unique)  # 顺序不确定，如 [1, 2, 3, 4, 5, 6, 9]
+
+# 保序去重（Python 3.7+）
+seen: set[int] = set()
+ordered_unique = [x for x in nums if not (x in seen or seen.add(x))]
+print(ordered_unique)  # [3, 1, 4, 5, 9, 2, 6]  保持首次出现顺序
+
+# 用 dict.fromkeys 保序去重（更直观）
+ordered2 = list(dict.fromkeys(nums))
+print(ordered2)  # [3, 1, 4, 5, 9, 2, 6]
+```
+
+:::tip 保序去重的技巧
+`dict.fromkeys(iterable)` 利用字典键的唯一性和 3.7+ 的有序性，一行实现"保序去重"，比手写循环更简洁、更 Pythonic。
+:::
+
+## 集合推导式
+
+集合推导式用 `{...}` 语法生成集合，自动去重。
+
+```py title="Python"
+# 1. 平方去重
+squares = {x * x for x in range(-5, 6)}
+print(squares)  # {0, 1, 4, 9, 16, 25}  负数平方后合并
+
+# 2. 提取单词首字母
+words = ["apple", "avocado", "banana", "cherry", "blueberry"]
+first_letters = {w[0] for w in words}
+print(first_letters)  # {'a', 'b', 'c'}
+
+# 3. 带条件过滤
+nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+evens = {x for x in nums if x % 2 == 0}
+print(evens)  # {2, 4, 6, 8, 10}
+```
+
+## 集合方法补充
+
+```py title="Python"
+s = {1, 2, 3}
+
+# 添加单个元素
+s.add(4)
+print(s)  # {1, 2, 3, 4}
+
+# 添加多个元素（接受可迭代对象）
+s.update([5, 6], {7, 8})
+print(s)  # {1, 2, 3, 4, 5, 6, 7, 8}
+
+# 删除
+s.discard(8)   # 不存在也不报错
+s.remove(7)    # 不存在会抛 KeyError
+removed = s.pop()  # 弹出任意一个（无序）
+print(removed, s)
+
+s.clear()       # 清空
+print(s)  # set()
+```
+
+:::warning discard vs remove
+`discard(x)` 删除元素不存在时**不报错**；`remove(x)` 不存在时**抛 `KeyError`**。不确定元素是否存在时用 `discard` 更安全。
+:::
+
+## 实战：去重与交集查找
+
+下面模拟一个实际场景：从两份用户访问日志中找出**两份都访问过的用户**，并统计各自独有的用户数。
+
+```py title="Python"
+from __future__ import annotations
+
+
+def analyze_visitors(
+    day1: list[str], day2: list[str]
+) -> dict[str, set[str] | int]:
+    """分析两天的访客数据。"""
+    s1 = set(day1)
+    s2 = set(day2)
+
+    both_days = s1 & s2                  # 两天都来过
+    only_day1 = s1 - s2                  # 仅第一天
+    only_day2 = s2 - s1                  # 仅第二天
+    either_day = s1 | s2                 # 至少来过一天
+
+    return {
+        "both_days": both_days,
+        "only_day1": only_day1,
+        "only_day2": only_day2,
+        "either_day": either_day,
+        "both_count": len(both_days),
+        "either_count": len(either_day),
+    }
+
+
+def main() -> None:
+    day1_users = [
+        "alice", "bob", "carol", "dave",
+        "alice", "eve",   # 故意重复
+    ]
+    day2_users = ["bob", "carol", "frank", "grace", "bob"]
+
+    report = analyze_visitors(day1_users, day2_users)
+
+    print(f"两天都访问: {sorted(report['both_days'])}")
+    print(f"仅第一天:   {sorted(report['only_day1'])}")
+    print(f"仅第二天:   {sorted(report['only_day2'])}")
+    print(f"两天交集数: {report['both_count']}")
+    print(f"两天并集数: {report['either_count']}")
+
+    # 用集合推导式找出名字长度为 5 的"共有用户"
+    len5_both = {u for u in report["both_days"] if len(u) == 5}
+    print(f"交集且名字长 5: {len5_both}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+输出：
+
+```
+两天都访问: ['bob', 'carol']
+仅第一天:   ['alice', 'dave', 'eve']
+仅第二天:   ['frank', 'grace']
+两天交集数: 2
+两天并集数: 7
+交集且名字长 5: {'carol'}
+```
+
+:::tip 集合运算的语义清晰
+用 `&`、`|`、`-` 表达"共有的""全部的""独有的"，比手写循环嵌套既快又易读。注意原始列表中的重复项（如 `alice` 出现两次）被自动去重，无需额外处理。
+:::
+
+## 🎯 动手练习
+
+1. **去重对比**：分别使用 `set()`、`dict.fromkeys()` 和循环实现列表去重，对比性能和保序性
+2. **集合运算**：给定两个用户列表，找出共同用户、独有用户，并统计各自数量
+3. **frozenset 实践**：使用 `frozenset` 作为字典键存储一组标签，演示顺序无关性
+4. **性能测试**：使用 `timeit` 对比 10 万元素列表和集合的成员查找性能差异
+
+## 📚 延伸阅读
+
+- [Python 集合文档](https://docs.python.org/zh-cn/3/library/stdtypes.html#set) - 官方集合类型详解
+- [frozenset 文档](https://docs.python.org/zh-cn/3/library/stdtypes.html#frozenset) - 不可变集合详解
+- [集合运算数学基础](https://docs.python.org/zh-cn/3/library/stdtypes.html#set-types-set-frozenset) - 并交差对称差运算
+- [性能优化指南](https://wiki.python.org/moin/TimeComplexity) - Python 数据结构时间复杂度
+
+## 📊 速查表
+
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 创建集合 | `{a, b}` 或 `set()` | `s = {1, 2, 3}` |
+| 空集合 | `set()` | `empty = set()`（不是 `{}`） |
+| 添加元素 | `s.add(x)` | `s.add(4)` |
+| 删除元素 | `s.discard(x)` | 不存在不报错 |
+| 删除元素 | `s.remove(x)` | 不存在抛 `KeyError` |
+| 弹出元素 | `s.pop()` | 弹出任意一个 |
+| 并集 | `a | b` 或 `a.union(b)` | `{1,2} | {2,3}` → `{1,2,3}` |
+| 交集 | `a & b` 或 `a.intersection(b)` | `{1,2} & {2,3}` → `{2}` |
+| 差集 | `a - b` 或 `a.difference(b)` | `{1,2} - {2,3}` → `{1}` |
+| 对称差 | `a ^ b` 或 `a.symmetric_difference(b)` | `{1,2} ^ {2,3}` → `{1,3}` |
+| 子集判断 | `a <= b` 或 `a.issubset(b)` | `{1} <= {1,2}` → `True` |
+| 不可变集合 | `frozenset(iterable)` | `fs = frozenset([1,2,3])` |
+
+## ✅ 本节总结
+
+- 集合是**无序、不重复、可变**的容器，基于哈希表，成员测试 O(1)
+- 创建空集合用 `set()`，`{}` 是空字典
+- 集合运算：`|` 并、`&` 交、`-` 差、`^` 对称差；对应方法可接受任意可迭代对象
+- `frozenset` 是不可变集合，可哈希，能作字典键和集合元素
+- 大量数据中判断存在性，把列表转集合可带来数量级提速
+- 保序去重推荐 `dict.fromkeys()`；非保序用 `set()` 即可
+- `discard` 删除不存在不报错，`remove` 会抛 `KeyError`

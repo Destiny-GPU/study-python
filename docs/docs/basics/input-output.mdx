@@ -1,0 +1,771 @@
+---
+sidebar_position: 7
+sidebar_label: '输入与输出'
+title: 📝 输入与输出
+description: 掌握 Python 的 print 函数参数、input 输入、多种格式化输出方式、sys.stdin/stdout/stderr 流，以及 rich 库的终端美化输出。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 📝 输入与输出
+
+输入与输出（I/O）是程序与外界交互的桥梁。Python 提供了简洁强大的 `print()` 与 `input()` 函数，以及灵活的标准流（`sys.stdin` / `sys.stdout` / `sys.stderr`）。本节将系统讲解它们的高级用法、多种格式化输出方式，并介绍用于终端美化的 `rich` 库。
+
+## 📌 本节要点
+- 掌握 print() 函数的 sep、end、file、flush 参数
+- 理解 input() 的字符串返回特性与安全输入封装
+- 熟练使用 f-string、format()、% 三种格式化方式
+- 了解 sys 标准流与 rich 库的终端美化输出
+
+## print() 函数
+
+`print()` 是 Python 中最常用的输出函数，它有许多实用的参数：
+
+```py title="Python"
+print?
+# 签名：print(*objects, sep=' ', end='\n', file=sys.stdout, flush=False)
+```
+
+| 参数    | 含义                              | 默认值       |
+| ------- | --------------------------------- | ------------ |
+| `*objects` | 要打印的内容（可多个）         | -            |
+| `sep`   | 多个对象之间的分隔符             | `' '`（空格）|
+| `end`   | 末尾追加的字符                    | `'\n'（换行）`|
+| `file`  | 输出到的文件对象                  | `sys.stdout` |
+| `flush` | 是否立即刷新输出缓冲区            | `False`      |
+
+### sep 参数：分隔符
+
+```py title="Python"
+# 默认用空格分隔
+print("a", "b", "c")  # a b c
+
+# 自定义分隔符
+print("2024", "01", "15", sep="-")   # 2024-01-15
+print("Alice", "Bob", "Charlie", sep=", ")  # Alice, Bob, Charlie
+print("a", "b", "c", sep="")  # abc (无分隔)
+print("序号", "姓名", "成绩", sep="\t")  # 序号	姓名	成绩 (制表符分隔)
+print("a", "b", "c", sep="\n")  # 每个元素换行
+```
+
+### end 参数：结尾字符
+
+```py title="Python"
+# 默认换行
+print("第一行")
+print("第二行")
+
+# 不换行
+print("Hello", end=" ")
+print("World")  # Hello World
+
+# 自定义结尾
+for i in range(5):
+    print(i, end=" ")  # 0 1 2 3 4 (同行，空格分隔)
+print()  # 最后换行
+
+# 进度条效果（用 \r 回到行首）
+import time
+
+for i in range(101):
+    print(f"\r进度: {i}%", end="")
+    time.sleep(0.01)
+print("\n完成！")
+```
+
+:::tip \r 与进度条
+`end="\r"`（回车符）让光标回到行首而不换行，是实现终端进度条、动态刷新的核心技巧。结合 `end=""` 不换行，可创建动态更新的输出。
+:::
+
+### file 参数：输出到文件
+
+```py title="Python"
+# 输出到文件
+with open("output.txt", "w", encoding="utf-8") as f:
+    print("写入文件的第一行", file=f)
+    print("写入文件的第二行", file=f)
+
+# 同时输出到屏幕和文件（典型日志场景）
+import sys
+
+class Tee:
+    """同时写入多个流"""
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+
+    def flush(self):
+        for s in self.streams:
+            s.flush()
+
+# 使用示例
+# with open("log.txt", "w", encoding="utf-8") as f:
+#     tee = Tee(sys.stdout, f)
+#     print("这条信息同时显示在屏幕和文件", file=tee)
+```
+
+### flush 参数：立即刷新
+
+```py title="Python"
+import time
+
+# 默认情况下，print 会缓冲输出
+# flush=True 强制立即输出（用于实时显示）
+for i in range(3):
+    print(f"处理中... {i+1}/3", flush=True)
+    time.sleep(0.5)
+```
+
+:::info 何时需要 flush=True？
+在以下场景中，输出可能不会立即显示，需要 `flush=True`：
+1. **管道输出**：`python script.py | grep xxx` 时，stdout 是块缓冲的
+2. **进度条/实时刷新**：确保信息立即显示
+3. **日志输出**：避免程序崩溃时丢失最后的日志
+4. **GUI/IDE 环境**：某些 IDE 的输出窗口有缓冲
+:::
+
+## input() 函数
+
+`input()` 用于从标准输入读取一行文本，返回**字符串**：
+
+```py title="Python"
+# 基本用法
+name = input("请输入你的名字：")
+print(f"你好，{name}！")
+
+# 注意：input 总是返回字符串，需要手动转换类型
+age_str = input("请输入你的年龄：")
+age = int(age_str)  # 转为整数
+print(f"明年你 {age + 1} 岁")
+
+# 更安全的转换
+try:
+    height = float(input("请输入你的身高（米）："))
+    print(f"你的身高是 {height} 米")
+except ValueError:
+    print("输入的不是有效数字")
+```
+
+:::warning input() 永远返回字符串
+`input()` 不管你输入什么，返回的都是字符串。输入 `123` 得到的是 `"123"` 而不是数字 `123`，需要用 `int()` 或 `float()` 转换。忘记转换是初学者的常见错误。
+:::
+
+### 封装安全的输入函数
+
+```py title="Python"
+def input_int(prompt: str, default: int | None = None) -> int:
+    """安全读取整数输入"""
+    while True:
+        s = input(prompt)
+        if not s and default is not None:
+            return default
+        try:
+            return int(s)
+        except ValueError:
+            print("请输入有效的整数")
+
+
+def input_float(prompt: str, default: float | None = None) -> float:
+    """安全读取浮点数输入"""
+    while True:
+        s = input(prompt)
+        if not s and default is not None:
+            return default
+        try:
+            return float(s)
+        except ValueError:
+            print("请输入有效的数字")
+
+
+def input_choice(prompt: str, options: list[str]) -> str:
+    """让用户从选项中选择"""
+    while True:
+        s = input(prompt).strip()
+        if s in options:
+            return s
+        print(f"请从以下选项中选择: {options}")
+
+
+# 使用示例
+# age = input_int("请输入年龄（默认 18）：", default=18)
+# print(f"你的年龄: {age}")
+```
+
+### 多行输入技巧
+
+```py title="Python"
+# 方法 1：用空行结束
+print("请输入多行内容（空行结束）：")
+lines = []
+while True:
+    line = input()
+    if line == "":
+        break
+    lines.append(line)
+print("你输入了：")
+print("\n".join(lines))
+
+# 方法 2：用 EOF 结束（Ctrl+D / Ctrl+Z）
+# lines = []
+# while True:
+#     try:
+#         line = input()
+#         lines.append(line)
+#     except EOFError:
+#         break
+# print("\n".join(lines))
+
+# 方法 3：用 sys.stdin 读取所有行
+import sys
+# print("请输入内容（Ctrl+D 结束）：")
+# content = sys.stdin.read()  # 读取全部
+# print(content)
+```
+
+## 格式化输出
+
+Python 有三种主要的字符串格式化方式。
+
+### 1. f-string（推荐）
+
+```py title="Python"
+name = "Alice"
+age = 25
+height = 1.68
+pi = 3.14159
+
+# 基本用法
+print(f"我叫 {name}，今年 {age} 岁")
+
+# 表达式
+print(f"明年我 {age + 1} 岁")
+
+# 格式化数字
+print(f"身高: {height:.2f} 米")      # 1.68
+print(f"圆周率: {pi:.4f}")          # 3.1416
+print(f"成绩: {85.5:>10.2f}")       # 右对齐宽度 10
+print(f"成绩: {85.5:<10.2f}")       # 左对齐
+print(f"成绩: {85.5:^10.2f}")       # 居中
+
+# 千位分隔符
+big_num = 1234567890
+print(f"{big_num:,}")    # 1,234,567,890
+print(f"{big_num:_}")    # 1_234_567_890
+
+# 百分比
+ratio = 0.856
+print(f"通过率: {ratio:.2%}")  # 85.60%
+
+# 科学计数法
+print(f"{123456789:.2e}")  # 1.23e+08
+
+# 不同进制
+num = 255
+print(f"十进制: {num}")        # 255
+print(f"二进制: {num:b}")       # 11111111
+print(f"八进制: {num:o}")       # 377
+print(f"十六进制: {num:x}")     # ff
+print(f"十六进制(大写): {num:X}")  # FF
+
+# 日期格式化
+from datetime import datetime
+now = datetime.now()
+print(f"现在时间: {now:%Y-%m-%d %H:%M:%S}")  # 2024-01-15 14:30:25
+
+# 调试输出（Python 3.8+：{x=} 等价于 x=value）
+x = 42
+y = "hello"
+print(f"{x=}, {y=}")  # x=42, y='hello'
+
+# Python 3.12+ 嵌套引号
+user = {"name": "Alice", "age": 25}
+print(f"用户: {user["name"]} ({user["age"]} 岁)")
+```
+
+:::tip f-string 调试语法 \{x=\}（Python 3.8+）
+在变量名后加 `=` 可以同时输出变量名和值，非常适合调试：
+
+```py title="Python"
+for i in range(3):
+    print(f"{i=}, {i**2=}")
+# i=0, i**2=0
+# i=1, i**2=1
+# i=2, i**2=4
+```
+:::
+
+### 2. format() 方法（遗留）
+
+`format()` 是 f-string 之前的格式化方式，新代码应使用 f-string。了解它是因为你会在旧代码中遇到：
+
+```py title="Python"
+name = "Alice"
+age = 25
+
+print("我叫 {}，今年 {} 岁".format(name, age))
+print("我叫 {n}，今年 {a} 岁".format(n=name, a=age))
+print("身高: {:.2f}".format(1.68))
+```
+
+### 3. % 格式化（遗留）
+
+`%` 格式化是 C 风格的格式化，仅在维护旧代码时遇到：
+
+```py title="Python"
+name = "Alice"
+age = 25
+
+print("我叫 %s，今年 %d 岁" % (name, age))
+print("身高: %.2f 米" % 1.68)
+```
+
+:::tip 格式化方式选择
+新代码一律使用 **f-string**，它是最快、最简洁、可读性最好的方式。
+:::
+
+## 对齐与表格输出
+
+利用格式化语法可以制作简单的对齐表格：
+
+```py title="Python"
+# 文本对齐
+def print_table(headers: list[str], rows: list[list[str]]) -> None:
+    """打印简单的对齐表格"""
+    # 计算每列最大宽度
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(str(cell)))
+
+    # 打印表头
+    header_line = " | ".join(f"{h:<{widths[i]}}" for i, h in enumerate(headers))
+    print(header_line)
+    print("-" * len(header_line))
+
+    # 打印数据行
+    for row in rows:
+        print(" | ".join(f"{str(c):<{widths[i]}}" for i, c in enumerate(row)))
+
+
+# 示例
+print_table(
+    ["姓名", "年龄", "城市", "职业"],
+    [
+        ["Alice", "25", "北京", "工程师"],
+        ["Bob", "30", "上海", "设计师"],
+        ["Charlie", "28", "广州", "产品经理"],
+    ],
+)
+```
+
+运行结果：
+
+```text title="输出"
+姓名    | 年龄 | 城市 | 职业
+---------------------------------------
+Alice   | 25   | 北京 | 工程师
+Bob     | 30   | 上海 | 设计师
+Charlie | 28   | 广州 | 产品经理
+```
+
+## sys.stdin / stdout / stderr
+
+`sys` 模块提供了对标准输入/输出/错误流的访问：
+
+```py title="Python"
+import sys
+
+# sys.stdout: 标准输出（print 默认输出到这里）
+print("普通信息")  # 等价于 sys.stdout.write("普通信息\n")
+
+# sys.stderr: 标准错误（用于错误信息）
+print("错误信息", file=sys.stderr)
+
+# sys.stdin: 标准输入
+# line = sys.stdin.readline()  # 读取一行（含换行符）
+# content = sys.stdin.read()   # 读取全部
+# lines = sys.stdin.readlines()  # 读取所有行
+
+# 区分 stdout 和 stderr 的意义
+print("这是正常输出", file=sys.stdout)
+print("这是错误信息", file=sys.stderr)
+
+# 重定向示例（命令行中常用）
+# python script.py > output.txt 2> error.txt
+# > 重定向 stdout，2> 重定向 stderr
+```
+
+### 重定向应用
+
+```py title="Python"
+import sys
+from io import StringIO
+
+# 将 print 输出捕获到字符串
+buffer = StringIO()
+print("这行不会显示在屏幕", file=buffer)
+print("而是写入缓冲区", file=buffer)
+output = buffer.getvalue()
+print(f"捕获到的内容:\n{output}")
+
+# 静默模式：重定向到 /dev/null
+# with open("/dev/null", "w") as devnull:
+#     print("这条不显示", file=devnull)
+```
+
+### 进度条实现
+
+```py title="Python"
+import sys
+import time
+
+def progress_bar(total: int, width: int = 30) -> None:
+    """演示进度条"""
+    for i in range(total + 1):
+        percent = i / total
+        filled = int(width * percent)
+        bar = "█" * filled + "-" * (width - filled)
+        sys.stdout.write(f"\r[{bar}] {percent:.1%} ({i}/{total})")
+        sys.stdout.flush()
+        time.sleep(0.02)
+    print("\n完成！")
+
+
+progress_bar(50)
+```
+
+运行结果（动态刷新）：
+
+```text title="输出"
+[██████████████████████████████] 100.0% (50/50)
+完成！
+```
+
+## rich 库：终端美化输出
+
+[rich](https://github.com/Textualize/rich) 是 Python 终端美化的现代化库，支持彩色文本、表格、进度条、Markdown 渲染等。安装方式：`pip install rich`。
+
+```py title="Python"
+# 安装：pip install rich
+from rich import print as rprint
+from rich.console import Console
+from rich.table import Table
+from rich.progress import Progress
+
+# 1. 彩色文本
+rprint("[bold red]红色粗体[/bold red]")
+rprint("[blue]蓝色[/blue] 文字")
+rprint("[bold green]成功！[/bold green] 数据已保存")
+
+# 2. 带样式的输出
+rprint("[italic]斜体文字[/italic]")
+rprint("[underline]下划线[/underline]")
+rprint("[bold yellow on blue]蓝底黄字[/bold yellow on blue]")
+
+# 3. 表格输出
+table = Table(title="用户列表")
+table.add_column("ID", style="cyan", justify="right")
+table.add_column("姓名", style="magenta")
+table.add_column("年龄", justify="right")
+table.add_column("城市")
+
+table.add_row("1", "Alice", "25", "北京")
+table.add_row("2", "Bob", "30", "上海")
+table.add_row("3", "Charlie", "28", "广州")
+
+console = Console()
+console.print(table)
+
+# 4. 进度条
+# with Progress() as progress:
+#     task = progress.add_task("[green]处理中...", total=100)
+#     for i in range(100):
+#         progress.update(task, advance=1)
+#         time.sleep(0.01)
+
+# 5. 输出复杂结构（自动格式化）
+data = {
+    "name": "Alice",
+    "age": 25,
+    "skills": ["Python", "JavaScript", "SQL"],
+    "address": {"city": "北京", "zip": "100000"},
+}
+rprint(data)  # 自动带语法高亮和缩进
+```
+
+:::tip rich 的应用场景
+`rich` 在以下场景特别有用：
+1. **CLI 工具**：让命令行工具输出更专业
+2. **数据可视化**：终端表格、树形结构展示
+3. **调试**：彩色打印让调试信息更清晰
+4. **进度显示**：美观的进度条、spinner
+5. **日志系统**：替代传统 logging 输出
+
+它的 `print` 函数完全兼容内置 `print`，可以作为平滑升级。
+:::
+
+## 文件输出基础（预告）
+
+写入文件是输出的重要场景，这里做一个简单预告，详细内容在"文件操作"章节讲解：
+
+```py title="Python"
+# 写入文本文件
+with open("output.txt", "w", encoding="utf-8") as f:
+    f.write("第一行\n")
+    f.write("第二行\n")
+    # 也可以用 print 写入
+    print("第三行（用 print）", file=f)
+
+# 追加写入
+with open("output.txt", "a", encoding="utf-8") as f:
+    f.write("追加的一行\n")
+
+# 读取文件
+with open("output.txt", "r", encoding="utf-8") as f:
+    content = f.read()
+    print(content)
+```
+
+:::info with 语句与文件操作
+`with` 语句会自动管理资源（自动关闭文件），即使中间发生异常也能保证文件被正确关闭。这是 Python 处理文件、网络连接等资源的推荐方式。
+:::
+
+## 实战：交互式成绩录入系统
+
+下面用一个综合示例演示 input/output 与格式化输出的实际应用：
+
+```py title="Python"
+"""交互式成绩录入系统
+
+演示 input/print 的综合应用，含数据验证与表格输出
+"""
+
+from typing import NamedTuple
+
+
+class Student(NamedTuple):
+    """学生记录"""
+    name: str
+    chinese: float
+    math: float
+    english: float
+
+    @property
+    def total(self) -> float:
+        return self.chinese + self.math + self.english
+
+    @property
+    def average(self) -> float:
+        return self.total / 3
+
+
+def input_float(prompt: str, min_val: float = 0, max_val: float = 100) -> float:
+    """安全读取浮点数"""
+    while True:
+        try:
+            value = float(input(prompt))
+            if min_val <= value <= max_val:
+                return value
+            print(f"  错误：数值需在 {min_val}-{max_val} 之间")
+        except ValueError:
+            print("  错误：请输入有效数字")
+
+
+def input_student() -> Student:
+    """录入一个学生信息"""
+    name = input("请输入姓名：").strip()
+    chinese = input_float("  语文成绩：")
+    math = input_float("  数学成绩：")
+    english = input_float("  英语成绩：")
+    return Student(name, chinese, math, english)
+
+
+def print_report(students: list[Student]) -> None:
+    """打印成绩报告表"""
+    # 表头
+    headers = ["姓名", "语文", "数学", "英语", "总分", "平均分", "等级"]
+    widths = [8, 6, 6, 6, 8, 8, 6]
+
+    # 分隔线
+    sep = "+" + "+".join("-" * (w + 2) for w in widths) + "+"
+
+    print("\n" + "=" * 50)
+    print("成绩报告表".center(50))
+    print("=" * 50)
+    print(sep)
+    print("| " + " | ".join(f"{h:<{widths[i]}}" for i, h in enumerate(headers)) + " |")
+    print(sep)
+
+    # 数据行
+    for s in students:
+        grade = (
+            "A" if s.average >= 90
+            else "B" if s.average >= 80
+            else "C" if s.average >= 70
+            else "D" if s.average >= 60
+            else "F"
+        )
+        row = [
+            s.name,
+            f"{s.chinese:.1f}",
+            f"{s.math:.1f}",
+            f"{s.english:.1f}",
+            f"{s.total:.1f}",
+            f"{s.average:.2f}",
+            grade,
+        ]
+        print("| " + " | ".join(f"{c:<{widths[i]}}" for i, c in enumerate(row)) + " |")
+
+    print(sep)
+
+    # 统计信息
+    if students:
+        avg_total = sum(s.total for s in students) / len(students)
+        best = max(students, key=lambda s: s.total)
+        print(f"\n班级平均总分: {avg_total:.2f}")
+        print(f"最高分: {best.name} ({best.total:.1f} 分)")
+
+
+# 主程序
+def main() -> None:
+    print("=== 学生成绩录入系统 ===")
+    print("输入学生信息，姓名为空时结束录入\n")
+
+    students: list[Student] = []
+    while True:
+        name = input(f"第 {len(students) + 1} 位学生姓名（空结束）：").strip()
+        if not name:
+            break
+        # 临时修改 input_student 不再问姓名
+        chinese = input_float("  语文成绩：")
+        math = input_float("  数学成绩：")
+        english = input_float("  英语成绩：")
+        students.append(Student(name, chinese, math, english))
+        print(f"  ✓ 已录入 {name}\n")
+
+    if students:
+        print_report(students)
+    else:
+        print("未录入任何学生信息")
+
+
+# 交互式运行（取消注释来使用）
+# if __name__ == "__main__":
+#     main()
+
+# 演示数据输出
+demo_students = [
+    Student("Alice", 95, 88, 92),
+    Student("Bob", 78, 85, 80),
+    Student("Charlie", 65, 72, 58),
+]
+print_report(demo_students)
+```
+
+运行结果：
+
+```text title="输出"
+==================================================
+                    成绩报告表
+==================================================
++----------+--------+--------+--------+----------+----------+--------+
+| 姓名     | 语文   | 数学   | 英语   | 总分     | 平均分   | 等级   |
++----------+--------+--------+--------+----------+----------+--------+
+| Alice    | 95.0   | 88.0   | 92.0   | 275.0    | 91.67    | A      |
+| Bob      | 78.0   | 85.0   | 80.0   | 243.0    | 81.00    | B      |
+| Charlie  | 65.0   | 72.0   | 58.0   | 195.0    | 65.00    | D      |
++----------+--------+--------+--------+----------+----------+--------+
+
+班级平均总分: 237.67
+最高分: Alice (275.0 分)
+```
+
+## 🎯 动手练习
+
+1. **安全输入封装**：编写一个 `input_int()` 函数，支持范围验证和默认值
+2. **格式化输出**：使用 f-string 打印一个对齐的表格，包含姓名、年龄、城市三列
+3. **进度条实现**：使用 `\r` 和 `end=""` 实现一个简单的终端进度条
+4. **rich 库体验**：安装 rich 库，尝试使用 `rprint()` 打印彩色文本和表格
+
+<PyodideRunner title="格式化输出练习">
+
+```python
+# 1. f-string 格式化大全
+name = "Alice"
+score = 95.678
+big_num = 1234567890
+
+print("=== f-string 格式化 ===")
+print(f"姓名: {name}")
+print(f"成绩: {score:.1f}")
+print(f"右对齐: {score:>10.2f}")
+print(f"左对齐: {score:<10.2f}")
+print(f"居中: {score:^10.2f}")
+print(f"千位分隔: {big_num:,}")
+print(f"百分比: {0.856:.2%}")
+print(f"二进制: {255:b}")
+print(f"十六进制: {255:x}")
+
+# 2. 对齐表格
+print("\n=== 对齐表格 ===")
+headers = ["姓名", "年龄", "城市"]
+rows = [
+    ["Alice", "25", "北京"],
+    ["Bob", "30", "上海"],
+    ["Charlie", "28", "广州"],
+]
+
+# 打印表头
+print(f"{headers[0]:<8}{headers[1]:<6}{headers[2]:<8}")
+print("-" * 22)
+
+# 打印数据行
+for row in rows:
+    print(f"{row[0]:<8}{row[1]:<6}{row[2]:<8}")
+
+# 3. 调试输出 {x=} 语法
+x = 42
+y = "hello"
+print(f"\n=== 调试输出 ===")
+print(f"{x=}, {y=}")
+print(f"{x + 1=}, {len(y)=}")
+```
+
+</PyodideRunner>
+
+## 📚 延伸阅读
+
+- [PEP 498 - f-string](https://peps.python.org/pep-0498/) - 格式化字符串字面量的正式规范
+- [PEP 3105 - print 函数](https://peps.python.org/pep-3105/) - Python 3 中 print 从语句改为函数
+- [rich 库文档](https://rich.readthedocs.io/) - 终端美化输出完整参考
+- [sys 模块文档](https://docs.python.org/zh-cn/3/library/sys.html) - 标准流与系统参数
+
+## 📊 速查表
+
+| 函数/语法 | 功能 | 示例 |
+|-----------|------|------|
+| `print(*args)` | 打印输出 | `print("a", "b", sep=",")` |
+| `input(prompt)` | 读取输入（返回字符串） | `name = input("姓名：")` |
+| `f"{x:.2f}"` | 格式化浮点 | `f"{3.14:.2f}"` → `"3.14"` |
+| `f"{x:>10}"` | 右对齐 | `f"{'hi':>10}"` → `"        hi"` |
+| `f"{x:,}"` | 千位分隔 | `f"{1234:,}"` → `"1,234"` |
+| `f"{x=}"` | 调试输出 | `x=42` → `"x=42"` |
+| `"{:.2%}".format(x)` | 百分比 | `"{:.2%}".format(0.85)` → `"85.00%"` |
+| `sys.stdout` | 标准输出流 | `print("msg", file=sys.stdout)` |
+| `sys.stderr` | 标准错误流 | `print("err", file=sys.stderr)` |
+| `rprint()` | rich 彩色输出 | `rprint("[red]错误[/red]")` |
+
+## ✅ 本节总结
+
+- **`print()` 函数**有 4 个关键参数：`sep`（分隔符）、`end`（结尾符）、`file`（输出目标）、`flush`（立即刷新）
+- **`input()` 函数**始终返回字符串，需要手动转换类型；推荐封装安全输入函数处理异常
+- **格式化**：新代码一律使用 f-string，`format()` 和 `%` 格式化仅在旧代码中出现
+- f-string 支持丰富的格式规范：对齐、宽度、精度、千位分隔符、百分比、科学计数法、进制、日期等
+- **`{x=}` 调试语法**（Python 3.8+）能同时输出变量名和值，调试利器
+- **Python 3.12+** f-string 支持嵌套相同引号、多行表达式与注释
+- `sys.stdin` / `sys.stdout` / `sys.stderr` 是标准流，可重定向用于日志、文件输出等场景
+- **`rich` 库**提供终端彩色、表格、进度条等美化输出，是现代 CLI 工具的首选
+- 文件 I/O 使用 `with` 语句自动管理资源，详细内容见"文件操作"章节

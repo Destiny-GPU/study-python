@@ -1,0 +1,547 @@
+---
+sidebar_position: 9
+sidebar_label: '防御性编程'
+title: 🚀 防御性编程
+description: 学习防御性编程的核心原则、输入验证、异常处理、类型检查、边界条件处理等实战技巧。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+import DocCardList from '@theme/DocCardList';
+import {useCurrentSidebarCategory} from '@docusaurus/theme-common';
+
+# 🚀 防御性编程
+
+<PyodideRunner title="防御性编程快速体验">
+
+```python
+# 输入验证
+def divide(a, b):
+    """安全的除法运算"""
+    if not isinstance(a, (int, float)):
+        raise TypeError("被除数必须是数字")
+    if not isinstance(b, (int, float)):
+        raise TypeError("除数必须是数字")
+    if b == 0:
+        raise ValueError("除数不能为零")
+    return a / b
+
+try:
+    print(f"10 / 3 = {divide(10, 3):.2f}")
+    print(f"10 / 0 = {divide(10, 0)}")
+except (TypeError, ValueError) as e:
+    print(f"错误: {e}")
+
+# EAFP 风格（请求原谅比许可容易）
+def get_value(data, key, default=None):
+    """EAFP: 先尝试，失败再处理"""
+    try:
+        return data[key]
+    except (KeyError, IndexError, TypeError):
+        return default
+
+print(get_value({"a": 1}, "a"))
+print(get_value({"a": 1}, "b", "默认值"))
+print(get_value([1, 2, 3], 5, "索引错误"))
+
+# 默认值防御
+def process_items(items=None):
+    """使用 None 作为默认值"""
+    if items is None:
+        items = []
+    return [x * 2 for x in items]
+
+print(process_items([1, 2, 3]))
+print(process_items())  # 不会共享同一个列表
+```
+
+</PyodideRunner>
+
+> *"防御性编程不是一种偏执，而是一种专业态度。"*
+
+## 导读
+
+本教程将深入探讨防御性编程（Defensive Programming）这一预防性编程方法论。通过学习，你将掌握以下核心技能：
+
+**学习目标**：
+- 理解防御性编程的三大核心原则：永不信任输入、快速失败、优雅降级
+- 掌握输入验证与数据校验的实战技巧，包括使用 Pydantic 进行声明式验证
+- 学会异常处理的正确模式，避免常见陷阱
+- 理解类型提示与静态检查的价值，配合 mypy 提升代码质量
+- 掌握边界条件与空值处理的最佳实践
+- 学会资源管理与上下文管理器的正确使用
+- 了解安全编码实践，防止注入攻击和敏感信息泄露
+
+**主要内容**：
+1. 防御性编程的核心原则
+2. 输入验证与数据校验
+3. 异常处理的艺术
+4. 类型提示与静态检查
+5. 边界条件与空值处理
+6. 资源管理与上下文管理器
+7. 日志记录与可观测性
+8. 安全编码实践
+9. 防御性编程检查清单
+
+---
+
+## 核心原则
+
+防御性编程的目标是让程序在异常情况下仍然优雅地运行或安全地失败。其三大原则如下：
+
+| 原则 | 说明 | 关键词 |
+|------|------|--------|
+| **永不信任输入** | 所有外部输入都可能是错误的、恶意的 | Validate Everything |
+| **快速失败** | 发现问题立即暴露，不要隐藏错误 | Fail Fast |
+| **优雅降级** | 无法继续时，给出有意义的反馈 | Graceful Degradation |
+
+### 非防御性代码示例
+
+```py title="Python"
+def calculate_average(scores):
+    total = sum(scores)
+    return total / len(scores)
+
+calculate_average([])        # 💥 ZeroDivisionError
+calculate_average(None)      # 💥 TypeError
+calculate_average(["a", "b"]) # 💥 TypeError
+```
+
+### 防御性代码示例
+
+```py title="Python"
+def calculate_average(scores):
+    if scores is None:
+        return 0.0
+    
+    scores = list(scores)
+    
+    if not scores:
+        return 0.0
+    
+    for s in scores:
+        if not isinstance(s, (int, float)):
+            raise TypeError(f"分数必须是数值类型，得到: {type(s).__name__}")
+    
+    return sum(scores) / len(scores)
+```
+
+---
+
+## 输入验证与数据校验
+
+### 基础输入验证
+
+```py title="Python"
+def create_user(username, age, email):
+    if not isinstance(username, str):
+        raise TypeError(f"用户名必须是字符串，得到: {type(username).__name__}")
+    username = username.strip()
+    if not username:
+        raise ValueError("用户名不能为空")
+    if len(username) < 3 or len(username) > 20:
+        raise ValueError(f"用户名长度必须在3-20个字符之间，当前: {len(username)}")
+    
+    if not isinstance(age, int):
+        raise TypeError(f"年龄必须是整数，得到: {type(age).__name__}")
+    if age < 0 or age > 150:
+        raise ValueError(f"年龄必须在0-150之间，当前: {age}")
+    
+    if not isinstance(email, str) or "@" not in email:
+        raise ValueError(f"邮箱格式无效: {email!r}")
+    
+    return {"username": username, "age": age, "email": email}
+```
+
+### 使用 Pydantic 进行声明式验证
+
+```py title="Python"
+from pydantic import BaseModel, EmailStr, field_validator, conint
+from typing import Optional
+
+class User(BaseModel):
+    username: str
+    age: conint(ge=0, le=150)
+    email: EmailStr
+    nickname: Optional[str] = None
+    
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v):
+        v = v.strip()
+        if not (3 <= len(v) <= 20):
+            raise ValueError("用户名长度必须在3-20之间")
+        return v
+
+user = User(username="Alice", age=25, email="alice@example.com")
+```
+
+---
+
+## 异常处理的艺术
+
+### 异常处理的黄金法则
+
+```
+⚠️ 不要用裸 except！
+
+❌ except:
+❌ except Exception:
+
+✅ except SpecificError as e:
+
+原因: 裸 except 会捕获 KeyboardInterrupt, SystemExit 等不应该被捕获的异常。
+```
+
+### 正确的异常处理模式
+
+```py title="Python"
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+def parse_config(config_str: str) -> dict:
+    if not isinstance(config_str, str):
+        raise TypeError(f"配置必须是字符串，得到: {type(config_str).__name__}")
+    
+    if not config_str.strip():
+        raise ValueError("配置字符串不能为空")
+    
+    try:
+        config = json.loads(config_str)
+    except json.JSONDecodeError as e:
+        logger.error("JSON解析失败: %s", e)
+        raise ValueError(f"配置格式无效: {e}") from e
+    except Exception as e:
+        logger.exception("解析配置时发生意外错误")
+        raise RuntimeError("配置解析失败") from e
+    else:
+        if not isinstance(config, dict):
+            raise TypeError(f"配置必须是字典，得到: {type(config).__name__}")
+        return config
+```
+
+### 自定义异常层级
+
+```py title="Python"
+class AppError(Exception):
+    def __init__(self, message: str, code: str = "UNKNOWN", details: dict = None):
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+    
+    def __str__(self):
+        return f"[{self.code}] {super().__str__()}"
+
+class ValidationError(AppError):
+    def __init__(self, message, field=None, **kwargs):
+        super().__init__(message, code="VALIDATION_ERROR", **kwargs)
+        self.field = field
+```
+
+---
+
+## 类型提示与静态检查
+
+### 带类型提示的函数
+
+```py title="Python"
+from typing import Optional
+
+def process_order(
+    order_id: int,
+    items: list[dict[str, str | int | float]],
+    customer_email: str,
+    discount: Optional[float] = None
+) -> dict:
+    if discount is not None and not (0 <= discount <= 1):
+        raise ValueError(f"折扣必须在0-1之间: {discount}")
+    
+    total = sum(item["quantity"] * item["price"] for item in items)
+    if discount:
+        total *= (1 - discount)
+    
+    return {
+        "order_id": order_id,
+        "total": round(total, 2),
+        "item_count": len(items),
+        "email": customer_email
+    }
+```
+
+### 使用 TypedDict 精确描述字典结构
+
+```py title="Python"
+from typing import TypedDict, NotRequired
+
+class OrderItem(TypedDict):
+    name: str
+    quantity: int
+    price: float
+    sku: NotRequired[str]
+
+class Order(TypedDict):
+    order_id: int
+    items: list[OrderItem]
+    total: float
+    status: str
+```
+
+### 使用 mypy 进行静态类型检查
+
+```bash title="Shell"
+pip install mypy
+mypy --strict your_code.py
+```
+
+---
+
+## 边界条件与空值处理
+
+### None 安全操作
+
+```py title="Python"
+def get_city_safe(user):
+    if user is None:
+        return None
+    if user.address is None:
+        return None
+    return user.address.city
+
+def safe_get(data: dict, *keys, default=None):
+    current = data
+    for key in keys:
+        if not isinstance(current, dict):
+            return default
+        current = current.get(key)
+        if current is None:
+            return default
+    return current if current is not None else default
+
+print(safe_get({"a": {"b": {"c": 42}}}, "a", "b", "c"))  # 42
+print(safe_get({"a": {"b": {"c": 42}}}, "a", "x", "y"))  # None
+```
+
+### 边界值测试思维
+
+```py title="Python"
+def clamp(value: float, min_val: float, max_val: float) -> float:
+    import math
+    
+    if min_val > max_val:
+        raise ValueError(f"min_val({min_val}) 不能大于 max_val({max_val})")
+    
+    if math.isnan(value):
+        raise ValueError("value 不能是 NaN")
+    
+    if math.isinf(value):
+        return max_val if value > 0 else min_val
+    
+    return max(min_val, min(value, max_val))
+
+assert clamp(5, 0, 10) == 5
+assert clamp(-5, 0, 10) == 0
+assert clamp(15, 0, 10) == 10
+```
+
+### 可变默认参数陷阱
+
+```py title="Python"
+def add_item_safe(item, lst=None):
+    if lst is None:
+        lst = []
+    lst.append(item)
+    return lst
+```
+
+---
+
+## 资源管理与上下文管理器
+
+### 使用 with 语句管理资源
+
+```py title="Python"
+def read_config_good(path):
+    with open(path) as f:
+        data = f.read()
+    return data
+
+def copy_file(src, dst):
+    with open(src) as fin, open(dst, "w") as fout:
+        fout.write(fin.read())
+```
+
+### 自定义上下文管理器
+
+```py title="Python"
+from contextlib import contextmanager
+import time
+
+@contextmanager
+def timer(label: str):
+    start = time.perf_counter()
+    try:
+        yield
+    finally:
+        elapsed = time.perf_counter() - start
+        print(f"{label} 耗时: {elapsed:.3f} 秒")
+
+with timer("数据处理"):
+    data = [i ** 2 for i in range(1000000)]
+```
+
+---
+
+## 日志记录与可观测性
+
+### 防御性日志记录模式
+
+```py title="Python"
+import logging
+
+logger = logging.getLogger("myapp")
+
+def fetch_user_data(user_id: int) -> dict:
+    logger.info("开始获取用户数据", extra={"user_id": user_id})
+    
+    try:
+        data = {"id": user_id, "name": "Alice"}
+    except ConnectionError as e:
+        logger.error("获取用户数据失败", extra={"user_id": user_id}, exc_info=True)
+        raise
+    except TimeoutError:
+        logger.warning("获取用户数据超时", extra={"user_id": user_id})
+        return {}
+    else:
+        logger.debug("用户数据获取成功", extra={"user_id": user_id})
+        return data
+```
+
+---
+
+## 安全编码实践
+
+### 避免注入攻击
+
+```py title="Python"
+import subprocess
+import html
+from pathlib import Path
+
+def ping_host_safe(host: str) -> bool:
+    import re
+    if not re.match(r'^[a-zA-Z0-9.\-]+$', host):
+        raise ValueError(f"无效的主机名: {host!r}")
+    
+    result = subprocess.run(
+        ["ping", "-c", "1", host],
+        capture_output=True,
+        timeout=5,
+        check=False
+    )
+    return result.returncode == 0
+
+def render_user_input(user_input: str) -> str:
+    return html.escape(user_input)
+
+def read_file_safe(base_dir: str, filename: str) -> str:
+    base = Path(base_dir).resolve()
+    target = (base / filename).resolve()
+    
+    if not str(target).startswith(str(base)):
+        raise ValueError(f"非法路径访问: {filename}")
+    
+    if not target.is_file():
+        raise FileNotFoundError(f"文件不存在: {filename}")
+    
+    return target.read_text()
+```
+
+### 敏感信息处理
+
+```py title="Python"
+import os
+import hashlib
+import hmac
+import secrets
+
+def hash_password(password: str, salt: bytes = None) -> tuple[bytes, str]:
+    if salt is None:
+        salt = os.urandom(32)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations=100000)
+    return salt, key.hex()
+
+def verify_password(password: str, salt: bytes, expected_hash: str) -> bool:
+    _, actual_hash = hash_password(password, salt)
+    return hmac.compare_digest(actual_hash, expected_hash)
+
+def generate_token(nbytes: int = 32) -> str:
+    return secrets.token_urlsafe(nbytes)
+```
+
+---
+
+## 防御性编程检查清单
+
+### 编码前检查
+
+| 检查项 | 说明 |
+|--------|------|
+| ☐ 理解所有输入来源 | 命令行、文件、网络、数据库、用户输入 |
+| ☐ 明确函数的前置条件 | 什么输入是合法的？什么是不合法的？ |
+| ☐ 明确函数的后置条件 | 返回值应该满足什么约束？ |
+| ☐ 考虑边界情况 | 空值、零、负数、极大值、空容器 |
+
+### 编码时检查
+
+| 检查项 | 说明 |
+|--------|------|
+| ☐ 验证所有外部输入 | 永不信任用户输入 |
+| ☐ 使用特定异常 | 不要用裸 `except` |
+| ☐ 资源使用 `with` | 文件、连接、锁都要正确释放 |
+| ☐ 避免可变默认参数 | 使用 `None` 作为哨兵值 |
+| ☐ 添加类型提示 | 配合 mypy 进行静态检查 |
+| ☐ 记录有意义的日志 | 包含上下文信息 |
+| ☐ 不吞没异常 | 至少记录日志，最好重新抛出 |
+
+### 编码后检查
+
+| 检查项 | 说明 |
+|--------|------|
+| ☐ 运行 mypy 类型检查 | `mypy --strict your_code.py` |
+| ☐ 运行 linter | `ruff check your_code.py` |
+| ☐ 编写边界值测试 | 测试空、零、负数、极大值 |
+| ☐ 编写异常路径测试 | 确保异常被正确处理 |
+| ☐ 代码审查 | 让同事检查防御性逻辑 |
+
+---
+
+## 总结
+
+防御性编程不是让你写更多的代码，而是让你写**更正确的代码**。它的核心理念可以用一句话概括：
+
+> **"永远假设事情会出错，并为每种出错情况做好准备。"**
+
+通过系统性地应用本文介绍的技术，你可以：
+
+- 🛡️ **减少运行时错误** — 在错误传播到用户之前捕获它
+- 🐛 **加速调试** — 更早发现问题，更精确定位
+- 📈 **提高可维护性** — 类型提示和文档让代码自解释
+- 🔒 **增强安全性** — 防止注入、泄露和其他安全漏洞
+- 🤝 **改善协作** — 清晰的接口和错误信息让团队更高效
+
+**核心要点回顾**：
+1. 遵循三大原则：永不信任输入、快速失败、优雅降级
+2. 使用 Pydantic 进行声明式输入验证
+3. 捕获特定异常，避免裸 `except`
+4. 添加类型提示并使用 mypy 进行静态检查
+5. 使用 `with` 语句管理资源，确保正确释放
+6. 记录有意义的日志，便于问题排查
+7. 防止注入攻击，安全处理敏感信息
+
+**实践意义**：防御性编程是专业开发者的必备技能，它能显著提升代码的健壮性和可靠性，减少线上故障和维护成本。
+
+---
+
+<DocCardList items={useCurrentSidebarCategory().items}/>

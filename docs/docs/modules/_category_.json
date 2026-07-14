@@ -1,0 +1,8 @@
+{
+  "label": "🧩 模块与包",
+  "position": 8,
+  "link": {
+    "type": "generated-index",
+    "description": "组织代码为模块与包，使用 pip 管理依赖，借助虚拟环境隔离项目。"
+  }
+}

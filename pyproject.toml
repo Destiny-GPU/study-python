@@ -1,0 +1,50 @@
+[project]
+name = "study-python"
+version = "0.1.0"
+description = "python学习项目"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "matplotlib>=3.11.0",
+    "scipy>=1.18.0",
+    "tqdm>=4.68.4",
+    "torch",              # 新增：PyTorch 主包
+    "torchvision",        # 新增：PyTorch 视觉库
+]
+authors = [{ name = "Tom", email = "tom@example.com" }]
+license = { text = "MIT" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/study_python"]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+select = ["E", "F", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+# 指定该项目的默认源（清华源）
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
+# 新增：PyTorch CPU 版本专用索引源
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true                              # 确保该索引仅用于明确指定的包
+
+# 新增：指定 torch 和 torchvision 从 pytorch-cpu 索引源安装
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }

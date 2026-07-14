@@ -1,0 +1,528 @@
+---
+sidebar_position: 1
+sidebar_label: '类与对象'
+title: 🏗️ 类与对象
+description: 学习 class 定义、__init__、self、实例属性与类属性、实例方法、__str__/__repr__、属性类型注解，构建面向对象程序的基础。
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🏗️ 类与对象
+
+面向对象编程（Object-Oriented Programming，OOP）是一种以"对象"为核心的编程范式。对象将**数据**（属性）和**行为**（方法）封装在一起，使我们能更自然地模拟现实世界。Python 是一门彻底的面向对象语言：数字、字符串、函数、类本身都是对象。掌握类与对象是构建大型程序、理解框架源码、写出可维护代码的基石。
+
+:::tip 🎯 本节要点
+- 使用 `class` 定义类，通过"调用"类名创建实例
+- `__init__` 负责初始化，`self` 指向当前实例
+- 类属性（共享）与实例属性（独有）的区别与访问机制
+- 三种方法：实例方法、类方法（`@classmethod`）、静态方法（`@staticmethod`）
+- `__str__`（用户友好）与 `__repr__`（开发者明确）的区别
+- 属性查找顺序：实例 → 类 → 父类链 → `__getattr__`
+:::
+
+:::info 📦 环境准备
+本节示例需要 **numpy** 库来生成离散时间信号，请先安装：
+
+```bash
+pip install numpy
+```
+:::
+
+<PyodideRunner title="类与对象快速体验">
+
+```python
+# 定义一个简单的类
+class Dog:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def bark(self):
+        return f"{self.name} says: 汪汪！"
+
+# 创建实例
+dog1 = Dog("旺财", 3)
+dog2 = Dog("小黑", 5)
+
+print(f"狗的名字: {dog1.name}, 年龄: {dog1.age}")
+print(dog1.bark())
+print(f"两只狗是同一个对象吗？ {dog1 is dog2}")
+
+# 类属性 vs 实例属性
+class Counter:
+    count = 0  # 类属性
+
+    def __init__(self):
+        Counter.count += 1  # 修改类属性
+
+Counter()
+Counter()
+Counter()
+print(f"创建了 {Counter.count} 个实例")
+```
+
+</PyodideRunner>
+
+## 定义类与创建对象
+
+使用 `class` 关键字定义类，通过"调用"类名来创建实例（对象）：
+
+```py title="Python"
+import numpy as np
+
+class Signal:
+    """一个离散时间信号。"""
+    pass  # 空类用 pass 占位
+
+# 创建实例
+s1 = Signal()
+s2 = Signal()
+
+print(type(s1))       # 输出：<class '__main__.Signal'>
+print(s1 is s2)       # 输出：False（两个不同实例）
+print(isinstance(s1, Signal))  # 输出：True
+```
+
+:::note Python 中的类也是对象
+类本身也是对象（`type` 的实例），可以赋值、传递、动态修改。这一点与 Java/C++ 有所不同。
+:::
+
+## `__init__` 与 `self`
+
+`__init__` 是**初始化方法**，在创建实例后自动调用，用于设置实例属性。`self` 代表实例本身，是所有实例方法的第一个参数。
+
+```py title="Python"
+import numpy as np
+
+class Signal:
+    def __init__(self, name: str, samples: np.ndarray):
+        # self.属性 = 参数   把数据挂到当前实例上
+        self.name = name
+        self.samples = samples
+
+    def amplitude(self) -> float:
+        # 实例方法通过 self 访问实例属性
+        return float(np.max(np.abs(self.samples)))
+
+# 创建时传入参数，自动调用 __init__
+t = np.linspace(0, 2 * np.pi, 100)
+sig = Signal("正弦波", np.sin(t))
+print(f"信号振幅：{sig.amplitude():.2f}")  # 输出：信号振幅：1.00
+print(f"信号名称：{sig.name}")              # 输出：信号名称：正弦波
+print(f"采样点数：{len(sig.samples)}")       # 输出：采样点数：100
+```
+
+:::warning 关于 self
+- `self` 只是约定俗成的名字，理论上叫 `this`、`me` 也行，但**强烈建议**沿用 `self`。
+- 调用方法时**不需要手动传 self**，Python 会自动把实例绑定到第一个参数：
+  `sig.amplitude()` 等价于 `Signal.amplitude(sig)`。
+:::
+
+### `__new__` 与 `__init__` 的分工
+
+`__new__` 负责**创建**实例（返回新对象），`__init__` 负责**初始化**实例。绝大多数情况下只重写 `__init__` 即可，只有实现单例、不可变类型（如 `tuple` 子类）时才需要重写 `__new__`。
+
+```py title="Python"
+class Singleton:
+    _instance: "Singleton | None" = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+a = Singleton()
+b = Singleton()
+print(a is b)  # 输出：True（同一个实例）
+```
+
+## 实例属性 vs 类属性
+
+属性按归属可分为两类：
+
+| 类型       | 定义位置            | 归属   | 访问方式              |
+|------------|---------------------|--------|-----------------------|
+| 类属性     | 类体中、方法外      | 类     | `类名.属性` 或 `实例.属性` |
+| 实例属性   | `__init__` 或方法内 | 实例   | `实例.属性`           |
+
+```py title="Python"
+import numpy as np
+
+class Signal:
+    unit = "V"      # 类属性：所有信号共享的单位
+    count = 0        # 类属性：统计总数
+
+    def __init__(self, name: str, samples: np.ndarray):
+        self.name = name      # 实例属性：每个信号独有
+        self.samples = samples
+        Signal.count += 1     # 修改类属性要用 类名.属性
+
+# 类属性通过类访问
+print(Signal.unit)   # 输出：V
+print(Signal.count)  # 输出：0
+
+s1 = Signal("正弦波", np.array([0.0, 1.0, 0.0, -1.0]))
+s2 = Signal("方波", np.array([1.0, 1.0, -1.0, -1.0]))
+
+# 也可以通过实例访问类属性
+print(s1.unit)   # 输出：V
+print(Signal.count)  # 输出：2
+print(s1.count, s2.count)  # 输出：2 2
+```
+
+:::warning 通过实例修改类属性的陷阱
+给实例属性赋值时，如果同名，会在实例上**新建**一个实例属性，**不会**修改类属性：
+
+```py title="Python"
+s1.unit = "mV"        # 在 s1 上新增实例属性
+print(s1.unit)         # 输出：mV（实例属性屏蔽了类属性）
+print(s2.unit)         # 输出：V（类属性未变）
+print(Signal.unit)     # 输出：V
+```
+
+修改类属性务必用 `类名.属性 = ...`。
+:::
+
+## 实例方法、类方法与静态方法
+
+```py title="Python"
+import numpy as np
+
+class SampleCounter:
+    total = 0  # 类属性
+
+    def __init__(self, name: str):
+        self.name = name  # 实例属性
+        SampleCounter.total += 1
+
+    def describe(self) -> str:
+        """实例方法：第一个参数是 self，可访问实例和类属性"""
+        return f"{self.name}（编号 {self.total}）"
+
+    @classmethod
+    def reset(cls) -> None:
+        """类方法：第一个参数是 cls（类本身），常用于工厂方法"""
+        cls.total = 0
+
+    @staticmethod
+    def help() -> str:
+        """静态方法：不需要 self/cls，与类逻辑相关但不依赖实例/类状态"""
+        return "使用 SampleCounter(name) 创建采样计数器"
+
+c1 = SampleCounter("通道 A")
+c2 = SampleCounter("通道 B")
+print(c1.describe())   # 输出：通道 A（编号 2）
+print(SampleCounter.help())  # 输出：使用 SampleCounter(name) 创建采样计数器
+
+SampleCounter.reset()
+print(SampleCounter.total)   # 输出：0
+```
+
+:::tip 何时用哪种方法？
+- **实例方法**：需要访问或修改实例状态时使用。
+- **类方法**：需要操作类级状态，或作为**工厂方法**（返回类的新实例）时使用。
+- **静态方法**：逻辑上属于这个类，但不需要访问实例或类状态时使用（相当于放在类命名空间里的普通函数）。
+:::
+
+## `__str__` 与 `__repr__`
+
+默认打印对象会显示类名和地址，可读性差。通过重写两个魔术方法来定制：
+
+- `__str__`：面向**终端用户**的友好字符串，`print(obj)` / `str(obj)` 时触发。
+- `__repr__`：面向**开发者**的明确字符串，`repr(obj)` / 在交互式终端直接输入变量时触发。**理想情况下应是一个能重建该对象的有效表达式。**
+
+```py title="Python"
+import numpy as np
+
+class Signal:
+    def __init__(self, name: str, samples: np.ndarray):
+        self.name = name
+        self.samples = samples
+
+    def __repr__(self) -> str:
+        # 开发者视角：应该能重建对象
+        return f"Signal({self.name!r}, np.array({self.samples.tolist()!r}))"
+
+    def __str__(self) -> str:
+        # 用户视角：简洁友好
+        peak = np.max(np.abs(self.samples))
+        return f"{self.name}（{len(self.samples)} 个采样点，峰值 {peak:.2f}）"
+
+t = np.linspace(0, 2 * np.pi, 4)
+sig = Signal("正弦波", np.sin(t))
+print(sig)
+# 输出：正弦波（4 个采样点，峰值 1.00）   ← 调用 __str__
+print(repr(sig))
+# 输出：Signal('正弦波', np.array([0.0, 0.8660254037844386, -0.8660254037844386, 0.0]))   ← 调用 __repr__
+print(f"{sig!r}")
+# 输出：Signal('正弦波', np.array([0.0, 0.8660254037844386, -0.8660254037844386, 0.0]))   ← !r 强制用 repr
+print([sig, sig])
+# 输出：[Signal('正弦波', np.array([...])), Signal('正弦波', np.array([...]))]  ← 容器内用 __repr__
+```
+
+:::tip 只重写 __repr__ 的策略
+如果只重写 `__repr__`，当 `__str__` 未定义时会回退到 `__repr__`。所以简单场景下**只写 `__repr__`** 就能让 `print` 和 `repr` 都有合理输出。
+:::
+
+## 属性访问机制
+
+Python 对属性访问有一套查找规则，理解它有助于排查"为何改了类属性实例却不变"之类的问题：
+
+1. 先查**实例**的 `__dict__`（实例属性字典）。
+2. 找不到再查**类**的 `__dict__`，再沿继承链查找父类。
+3. 还找不到则调用 `__getattr__`（如果定义了），或抛出 `AttributeError`。
+
+```py title="Python"
+import numpy as np
+
+class Signal:
+    default_unit = "V"  # 类属性
+
+sig = Signal()
+print(sig.__dict__)      # 输出：{}（实例还没有自己的属性）
+print(sig.default_unit)   # 输出：V（沿查找链找到类属性）
+
+sig.default_unit = "mV"  # 赋值会在实例上新建属性
+print(sig.__dict__)      # 输出：{'default_unit': 'mV'}
+print(Signal.default_unit)  # 输出：V（类属性没变）
+
+del sig.default_unit     # 删除实例属性后又会"露出"类属性
+print(sig.default_unit)   # 输出：V
+```
+
+:::info 动态查看与修改属性
+- `hasattr(obj, "name")`：判断是否有某属性
+- `getattr(obj, "name", default)`：安全获取属性
+- `setattr(obj, "name", value)`：动态设置属性
+- `delattr(obj, "name")`：删除属性
+
+这些函数在写元编程、序列化框架时很有用。
+:::
+
+## 类型注解：属性与方法的类型
+
+Python 3.12+ 支持在类体直接用 `属性: 类型` 形式声明**类级别的类型注解**，配合 `__init__` 赋值，让 IDE 和类型检查器（如 mypy / pyright）更好推断：
+
+```py title="Python"
+import numpy as np
+
+class WaveformGenerator:
+    # 类级别的类型注解（不创建类属性，仅用于类型检查）
+    waveform: str
+    frequency: float
+    amplitudes: list[float]
+
+    def __init__(
+        self,
+        waveform: str,
+        frequency: float,
+        amplitudes: list[float] | None = None,
+    ):
+        self.waveform = waveform
+        self.frequency = frequency
+        self.amplitudes = amplitudes if amplitudes is not None else []
+
+    def rms(self) -> float:
+        """计算均方根值。"""
+        if not self.amplitudes:
+            return 0.0
+        return float(np.sqrt(np.mean(np.array(self.amplitudes) ** 2)))
+
+    def __repr__(self) -> str:
+        return (
+            f"WaveformGenerator(waveform={self.waveform!r}, "
+            f"freq={self.frequency}, rms={self.rms():.2f})"
+        )
+
+wg: WaveformGenerator = WaveformGenerator("正弦波", 1000.0, [0.5, 0.8, 0.6, 0.9])
+print(f"RMS = {wg.rms():.4f}")  # 输出：RMS = 0.7177
+print(wg)
+# 输出：WaveformGenerator(waveform='正弦波', freq=1000.0, rms=0.72)
+```
+
+:::note 注解只声明，不创建属性
+`waveform: str` 这样的注解**不会**真正给类添加属性，只是写进 `__annotations__` 字典。真正的赋值发生在 `__init__` 中的 `self.waveform = waveform`。若想同时声明并赋默认值，可以写 `waveform: str = "正弦"`，但此时它就成了**类属性**。
+:::
+
+## 实战：信号管理
+
+综合运用以上知识，实现一个简洁的信号管理类：
+
+```py title="Python"
+import numpy as np
+
+class Signal:
+    """离散时间信号。
+
+    Args:
+        name: 信号名称。
+        samples: 采样数据（numpy 数组）。
+        sample_rate: 采样率（Hz）。
+    """
+    unit = "V"                # 类属性：所有信号共享的默认单位
+    _next_id: int = 1         # 受保护的类属性：自增 ID
+
+    def __init__(
+        self,
+        name: str,
+        samples: np.ndarray,
+        sample_rate: float = 1000.0,
+    ) -> None:
+        self.id: int = Signal._next_id
+        Signal._next_id += 1
+        self.name = name
+        self.samples = samples
+        self.sample_rate = sample_rate
+
+    def amplitude(self) -> float:
+        """峰值振幅。"""
+        return float(np.max(np.abs(self.samples)))
+
+    def rms(self) -> float:
+        """均方根值。"""
+        return float(np.sqrt(np.mean(self.samples ** 2)))
+
+    def energy(self) -> float:
+        """信号能量。"""
+        return float(np.sum(self.samples ** 2))
+
+    def add_noise(self, noise_level: float = 0.1) -> None:
+        """添加高斯白噪声。"""
+        noise = np.random.normal(0, noise_level, len(self.samples))
+        self.samples = self.samples + noise
+
+    def __repr__(self) -> str:
+        return (
+            f"Signal(id={self.id}, name={self.name!r}, "
+            f"points={len(self.samples)}, amp={self.amplitude():.2f}, "
+            f"rms={self.rms():.2f})"
+        )
+
+    def __str__(self) -> str:
+        return (
+            f"#{self.id} {self.name}（{Signal.unit}）"
+            f" {len(self.samples)} 点，峰值 {self.amplitude():.2f}"
+        )
+
+
+class SignalManager:
+    """信号管理器。"""
+
+    def __init__(self) -> None:
+        self.signals: list[Signal] = []
+
+    def add(self, signal: Signal) -> None:
+        self.signals.append(signal)
+
+    def find(self, name: str) -> Signal | None:
+        for s in self.signals:
+            if s.name == name:
+                return s
+        return None
+
+    def strongest(self) -> Signal | None:
+        """找出能量最大的信号。"""
+        if not self.signals:
+            return None
+        return max(self.signals, key=lambda s: s.energy())
+
+    def __repr__(self) -> str:
+        return f"SignalManager({len(self.signals)} signals)"
+
+
+# 使用示例
+np.random.seed(42)
+manager = SignalManager()
+
+t = np.linspace(0, 1, 200)
+manager.add(Signal("正弦波", np.sin(2 * np.pi * 5 * t), 200))
+manager.add(Signal("方波", np.sign(np.sin(2 * np.pi * 3 * t)), 200))
+manager.add(Signal("衰减振荡", np.exp(-2 * t) * np.cos(2 * np.pi * 10 * t), 200))
+
+print("--- 所有信号 ---")
+for s in manager.signals:
+    print(s)  # 调用 __str__
+    print(f"  开发视图：{s!r}")  # 调用 __repr__
+
+print("\n--- 查找 ---")
+target = manager.find("方波")
+if target:
+    target.add_noise(0.05)
+    print(f"加噪后：{target!r}")
+
+print("\n--- 最强信号 ---")
+best = manager.strongest()
+if best:
+    print(f"能量最大：{best.name}（{best.energy():.2f}）")
+
+print("\n--- 统计 ---")
+print(f"共创建信号数（自增 ID 体现）：{Signal._next_id - 1}")
+print(manager)
+```
+
+输出示例：
+
+```text title="输出"
+--- 所有信号 ---
+#1 正弦波（V）200 点，峰值 1.00
+  开发视图：Signal(id=1, name='正弦波', points=200, amp=1.00, rms=0.71)
+#2 方波（V）200 点，峰值 1.00
+  开发视图：Signal(id=2, name='方波', points=200, amp=1.00, rms=1.00)
+#3 衰减振荡（V）200 点，峰值 1.00
+  开发视图：Signal(id=3, name='衰减振荡', points=200, amp=1.00, rms=0.28)
+
+--- 查找 ---
+加噪后：Signal(id=2, name='方波', points=200, amp=1.06, rms=1.00)
+
+--- 最强信号 ---
+能量最大：方波（200.00）
+
+--- 统计 ---
+共创建信号数（自增 ID 体现）：3
+SignalManager(3 signals)
+```
+
+## 🎯 动手练习
+
+1. **滤波器类**：实现 `MovingAverageFilter` 类，包含 `window_size` 属性，提供 `apply(signal)` 方法返回滤波后的新信号数组
+2. **类属性计数器**：设计一个类，每次创建实例时自动递增计数器，提供类方法查询已创建的实例总数
+3. **工厂方法模式**：使用 `@classmethod` 实现 `Signal.from_sine(freq, duration, sample_rate)` 和 `Signal.from_square(freq, duration, sample_rate)` 两种工厂方法
+4. **频谱分析器**：实现 `SpectrumAnalyzer` 类，内部存储采样数据，通过 `@property` 提供频率和幅度谱的只读访问
+
+## 📚 延伸阅读
+
+- **面向对象编程基础**：理解封装、继承、多态三大核心概念
+- **魔术方法**：深入学习 `__new__`、`__getattribute__`、`__setattr__` 等高级魔术方法
+- **数据类**：了解 Python 3.7+ 的 `@dataclass` 装饰器，简化数据载体类的定义
+- **抽象基类**：使用 `abc` 模块定义接口，强制子类实现特定方法
+
+## 📊 速查表
+
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 定义类 | `class Name:` | `class Signal:` |
+| 创建实例 | `obj = ClassName(args)` | `s = Signal("正弦波", samples)` |
+| 初始化方法 | `def __init__(self, ...):` | 自动在创建时调用 |
+| 实例方法 | `def method(self):` | `sig.amplitude()` |
+| 类方法 | `@classmethod` + `cls` | `SampleCounter.reset()` |
+| 静态方法 | `@staticmethod` | `SampleCounter.help()` |
+| 类属性 | 类体内定义 | `Signal.unit = "V"` |
+| 实例属性 | `self.attr = value` | `self.name = name` |
+| 用户友好字符串 | `def __str__(self):` | `print(obj)` 调用 |
+| 开发者明确字符串 | `def __repr__(self):` | `repr(obj)` / 容器内调用 |
+| 类型注解 | `attr: type` | `name: str` |
+| 动态属性操作 | `getattr/setattr/hasattr` | `getattr(obj, "name", default)` |
+| 单例模式 | 重写 `__new__` | 控制实例创建 |
+
+## 📝 本节总结
+
+本节我们学习了面向对象编程的基础——类与对象。核心要点包括：
+
+- **类是模板，对象是实例**：`class` 定义结构，调用类名创建具体对象
+- **`self` 是桥梁**：连接实例与方法，让方法能访问和修改实例数据
+- **属性分两类**：类属性（共享）与实例属性（独有），修改类属性必须用 `类名.属性`
+- **方法有三种**：实例方法操作实例状态，类方法操作类状态或作为工厂，静态方法是类命名空间中的普通函数
+- **双下方法定制行为**：`__str__` 面向用户，`__repr__` 面向开发者，容器内使用 `__repr__`
+- **属性查找有顺序**：实例 → 类 → 父类 → `__getattr__`，理解它可避免"改了类属性实例却不变"的困惑
+
+掌握这些基础后，你将能够设计出结构清晰、可复用的类。下一节将介绍**继承**——通过复用已有类来构建层级化的类型体系。

@@ -1,0 +1,8 @@
+{
+  "label": "📂 文件与 IO",
+  "position": 9,
+  "link": {
+    "type": "generated-index",
+    "description": "读写文件、处理路径、操作 JSON 与 CSV 等常见数据格式。"
+  }
+}
