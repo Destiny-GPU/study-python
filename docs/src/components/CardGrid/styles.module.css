@@ -102,24 +102,22 @@
   margin-bottom: 0;
 }
 
-/* 卡片按钮：ds-btn / ds-btn-primary 通过 JSX clsx 应用，此处仅定义卡片内覆盖 */
-.cardButton {
+/* 卡片按钮：与「开始学习」相同的实心填充风格 */
+.cardButton,
+.cardButton:visited {
   margin-top: 0.75rem;
   padding: 0.6rem 1.5rem;
   font-size: 0.95rem;
-}
-
-/* 深色模式下增强可见性 */
-[data-theme='dark'] .cardButton {
+  font-weight: 600;
   background: linear-gradient(135deg, var(--ifm-color-primary) 0%, var(--ifm-color-violet) 100%);
-  color: #ffffff;
-  box-shadow: 0 3px 12px rgba(74, 108, 247, 0.4);
+  color: #ffffff !important;
+  border-color: transparent;
+  box-shadow: 0 4px 16px rgba(74, 108, 247, 0.3);
 }
 
-[data-theme='dark'] .cardButton:hover {
-  background: linear-gradient(135deg, var(--ifm-color-primary-dark) 0%, var(--ifm-color-violet-dark) 100%);
-  color: #ffffff;
-  box-shadow: 0 5px 20px rgba(74, 108, 247, 0.6);
+.cardButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(74, 108, 247, 0.4);
 }
 
 /* 滚动入场动画 */
@@ -166,8 +164,7 @@
   }
 
   .cardButton {
-    padding: 0.5rem 1.25rem;
-    font-size: 0.9rem;
+    min-height: 40px;
   }
 }
 
@@ -198,8 +195,6 @@
   }
 
   .cardButton {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
     min-height: 40px;
   }
 }

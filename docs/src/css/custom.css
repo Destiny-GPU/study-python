@@ -1,5 +1,5 @@
 /**
- * 现代化 Python 文档网站主题 - 2025 专业版
+ * 现代化 Python 文档网站主题 - 2026 专业版
  * 设计理念：大字体、易读性、专业感、现代美学
  * 配色灵感：Linear、Vercel、Stripe 等顶级产品
  */
@@ -125,7 +125,8 @@
   --ifm-background-color: #0f0f17;
   --ifm-background-surface-color: #1a1a28;
   --ifm-card-background-color: #222233;
-
+  
+  
   /* 暗色文字 - 暖白 */
   --ifm-color-text-primary: #e8e6f0;
   --ifm-color-text-secondary: #b8b6c4;
@@ -1345,7 +1346,7 @@ button[class*="copyButton"][class*="success"] {
 
 .about-tech .cardContent {
   font-size: 0.88rem;
-  color: var(--ifm-color-emphasis-600);
+  color: var(--ifm-color-emphasis-800);
 }
 
 /* Education section - prominent cards */
@@ -1418,7 +1419,7 @@ button[class*="copyButton"][class*="success"] {
 .about-education .cardContent {
   font-size: 0.9rem;
   line-height: 1.6;
-  color: var(--ifm-color-emphasis-600);
+  color: var(--ifm-color-emphasis-800);
   text-align: left;
   display: flex;
   flex-direction: column;

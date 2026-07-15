@@ -11,9 +11,9 @@ const CODE_LINES = [
   '# π ≈ 3.141592653589793',
 ];
 
-const CHARS_PER_TICK = 2;
+const CHARS_PER_TICK = 1;
 const TICK_MS = 30;
-const LINE_PAUSE_MS = 300;
+const LINE_PAUSE_MS = 100;
 
 export default function TypingCode() {
   const [lineIdx, setLineIdx] = useState(0);
@@ -22,6 +22,7 @@ export default function TypingCode() {
   const rafRef = useRef(null);
   const lastTickRef = useRef(0);
   const pauseUntilRef = useRef(0);
+  const loopTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (done) return;
@@ -60,6 +61,23 @@ export default function TypingCode() {
     rafRef.current = requestAnimationFrame(step);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [lineIdx, charIdx, done]);
+
+  // 动画完成后自动循环播放
+  useEffect(() => {
+    if (!done) return;
+
+    loopTimeoutRef.current = setTimeout(() => {
+      setLineIdx(0);
+      setCharIdx(0);
+      setDone(false);
+    }, 5000); // 5秒间隔
+
+    return () => {
+      if (loopTimeoutRef.current) {
+        clearTimeout(loopTimeoutRef.current);
+      }
+    };
+  }, [done]);
 
   return (
     <div className={styles.codeAnimation}>

@@ -17,7 +17,7 @@
 }
 
 .editorWrapper {
-  max-height: 400px;
+  max-height: 500px;
   overflow: auto;
 }
 
@@ -119,6 +119,23 @@
   color: #a6adc8;
 }
 
+/* Light mode adjustments */
+[data-theme='light'] .outputPanel {
+  background: #f8f9fa;
+  color: #2c2c2c;
+  border: 1px solid #e9ecef;
+}
+
+[data-theme='light'] .outputPanel.outputError {
+  background: #fff5f5;
+  border: 1px solid #f8d7da;
+}
+
+[data-theme='light'] .outputLabel {
+  background: #e9ecef;
+  color: #495057;
+}
+
 .outputContent {
   margin: 0;
   padding: 1rem;
@@ -126,6 +143,104 @@
   word-break: break-word;
   max-height: 300px;
   overflow: auto;
+}
+
+/* CodeMirror editor themes */
+.editor :global(.cm-editor) {
+  height: 100%;
+  min-height: 300px;
+}
+
+.editor :global(.cm-scroller) {
+  overflow: auto;
+}
+
+/* Dark theme - using custom colors */
+.editor :global(.cm-editor.cm-theme-dark) {
+  background-color: #1e1e2e;
+}
+
+.editor :global(.cm-theme-dark .cm-gutters) {
+  background-color: #181825;
+  color: #6c7086;
+  border-right: 1px solid #313244;
+}
+
+.editor :global(.cm-theme-dark .cm-activeLine) {
+  background-color: #313244;
+}
+
+.editor :global(.cm-theme-dark .cm-activeLineGutter) {
+  background-color: #1e1e2e;
+  color: #a6adc8;
+}
+
+.editor :global(.cm-theme-dark .cm-selectionBackground) {
+  background-color: #45475a;
+}
+
+.editor :global(.cm-theme-dark .cm-selection) {
+  color: #cdd6f4;
+}
+
+.editor :global(.cm-theme-dark .cm-line) {
+  color: #cdd6f4;
+}
+
+.editor :global(.cm-theme-dark .cm-cursor) {
+  border-left-color: #f5e0dc;
+}
+
+.editor :global(.cm-theme-dark .cm-foldGutter) {
+  color: #6c7086;
+}
+
+.editor :global(.cm-theme-dark .cm-foldGutter-open) {
+  color: #a6adc8;
+}
+
+/* Light theme - custom colors */
+.editor :global(.cm-editor.cm-theme-light) {
+  background-color: #ffffff;
+}
+
+.editor :global(.cm-theme-light .cm-gutters) {
+  background-color: #f8f9fa;
+  color: #6c7086;
+  border-right: 1px solid #e9ecef;
+}
+
+.editor :global(.cm-theme-light .cm-activeLine) {
+  background-color: #f1f3f5;
+}
+
+.editor :global(.cm-theme-light .cm-activeLineGutter) {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.editor :global(.cm-theme-light .cm-selectionBackground) {
+  background-color: #b3d7ff;
+}
+
+.editor :global(.cm-theme-light .cm-selection) {
+  color: #0056b3;
+}
+
+.editor :global(.cm-theme-light .cm-line) {
+  color: #2c2c2c;
+}
+
+.editor :global(.cm-theme-light .cm-cursor) {
+  border-left-color: #0056b3;
+}
+
+.editor :global(.cm-theme-light .cm-foldGutter) {
+  color: #6c7086;
+}
+
+.editor :global(.cm-theme-light .cm-foldGutter-open) {
+  color: #495057;
 }
 
 /* Dark mode adjustments */
@@ -173,7 +288,7 @@
   }
 
   .editorWrapper {
-    max-height: 300px;
+    max-height: 380px;
   }
 
   .editor {

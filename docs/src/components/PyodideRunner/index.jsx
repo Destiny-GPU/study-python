@@ -21,10 +21,31 @@ export default function PyodideRunner({ children, title }) {
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState(null);
   const [pythonLang, setPythonLang] = useState(null);
+  const [theme, setTheme] = useState('dark');
   const pyodideRef = useRef(null);
 
   useEffect(() => {
     import('@codemirror/lang-python').then(mod => setPythonLang(() => mod.python));
+  }, []);
+
+  // Detect theme from Docusaurus data-theme attribute (client-side only)
+  useEffect(() => {
+    const getTheme = () =>
+      document.documentElement.getAttribute('data-theme') || 'dark';
+    setTheme(getTheme());
+
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === 'data-theme') {
+          setTheme(getTheme());
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
   }, []);
 
   const handleRun = useCallback(async () => {
@@ -102,7 +123,7 @@ sys.stderr = sys.__stderr__
             value={code}
             onChange={(value) => setCode(value)}
             extensions={pythonLang ? [pythonLang()] : []}
-            theme="dark"
+            theme={theme}
             basicSetup={{
               lineNumbers: true,
               foldGutter: false,
@@ -162,17 +183,21 @@ sys.stderr = sys.__stderr__
 
 /**
  * Extract code string from MDX children (fenced code block).
+ * Handles MDX v3 nested structures where children.props.children may be an object.
  */
 function extractCodeFromChildren(children) {
   if (typeof children === 'string') {
     return children.trim();
   }
 
-  // Handle MDX code block: children.props.children
+  // Handle MDX code block: children.props.children (may be nested)
   if (children?.props?.children) {
     const child = children.props.children;
     if (typeof child === 'string') {
       return child.trim();
+    }
+    if (typeof child === 'object' && child !== null) {
+      return extractCodeFromChildren(child);
     }
   }
 
