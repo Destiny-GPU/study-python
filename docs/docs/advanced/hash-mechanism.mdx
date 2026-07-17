@@ -1,17 +1,17 @@
 ---
-sidebar_position: 7
 sidebar_label: '哈希机制'
-title: 🚀 Python 哈希机制详解
+title: Python 哈希机制详解
 description: 深入理解 Python 的哈希机制，掌握可哈希对象的特性，学习自定义类中正确实现 __hash__ 和 __eq__ 方法。
+tags: [进阶特性, 数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 🚀 Python 哈希机制详解
 
-哈希（Hash）是 Python 中实现高效数据结构（如字典、集合）的基础。理解哈希机制能帮助你写出更高效、更正确的代码。
+哈希（Hash）是 Python 中实现高效数据结构（如字典、集合）的基础。理解哈希机制有助于写出更高效、更正确的代码。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **hash() vs hashlib**：`hash()` 用于快速查找（dict/set），`hashlib` 用于安全校验
 - **可哈希 = 不可变**：对象生命周期内哈希值固定，且能进行相等性比较
 - **三大场景**：字典键、集合元素、缓存机制
@@ -19,13 +19,13 @@ import { PyodideRunner } from '@site/src/components';
 - **大文件哈希**：复杂度 O(n)，瓶颈在 I/O，永远使用分块读取
 :::
 
-:::danger 安全警告
+:::danger[安全警告]{.safety-warning}
 **绝对禁止**用内置 `hash()` 做密码哈希或文件安全校验！
 :::
 
 <PyodideRunner title="哈希机制快速体验">
 
-```python
+```py
 # 基本哈希
 print(f"hash(42): {hash(42)}")
 print(f"hash('hello'): {hash('hello')}")
@@ -81,7 +81,7 @@ print(f"集合长度: {len(point_set)}")  # p1 和 p2 相等，只保留一个
 | **稳定性** | ❌ 每次启动随机化 | ✅ 标准化，全球一致 |
 | **典型用途** | 字典键、集合、缓存 | 签名、校验、密码、区块链 |
 
-:::danger 安全警告
+:::danger[安全警告]{.safety-warning}
 **绝对禁止**用内置 `hash()` 做密码哈希或文件安全校验！
 :::
 
@@ -89,13 +89,13 @@ print(f"集合长度: {len(point_set)}")  # p1 和 p2 相等，只保留一个
 
 可哈希是指一个对象在其生命周期内拥有**固定不变的哈希值**，且能进行相等性比较。**核心公式：可哈希 = 有稳定的"身份证号" + 能判断是否相等。**
 
-#### 准入条件
+### 准入条件
 
 1. 实现 `__hash__()` 返回整数。
 2. 实现 `__eq__()` 支持比较。
 3. **哈希值终身不变**（因此可变对象如 list/dict/set 默认不可哈希）。
 
-#### 核心作用：三大场景
+### 核心作用：三大场景
 
 ```py title="Python"
 # 🔑 1. 作为 dict 的键 (O(1) 查找)
@@ -181,7 +181,7 @@ class Point:
         return hash((self.x, self.y))
 ```
 
-:::warning 可变对象不可哈希
+:::warning[可变对象不可哈希]
 如果一个对象是可变的（如 list、dict、set），它的哈希值可能会改变，因此不能作为字典的键或集合的元素。尝试这样做会抛出 `TypeError`。
 :::
 
@@ -271,10 +271,10 @@ print(cache[alice2])  # Alice（因为 __eq__ 和 __hash__ 一致）
 - **[hashlib 官方文档](https://docs.python.org/zh-cn/3/library/hashlib.html)** - 安全哈希库
 - **[PEP 452](https://peps.python.org/pep-0452/)** - 内存安全与哈希随机化
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **哈希值是数据的压缩数字指纹**：`hash()` 用于 O(1) 查找，`hashlib` 用于安全校验
 - **可哈希是哈希表的准入门票**：核心是"不可变性"，重写 `__eq__` 必须处理 `__hash__`
 - **大文件哈希复杂度仍是 O(n)**，瓶颈在 I/O，永远使用**分块读取**
 
-理解哈希机制，能帮助你正确使用字典和集合，避免常见的 `TypeError`。
+理解哈希机制，有助于正确使用字典和集合，避免常见的 `TypeError`。

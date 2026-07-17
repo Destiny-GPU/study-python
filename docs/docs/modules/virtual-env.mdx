@@ -1,15 +1,15 @@
 ---
-sidebar_position: 4
 sidebar_label: '虚拟环境'
 title: 🧩 虚拟环境
 description: 理解虚拟环境必要性，使用 venv 创建/激活，掌握 uv、poetry 现代工具与 pyenv 多版本管理，搭建完整 Python 项目工作流。
+tags: [模块与包]
 ---
 
-# 🧩 虚拟环境
+# 🏠 虚拟环境
 
 Python 的依赖默认安装到全局 `site-packages`，这意味着所有项目共享同一套包版本。当项目 A 需要 `requests==2.31`、项目 B 需要 `requests==2.32` 时，全局环境根本无法同时满足——这就是**依赖地狱**。**虚拟环境**为每个项目创建独立的 Python 沙箱，从根本上解决这个问题。本节系统介绍 `venv` 标准库方案，以及现代工具 `uv`、`poetry`、`pyenv`。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **依赖隔离**：每个项目独立 `site-packages`，避免版本冲突
 - **venv**：Python 标准库方案，`python -m venv .venv` 创建，`source .venv/bin/activate` 激活
 - **uv**：Rust 编写的现代工具，速度快 10-100 倍，自动管理 Python 版本
@@ -39,7 +39,7 @@ pip install django==5.0
 
 ### 虚拟环境的核心价值
 
-:::info 虚拟环境三件事
+:::info[虚拟环境三件事]
 1. **隔离**：每个环境有独立的 `site-packages`，互不干扰
 2. **复现**：通过 `requirements.txt` 或 `pyproject.toml` 锁文件，团队成员/CI/生产环境完全一致
 3. **清理**：删除一个目录即可彻底卸载一个项目的所有依赖，不污染系统
@@ -88,7 +88,7 @@ python -m venv /path/to/myenv
 └── pyvenv.cfg
 ```
 
-:::tip 推荐把虚拟环境命名为 .venv
+:::tip[推荐把虚拟环境命名为 .venv]
 - IDE（VS Code、PyCharm）会自动识别 `.venv` 目录并提示激活
 - `.gitignore` 中加一行 `.venv/` 即可忽略
 - 名字简短，输入方便
@@ -143,7 +143,7 @@ deactivate
 deactivate
 ```
 
-:::warning PowerShell 执行策略
+:::warning[PowerShell 执行策略]
 首次在 PowerShell 中激活虚拟环境可能报错"无法加载文件，因为在此系统上禁止运行脚本"。以管理员身份运行 PowerShell 执行：
 ```powershell title="PowerShell"
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -171,7 +171,7 @@ python -c "import sys; print(sys.prefix)"
 # 输出：/home/user/myproject/.venv
 ```
 
-:::info 不激活也能用
+:::info[不激活也能用]
 即使不激活，直接调用虚拟环境的解释器也能用其依赖：
 ```bash title="Shell"
 .venv/bin/python script.py
@@ -246,7 +246,7 @@ uv venv myenv
 source .venv/bin/activate
 ```
 
-:::tip uv 自动管理 Python 版本
+:::tip[uv 自动管理 Python 版本]
 `uv venv --python 3.13` 如果系统没装 Python 3.13，uv 会**自动从官方源下载**对应版本，无需 pyenv。这是 uv 的一大杀手锏。
 :::
 
@@ -322,7 +322,7 @@ dev = [
 ]
 ```
 
-:::info uv.lock 的作用
+:::info[uv.lock 的作用]
 `uv add` 会生成 `uv.lock` 文件，记录**所有传递依赖的精确版本与哈希**。提交到 Git 后，团队成员和 CI 通过 `uv sync` 即可完全复现环境，杜绝"在我电脑上能跑"。
 :::
 
@@ -407,7 +407,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 ```
 
-:::warning poetry vs uv 怎么选？
+:::warning[poetry vs uv 怎么选？]
 - **poetry**：成熟稳定，生态完善，社区广泛使用。但虚拟环境管理较重，速度慢于 uv
 - **uv**：速度极快，2024 年起快速崛起，统一管理 Python 版本与依赖。截至 2026 年已成熟，**新项目推荐首选 uv**
 
@@ -416,7 +416,7 @@ build-backend = "poetry.core.masonry.api"
 
 ## pyenv 多版本
 
-[`pyenv`](https://github.com/pyenv/pyenv) 让你在同一台机器上**安装和切换多个 Python 解释器版本**，是经典的多版本管理工具。
+[`pyenv`](https://github.com/pyenv/pyenv) 能在同一台机器上**安装和切换多个 Python 解释器版本**，是经典的多版本管理工具。
 
 ### 安装 pyenv
 
@@ -468,8 +468,8 @@ pyenv shell 3.14.0
 
 提交到 Git 后，团队成员进入此目录会自动切换到对应 Python 版本。
 
-:::tip pyenv vs uv 的版本管理
-uv 内置了 Python 版本管理（`uv venv --python 3.13`），且自动下载。如果你已经在用 uv，**通常不再需要 pyenv**。pyenv 仍然适合：
+:::tip[pyenv vs uv 的版本管理]
+uv 内置了 Python 版本管理（`uv venv --python 3.13`），且自动下载。如果已经在用 uv，**通常不再需要 pyenv**。pyenv 仍然适合：
 - 维护需要特定旧版本 Python 的老项目
 - 需要切换到带特定调试符号的版本
 - CI 矩阵测试多版本
@@ -707,7 +707,7 @@ uv build
 uv publish
 ```
 
-:::tip uv publish 自动化
+:::tip[uv publish 自动化]
 `uv publish` 内置了上传功能，配合 `PYPI_TOKEN` 环境变量可在 CI 中一行命令发布：
 ```bash title="Shell"
 UV_PUBLISH_TOKEN=pypi-xxxxx uv publish
@@ -759,7 +759,7 @@ uv run greeter Alice  # 跑 CLI
 - **[pyenv GitHub](https://github.com/pyenv/pyenv)** - 多版本 Python 管理
 - **[Python Packaging Guide](https://packaging.python.org/en/latest/)** - Python 打包官方指南
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **虚拟环境解决"依赖地狱"**，让每个项目拥有独立 `site-packages`，避免版本冲突
 - **`python -m venv .venv` 是标准库方案**，配合 `source .venv/bin/activate` 激活，适合简单项目
@@ -769,4 +769,4 @@ uv run greeter Alice  # 跑 CLI
 - **现代工作流**：`uv init` → `uv add` → `uv sync` → `uv run` → `uv build` → `uv publish`，一条命令搞定全流程
 - **团队协作**：克隆仓库后只需 `uv sync`，一键安装正确 Python 版本 + 所有依赖，杜绝"在我电脑上能跑"
 
-至此，**模块与包**章节结束。回顾整个学习路径：从基础的变量、数据类型、控制流，到函数、模块、包——你已经掌握了组织 Python 代码的全部核心机制。下一步可以深入学习面向对象编程、异常处理、文件 I/O 等进阶主题。
+至此，**模块与包**章节结束。回顾整个学习路径：从基础的变量、数据类型、控制流，到函数、模块、包——已掌握组织 Python 代码的全部核心机制。下一步可以深入学习面向对象编程、异常处理、文件 I/O 等进阶主题。

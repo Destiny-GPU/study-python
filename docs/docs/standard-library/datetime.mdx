@@ -1,17 +1,17 @@
 ---
-sidebar_position: 2
 sidebar_label: 'datetime'
 title: 🧰 datetime 时间处理
 description: 掌握 datetime、date、time、timedelta、时区 aware 与 naive、zoneinfo、时间戳、日期运算与 calendar 模块。
+tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
-# 🧰 datetime 时间处理
+# 🕐 datetime 时间处理
 
 时间是无处不在却又极其微妙的概念：时区、闰秒、夏令时、闰年、月末日期……任何一处疏忽都会让程序在跨时区或跨季度时崩溃。Python 标准库 `datetime` 模块提供了完整的时间处理工具，配合 `zoneinfo` 模块可以优雅地处理时区问题。本章将系统讲解这些工具。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **核心类**：`date`（日期）、`time`（时间）、`datetime`（日期+时间）、`timedelta`（间隔）
 - **当前时间**：用 `datetime.now()`，UTC 用 `datetime.now(timezone.utc)`，避免 `utcnow()`
 - **时间戳**：跨语言交换绝对时刻的标准格式，与时区无关
@@ -23,7 +23,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="datetime 快速体验">
 
-```python
+```py
 from datetime import date, datetime, timedelta
 
 # 创建日期和时间
@@ -112,7 +112,7 @@ utc_naive = datetime.utcnow()
 print("utcnow (naive):", utc_naive)
 ```
 
-:::warning utcnow 已不推荐
+:::warning[utcnow 已不推荐]
 `datetime.utcnow()` 返回的是 **naive**（无时区）的 UTC 时间，容易和本地时间混淆，Python 3.12 起在文档中明确不推荐。正确做法是使用带时区的 `datetime.now(timezone.utc)`，下面会详细介绍。
 :::
 
@@ -140,7 +140,7 @@ back = utc_dt.timestamp()
 print("还原时间戳:", back)  # 与 ts 相同
 ```
 
-:::note 时间戳与时区无关
+:::note[时间戳与时区无关]
 时间戳本身与时区无关——它代表一个绝对时刻。同一个事件，无论用哪个时区查看，对应的时间戳都是同一个。差异只体现在 `datetime.fromtimestamp(ts)` 转换时是否指定 `tz`：不指定则按本地时区显示，指定则按指定时区显示。
 :::
 
@@ -185,7 +185,7 @@ print(parsed == dt)  # True
 | `%z` | 时区偏移 | +0800 |
 | `%Z` | 时区名 | CST |
 
-:::tip ISO 8601 捷径
+:::tip[ISO 8601 捷径]
 处理 ISO 8601 格式（如 `2025-07-10T14:30:45+08:00`）时，不必手写格式串，直接用 `isoformat()` 与 `fromisoformat()`：
 
 ```py title="Python"
@@ -222,7 +222,7 @@ print(aware.tzinfo)  # UTC
 # aware > naive  # 抛 TypeError
 ```
 
-:::warning 不要混用 aware 与 naive
+:::warning[不要混用 aware 与 naive]
 `aware` 与 `naive` 的 `datetime` 不能直接比较、相减。代码中应保持一致——要么全部用 aware（推荐），要么全部用 naive（仅在单时区、纯本地场景）。生产代码强烈建议一律使用 aware，从源头杜绝时区 bug。
 :::
 
@@ -266,7 +266,7 @@ dt_winter = datetime(2025, 1, 10, 14, 30, tzinfo=new_york)
 print(dt_winter)  # 2025-01-10 14:30:00-05:00（标准时间 UTC-5）
 ```
 
-:::tip ZoneInfo 解决夏令时
+:::tip[ZoneInfo 解决夏令时]
 纽约冬天 UTC-5，夏天 UTC-4。固定偏移量的 `timezone` 无法表达这种切换，而 `ZoneInfo` 会根据日期自动选择正确的偏移。所有跨时区应用都应使用 `zoneinfo`。
 :::
 
@@ -289,7 +289,7 @@ utc_time = beijing_time.astimezone(ZoneInfo("UTC"))
 print("UTC:", utc_time)  # 2025-07-10 12:00:00+00:00
 ```
 
-:::info Windows 上的 tzdata
+:::info[Windows 上的 tzdata]
 Windows 系统没有内置 IANA 时区数据库，需要安装 `tzdata` 包：
 
 ```bash title="Shell"
@@ -354,7 +354,7 @@ print(add_months(d, 1))  # 2025-02-28（2 月没有 31 日，取月末）
 print(add_months(d, 2))  # 2025-03-31
 ```
 
-:::note 没有 relativedelta
+:::note[没有 relativedelta]
 标准库没有"加 N 个月"的工具。需要复杂日历运算（如"下个月最后一个工作日"）可以使用第三方库 `python-dateutil` 的 `relativedelta`。仅用标准库时，按上例手动处理即可。
 :::
 
@@ -443,7 +443,7 @@ hc = calendar.HTMLCalendar()
 print(hc.formatmonth(2025, 7))  # 返回 HTML 字符串
 ```
 
-:::tip 本地化日历
+:::tip[本地化日历]
 `calendar` 默认用英文。要本地化月份、星期名称，设置 locale：
 
 ```py title="Python"
@@ -601,7 +601,7 @@ if __name__ == "__main__":
 加班时长: 4小时15分
 ```
 
-:::tip 跨午夜班次的处理
+:::tip[跨午夜班次的处理]
 夜班从晚 22 点打卡到次日 6 点，单纯比较时间字符串会得出负数。代码中通过"下班时间早于上班时间则加一天"的简单规则自动修正。这种业务逻辑在排班、考勤、订单系统中极为常见。
 :::
 
@@ -638,7 +638,7 @@ if __name__ == "__main__":
 - **[PEP 615](https://peps.python.org/pep-0615/)** - zoneinfo 模块引入规范
 - **[python-dateutil](https://dateutil.readthedocs.io/)** - 第三方库，提供 `relativedelta` 等高级时间运算
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`datetime` 模块核心类**：`date`（日期）、`time`（时间）、`datetime`（日期+时间）、`timedelta`（间隔）、`tzinfo`（时区）
 - **获取当前时间用 `datetime.now()`**，UTC 时间用 `datetime.now(timezone.utc)`，避免已弃用的 `utcnow()`

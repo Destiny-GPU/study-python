@@ -1,8 +1,8 @@
 ---
-sidebar_position: 2
 sidebar_label: 'typing 模块'
-title: 🚀 typing 模块
+title: typing 模块
 description: 深入 typing 模块，掌握 Callable、TypeVar、Generic、Protocol、TypedDict、Literal、Final 等高级类型工具。
+tags: [进阶特性, 面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 上一节介绍了类型注解的基础用法。本节深入 Python 标准库的 `typing` 模块——它是整个类型系统的核心工具箱，提供了函数签名、泛型、协议、字面量类型等丰富抽象。掌握 `typing` 是编写大型、健壮 Python 项目的基础，也是阅读主流框架（FastAPI、Pydantic、SQLAlchemy）源码的钥匙。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **Any/object**：`Any` 关闭类型检查，`object` 是所有类型基类，需窄化
 - **Callable**：标注可调用对象，`Callable[[参数], 返回]`
 - **TypeVar/Generic**：定义泛型，`bound` 限定子类，受限 `TypeVar` 限定取值
@@ -22,9 +22,8 @@ import { PyodideRunner } from '@site/src/components';
 - **TypedDict**：类型化字典，字典键有类型约束
 - **Annotated**：类型之外附加元信息，被 Pydantic/FastAPI 利用
 - **Python 3.12+**：`type` 语句和泛型类语法让泛型表达更简洁
-:::
 
-:::info Python 版本演进
+:::info[Python 版本演进]
 `typing` 模块在持续演进。许多原本需要从 `typing` 导入的工具，在新版 Python 中有了更简洁的原生替代：
 - Python 3.9：`list[int]` 取代 `List[int]`（PEP 585）
 - Python 3.10：`X | Y` 取代 `Union[X, Y]`（PEP 604）
@@ -35,7 +34,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="typing 模块快速体验">
 
-```python
+```py
 from typing import Callable, TypeVar, Literal
 
 # Callable 类型
@@ -77,6 +76,21 @@ print(f"类型注解: {get_type_hints(process)}")
 
 `Any` 表示"任意类型"，相当于关闭类型检查——任何类型都与 `Any` 兼容：
 
+类型系统层级关系：
+
+```mermaid
+graph TD
+    Any["Any - 关闭类型检查"] --> Object["object - 所有类型基类"]
+    Object --> Literal["Literal - 字面量类型"]
+    Object --> Union["Union / X | Y - 联合类型"]
+    Object --> Protocol["Protocol - 结构化类型"]
+    Object --> TypedDict["TypedDict - 类型化字典"]
+    Union --> NoneType["None"]
+    Union --> Basic["int, str, float, bool"]
+    Callable["Callable[[args], ret] - 可调用"] --> Function["函数类型"]
+    TypeVar["TypeVar('T') - 泛型变量"] --> Generic["Generic[T] - 泛型类"]
+```
+
 ```py title="Python"
 from typing import Any
 
@@ -91,8 +105,8 @@ x = "hello"  # Any 可以赋值为任何类型，检查器不警告
 print(process_anything(42))
 ```
 
-:::warning 谨慎使用 Any
-`Any` 是类型安全的"逃生舱"，使用它等于放弃类型检查。应尽量用更具体的类型或 `object`。`object` 是所有类型的基类，但与 `Any` 不同——`object` 的方法很少，类型检查器会强制你做窄化：
+:::warning[谨慎使用 Any]
+`Any` 是类型安全的"逃生舱"，使用它等于放弃类型检查。应尽量用更具体的类型或 `object`。`object` 是所有类型的基类，但与 `Any` 不同——`object` 的方法很少，类型检查器会强制做窄化：
 
 ```py title="Python"
 def process_object(data: object) -> None:
@@ -129,7 +143,7 @@ def unreachable() -> Never:
     raise AssertionError("这行代码不应该被执行到")
 ```
 
-:::note NoReturn 与 Never 的区别
+:::note[NoReturn 与 Never 的区别]
 `NoReturn` 和 `Never` 几乎等价，都表示"函数不正常返回"。`Never`（Python 3.11+，PEP 664）是更现代的写法，语义上更清晰——它表示"该类型没有值"，可用于更广泛的场景（如穷尽检查）。
 :::
 
@@ -180,7 +194,7 @@ def log_and_call(func: Callable[..., int], *args, **kwargs) -> int:
 print(log_and_call(int, "42"))  # 调用 int / 42
 ```
 
-:::tip 类也是 Callable
+:::tip[类也是 Callable]
 类本身也是可调用对象（调用类会创建实例）。`Callable[[str, int], Person]` 可以表示一个接收 `str` 和 `int`、返回 `Person` 的类或工厂函数。
 :::
 
@@ -232,7 +246,7 @@ print(next(gen))  # 3
 # 再 next 会抛 StopIteration("done")
 ```
 
-:::note SendType 的含义
+:::note[SendType 的含义]
 `Generator[Y, S, R]` 中：
 - `Y`：`yield` 表达式产出的值的类型
 - `S`：`send()` 方法传入的值的类型（不用 `send` 则为 `None`）
@@ -262,7 +276,7 @@ print(first(["a", "b"]))        # a，类型推断为 str | None
 print(first([3.14, 2.71]))      # 3.14，类型推断为 float | None
 ```
 
-:::tip TypeVar 的核心价值
+:::tip[TypeVar 的核心价值]
 没有 `TypeVar`，`first` 只能标注为 `list[object] -> object | None`，丢失了"输入列表元素类型与返回值类型一致"的信息。`TypeVar` 让类型检查器能精确追踪这种关系。
 :::
 
@@ -422,7 +436,7 @@ print(add(1, 2))               # add 耗时 ... / 3
 print(greet("Alice", greeting="Hi"))  # greet 耗时 ... / Hi, Alice
 ```
 
-:::note ParamSpec 解决的问题
+:::note[ParamSpec 解决的问题]
 没有 `ParamSpec`，装饰器只能用 `Callable[..., R]`，会丢失原函数的参数信息——类型检查器无法检查 `add("a", "b")` 这样的错误调用。`ParamSpec` 让装饰器精确转发参数签名，是编写类型安全的装饰器的关键工具。
 :::
 
@@ -482,7 +496,7 @@ configure(None)
 # configure(False)  # 类型检查器报错
 ```
 
-:::tip Literal 的常见用途
+:::tip[Literal 的常见用途]
 - 限定字符串参数取值（如模式、状态、配置项）
 - 标记"重载分支"（配合 `@overload`）
 - 与 `Enum` 互补——`Literal` 用于少量固定值，`Enum` 用于大量枚举
@@ -520,7 +534,7 @@ class SubConfig(Config):
     # VERSION = "2.0.0"  # 类型检查器报错：不应覆盖 Final 属性
 ```
 
-:::note Final 与常量
+:::note[Final 与常量]
 `Final` 是类型检查期的"常量"声明，运行时不强制。它告诉类型检查器"这个变量不应被重新赋值"，便于发现意外修改。与 `const`（其他语言）不同，Python 的 `Final` 只约束重新绑定，不约束对象内容——`Final` 的列表仍可 `append`。
 :::
 
@@ -584,12 +598,12 @@ cleanup(FileLike())    # 文件已关闭
 cleanup(Connection())  # 连接已关闭
 ```
 
-:::tip Protocol vs ABC
+:::tip[Protocol vs ABC]
 `Protocol` 与 `ABC`（抽象基类）都用于定义接口，但机制不同：
 - **ABC**：_nominal typing_，必须显式继承才算是子类
 - **Protocol**：_structural typing_，只要结构匹配就算实现
 
-Protocol 更灵活，特别适合"第三方类适配"——你可以为已有类"声明"协议而无需修改其源码。
+Protocol 更灵活，特别适合"第三方类适配"——我们可以为已有类"声明"协议而无需修改其源码。
 :::
 
 ### 带属性的 Protocol
@@ -648,7 +662,7 @@ print(isinstance(Square(), Drawable))  # True
 print(isinstance("hello", Drawable))   # False
 ```
 
-:::warning runtime_checkable 的局限
+:::warning[runtime_checkable 的局限]
 `@runtime_checkable` 的 `isinstance` 检查只验证**方法/属性存在**，不验证签名。它只能检查属性名是否存在，无法检查参数类型或返回类型。复杂协议的运行时检查可能不可靠。
 :::
 
@@ -696,7 +710,7 @@ event: FlightEvent = {"event_type": "takeoff", "timestamp": 1703980800.0, "detai
 print(event)
 ```
 
-:::note Python 3.11+ 的 Required/NotRequired
+:::note[Python 3.11+ 的 Required/NotRequired]
 Python 3.11+ 引入了 `Required` 和 `NotRequired`：
 - 默认所有键都是必需的
 - `NotRequired[X]` 标记可选键
@@ -759,7 +773,7 @@ hints = get_type_hints(SignalConfig, include_extras=True)
 print(hints["sample_rate"].__metadata__)  # ('采样率必须为正整数', <function validate_positive>)
 ```
 
-:::tip Annotated 的应用场景
+:::tip[Annotated 的应用场景]
 `Annotated` 让类型注解携带额外数据，被各类框架利用：
 - **Pydantic**：`Annotated[int, Field(gt=0)]` 表达"正整数"
 - **FastAPI**：`Annotated[str, Query(max_length=50)]` 表达"URL 查询参数"
@@ -818,7 +832,7 @@ p: Pair[str] = ("hello", "world")
 print(p)
 ```
 
-:::info PEP 695 的革命性
+:::info[PEP 695 的革命性]
 Python 3.12（PEP 695）引入的 `type` 语句和泛型类语法，让 Python 的泛型表达接近 Rust/Haskell 的简洁程度。关键变化：
 1. 泛型类：`class Stack[T]:` 直接声明类型参数
 2. 泛型函数：`def first[T](items: list[T]):` 直接声明
@@ -918,7 +932,7 @@ print(list(desc_buffer))
 # [DroneState(altitude=500, ...), DroneState(altitude=300, ...), DroneState(altitude=100, ...)]
 ```
 
-:::tip @overload 实现重载
+:::tip[@overload 实现重载]
 `@overload` 装饰器用于声明**多个类型签名**，帮助类型检查器理解函数在不同参数下的不同返回类型。实际运行的是最后一个未带 `@overload` 的实现。上例中 `get(0)` 返回 `T`，`get(1:3)` 返回 `list[T]`——这种"参数类型决定返回类型"的场景正是 `@overload` 的用武之地。
 :::
 
@@ -958,7 +972,7 @@ print(list(desc_buffer))
 - **[PEP 612](https://peps.python.org/pep-0612/)** - ParamSpec 规范
 - **[PEP 695](https://peps.python.org/pep-0695/)** - Python 3.12 泛型语法
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`Any` 放弃类型检查**，应优先用 `object`；`NoReturn`/`Never` 标注永不返回的函数
 - **`Callable[[参数], 返回]` 标注可调用对象**；`Callable[..., R]` 表示任意参数

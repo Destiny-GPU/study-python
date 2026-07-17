@@ -1,0 +1,142 @@
+.trackContainer {
+  margin: 2rem 0;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.header p {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 1.1rem;
+}
+
+.trackGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.trackCard {
+  border: 2px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  background: var(--ifm-card-background-color);
+}
+
+.trackCard:hover {
+  border-color: var(--track-color, var(--ifm-color-primary));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.trackHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.trackEmoji {
+  font-size: 2.5rem;
+}
+
+.trackTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ifm-font-color-base);
+}
+
+.trackSubtitle {
+  font-size: 0.9rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.trackDescription {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  flex-grow: 1;
+}
+
+.trackMeta {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 8px;
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metaLabel {
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metaValue {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ifm-font-color-base);
+}
+
+.trackCategories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.categoryTag {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--ifm-color-emphasis-100);
+  border-radius: 4px;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.trackAction {
+  text-align: center;
+  padding: 0.75rem;
+  background: var(--track-color, var(--ifm-color-primary));
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: opacity 0.2s ease;
+}
+
+.trackCard:hover .trackAction {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .trackGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .trackMeta {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}

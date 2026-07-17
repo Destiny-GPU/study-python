@@ -2,7 +2,7 @@
   "label": "📝 基础语法",
   "position": 3,
   "link": {
-    "type": "generated-index",
-    "description": "掌握 Python 变量、数据类型、运算符、输入输出等基本语法元素。"
+    "type": "doc",
+    "id": "basics/index"
   }
 }

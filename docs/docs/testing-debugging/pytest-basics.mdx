@@ -1,17 +1,17 @@
 ---
-sidebar_position: 1
 sidebar_label: 'pytest 测试基础'
-title: '🧪 pytest 测试基础'
+title: 🧪 pytest 测试基础
 description: 用 pytest 快速上手 Python 测试：编写第一个测试、断言、运行测试、参数化、常用 fixture，不搞复杂理论，直接上手。
+tags: [测试调试]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 🧪 pytest 测试基础
 
-写完代码怎么知道它对不对？靠 `print` 看输出？那万一改了一处，之前测试过的功能又坏了呢？**测试**就是用来回答这个问题的——它自动验证代码行为，改完代码跑一下就知道有没有"搞坏什么"。本节用最精简的方式带你上手 pytest。
+写完代码怎么知道它对不对？靠 `print` 看输出？那万一改了一处，之前测试过的功能又坏了呢？**测试**就是用来回答这个问题的——它自动验证代码行为，改完代码跑一下就知道有没有"搞坏什么"。本节用最精简的方式介绍 pytest 入门。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - 测试就是一个函数，名字以 `test_` 开头
 - 用 `assert` 验证结果，pytest 自动报告哪里失败
 - `uv run pytest` 一行跑所有测试
@@ -21,7 +21,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="pytest 测试快速体验">
 
-```python
+```py
 # 被测试的函数
 def add(a, b):
     return a + b
@@ -73,7 +73,7 @@ for a, b, expected in test_cases:
 
 ## 第一个测试
 
-假设你有一个计算器模块：
+假设有这样一个计算器模块：
 
 ```py title="Python"
 # calc.py
@@ -124,7 +124,7 @@ tests/test_calc.py::test_divide_by_zero PASSED
 
 就这？就这。**测试就是一个普通函数**，名字以 `test_` 开头，用 `assert` 写条件，pytest 自动发现并运行它们。
 
-:::tip 测试命名规则
+:::tip[测试命名规则]
 pytest 默认发现 `test_*.py` 文件中 `test_` 开头的函数。文件和函数名都必须以 `test_` 开头，否则 pytest 不会识别。
 :::
 
@@ -152,7 +152,7 @@ pytest 失败时会显示详细的对比信息：
 uv run pytest tests/test_calc.py::test_add -v
 ```
 
-如果 `add(2, 3)` 返回了 `6`，你会看到：
+如果 `add(2, 3)` 返回了 `6`，会看到：
 
 ```text title="输出"
 >       assert add(2, 3) == 5
@@ -261,7 +261,7 @@ def test_read_file(temp_file):
 
 pytest 会自动发现 `conftest.py` 中的 fixture，不需要 import。
 
-:::info fixture 的作用域
+:::info[fixture 的作用域]
 默认每个使用该 fixture 的测试函数都会重新执行一次。如果想让 fixture 在整个文件中只执行一次，加 `scope="module"`：
 
 ```py title="Python"
@@ -349,3 +349,33 @@ def test_fib_param(n, expected):
 
 def test_length():
     assert len(fib(10)) == 10
+```
+
+## 🎯 动手练习
+
+### 基础题
+
+1. 给下面的函数写测试，覆盖正常输入和边界情况：
+
+```py title="Python"
+def is_palindrome(s: str) -> bool:
+    """判断字符串是否为回文（忽略大小写和空格）。"""
+    cleaned = s.replace(" ", "").lower()
+    return cleaned == cleaned[::-1]
+```
+
+2. 用 `@pytest.mark.parametrize` 测试 `is_even(n)` 函数，至少覆盖正数、负数、零。
+
+### 进阶题
+
+3. 给一个返回列表的函数写测试，确保列表长度、元素类型、排序都正确。
+4. 用 fixture 创建一个临时 CSV 文件，写入测试数据，然后在测试中读取并验证。
+
+## ✅ 本节总结
+
+- 测试就是一个以 `test_` 开头的函数，用 `assert` 验证结果
+- pytest 自动发现并运行测试，失败时显示详细的对比信息
+- `pytest.approx` 处理浮点数比较，`pytest.raises` 测试异常
+- `@pytest.mark.parametrize` 用一组参数生成多个测试用例
+- fixture 用 `@pytest.fixture` 准备测试数据，支持 `scope` 控制生命周期
+- 运行测试：`uv run pytest`，常用参数 `-v`、`-k`、`-x`、`--lf`

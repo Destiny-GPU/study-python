@@ -1,0 +1,775 @@
+---
+sidebar_label: '完整项目实战'
+title: 完整项目实战：学生成绩管理系统
+description: 从零到一构建一个完整的 Python CLI 项目，串联变量、函数、OOP、文件处理、测试等所有知识。
+tags: [项目实战]
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🚀 完整项目实战：学生成绩管理系统
+
+前面我们零散地学习了变量、函数、OOP、文件处理、异常、测试等知识点。现在是时候把它们**串成一条线**了——本节将从零构建一个完整的 Python CLI 项目，覆盖从需求分析到测试打包的全流程。
+
+## 📌 本节要点
+
+学完本节后，我们将掌握：
+
+- 如何从需求出发规划项目结构
+- 用 `dataclass` 设计数据模型，用 `Enum` 定义等级
+- 实现 JSON 文件存储和 CRUD 操作
+- 用 `argparse` 构建命令行界面
+- 为每个模块编写 pytest 测试
+- 使用 ruff 检查代码质量，配置 `pyproject.toml` 打包
+
+## 一、项目规划
+
+### 需求分析
+
+我们要做一个**学生成绩管理系统**，核心功能：
+
+- **增删改查**（CRUD）：添加学生、修改成绩、删除学生、查询列表
+- **按科目统计**：平均分、最高分、最低分、等级分布
+- **导出报告**：输出格式化的成绩报告
+
+### 技术选型
+
+| 技术 | 用途 |
+|------|------|
+| `dataclass` | 数据模型，省去样板代码 |
+| `Enum` | 等级枚举（A/B/C/D/F） |
+| `json` 模块 | 文件存储 |
+| `argparse` | CLI 命令解析 |
+| `pytest` | 单元测试 |
+| `ruff` | 代码检查和格式化 |
+
+### 最终效果预览
+
+```bash title="Shell"
+# 添加学生
+$ python -m grade_manager.cli add --name "张三" --id S001
+学生 张三 (S001) 已添加
+
+# 录入成绩
+$ python -m grade_manager.cli update --id S001 --subject "数学" --score 92.5
+已更新 张三 的 数学 成绩：92.5
+
+# 查看所有学生
+$ python -m grade_manager.cli list
+  学号  姓名    科目数  平均分
+  S001  张三    3       88.33
+  S002  李四    2       91.00
+
+# 统计报告
+$ python -m grade_manager.cli stats --subject "数学"
+科目：数学
+  平均分：87.50
+  最高分：95.00（王五）
+  最低分：80.00（赵六）
+  等级分布：A=2, B=1, C=1
+```
+
+## 二、项目结构
+
+```text title="项目目录"
+student-grade-manager/
+├── pyproject.toml
+├── src/
+│   └── grade_manager/
+│       ├── __init__.py
+│       ├── models.py      # 数据模型
+│       ├── storage.py     # JSON 文件存储
+│       ├── stats.py       # 统计计算
+│       └── cli.py         # CLI 界面
+└── tests/
+    ├── conftest.py
+    ├── test_models.py
+    ├── test_storage.py
+    └── test_stats.py
+```
+
+初始化项目：
+
+```bash title="Shell"
+mkdir -p student-grade-manager/src/grade_manager
+mkdir -p student-grade-manager/tests
+touch student-grade-manager/src/grade_manager/__init__.py
+```
+
+## 三、数据模型（models.py）
+
+用 `dataclass` 定义学生数据，用 `Enum` 定义成绩等级：
+
+```py title="Python"
+# src/grade_manager/models.py
+from dataclasses import dataclass, field
+from enum import Enum
+
+
+class GradeLevel(Enum):
+    """成绩等级"""
+    A = "A"  # 90-100
+    B = "B"  # 80-89
+    C = "C"  # 70-79
+    D = "D"  # 60-69
+    F = "F"  # 0-59
+
+    @classmethod
+    def from_score(cls, score: float) -> "GradeLevel":
+        """根据分数返回等级"""
+        if score >= 90:
+            return cls.A
+        elif score >= 80:
+            return cls.B
+        elif score >= 70:
+            return cls.C
+        elif score >= 60:
+            return cls.D
+        else:
+            return cls.F
+
+
+@dataclass
+class Student:
+    """学生数据模型"""
+    name: str
+    student_id: str
+    grades: dict[str, float] = field(default_factory=dict)
+
+    def average(self) -> float:
+        """计算平均分"""
+        if not self.grades:
+            return 0.0
+        return sum(self.grades.values()) / len(self.grades)
+
+    def grade_level(self) -> GradeLevel:
+        """根据平均分返回等级"""
+        return GradeLevel.from_score(self.average())
+
+    def to_dict(self) -> dict:
+        """转为字典（便于 JSON 序列化）"""
+        return {
+            "name": self.name,
+            "student_id": self.student_id,
+            "grades": self.grades,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Student":
+        """从字典创建实例"""
+        return cls(
+            name=data["name"],
+            student_id=data["student_id"],
+            grades=data.get("grades", {}),
+        )
+```
+
+:::tip[测试模型逻辑]
+下面用 Pyodide 快速验证模型行为：
+
+```py
+# 模拟 GradeLevel 和 Student
+from enum import Enum
+from dataclasses import dataclass, field
+
+class GradeLevel(Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+    F = "F"
+
+    @classmethod
+    def from_score(cls, score):
+        if score >= 90: return cls.A
+        elif score >= 80: return cls.B
+        elif score >= 70: return cls.C
+        elif score >= 60: return cls.D
+        else: return cls.F
+
+@dataclass
+class Student:
+    name: str
+    student_id: str
+    grades: dict = field(default_factory=dict)
+
+    def average(self):
+        if not self.grades:
+            return 0.0
+        return sum(self.grades.values()) / len(self.grades)
+
+    def grade_level(self):
+        return GradeLevel.from_score(self.average())
+
+s = Student("张三", "S001", {"数学": 92, "英语": 85, "物理": 88})
+print(f"平均分: {s.average():.2f}")
+print(f"等级: {s.grade_level().value}")
+```
+:::
+
+## 四、JSON 文件存储（storage.py）
+
+实现文件读写和 CRUD 操作：
+
+```py title="Python"
+# src/grade_manager/storage.py
+from pathlib import Path
+import json
+
+from .models import Student
+
+
+class StorageError(Exception):
+    """存储操作异常"""
+
+
+def load_grades(filepath: str | Path) -> list[Student]:
+    """从 JSON 文件加载学生数据"""
+    path = Path(filepath)
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return [Student.from_dict(item) for item in data]
+    except (json.JSONDecodeError, KeyError) as e:
+        raise StorageError(f"文件格式错误: {e}") from e
+
+
+def save_grades(filepath: str | Path, students: list[Student]) -> None:
+    """将学生数据保存到 JSON 文件"""
+    path = Path(filepath)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = [s.to_dict() for s in students]
+    path.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def add_student(filepath: str | Path, student: Student) -> None:
+    """添加学生"""
+    students = load_grades(filepath)
+    for s in students:
+        if s.student_id == student.student_id:
+            raise StorageError(f"学号 {student.student_id} 已存在")
+    students.append(student)
+    save_grades(filepath, students)
+
+
+def update_grade(filepath: str | Path, student_id: str, subject: str, score: float) -> Student:
+    """更新指定学生的科目成绩"""
+    students = load_grades(filepath)
+    for s in students:
+        if s.student_id == student_id:
+            s.grades[subject] = score
+            save_grades(filepath, students)
+            return s
+    raise StorageError(f"未找到学号 {student_id}")
+
+
+def delete_student(filepath: str | Path, student_id: str) -> None:
+    """删除学生"""
+    students = load_grades(filepath)
+    new_students = [s for s in students if s.student_id != student_id]
+    if len(new_students) == len(students):
+        raise StorageError(f"未找到学号 {student_id}")
+    save_grades(filepath, new_students)
+
+
+def list_students(filepath: str | Path) -> list[Student]:
+    """列出所有学生"""
+    return load_grades(filepath)
+```
+
+:::note[异常处理]
+`StorageError` 是自定义异常，统一处理文件读写和业务逻辑中的错误。调用方只需捕获这一个异常即可。
+:::
+
+## 五、统计计算（stats.py）
+
+```py title="Python"
+# src/grade_manager/stats.py
+from dataclasses import dataclass
+
+from .models import Student, GradeLevel
+
+
+@dataclass
+class SubjectStats:
+    """单科统计结果"""
+    subject: str
+    average: float
+    max_score: float
+    min_score: float
+    max_student: str
+    min_student: str
+    distribution: dict[str, int]
+
+
+def subject_statistics(students: list[Student], subject: str) -> SubjectStats:
+    """计算指定科目的统计数据"""
+    scores: list[tuple[str, float]] = []
+    for s in students:
+        if subject in s.grades:
+            scores.append((s.name, s.grades[subject]))
+
+    if not scores:
+        raise ValueError(f"没有找到科目 {subject} 的成绩数据")
+
+    avg = sum(score for _, score in scores) / len(scores)
+    max_entry = max(scores, key=lambda x: x[1])
+    min_entry = min(scores, key=lambda x: x[1])
+
+    distribution: dict[str, int] = {level.value: 0 for level in GradeLevel}
+    for _, score in scores:
+        level = GradeLevel.from_score(score)
+        distribution[level.value] += 1
+
+    return SubjectStats(
+        subject=subject,
+        average=round(avg, 2),
+        max_score=max_entry[1],
+        min_score=min_entry[1],
+        max_student=max_entry[0],
+        min_student=min_entry[0],
+        distribution=distribution,
+    )
+
+
+def rank_students(students: list[Student]) -> list[Student]:
+    """按平均分降序排列学生"""
+    return sorted(students, key=lambda s: s.average(), reverse=True)
+```
+
+## 六、CLI 界面（cli.py）
+
+```py title="Python"
+# src/grade_manager/cli.py
+import argparse
+import sys
+from pathlib import Path
+
+from .models import Student
+from .storage import (
+    StorageError,
+    add_student,
+    delete_student,
+    list_students,
+    save_grades,
+    update_grade,
+)
+from .stats import rank_students, subject_statistics
+
+
+DEFAULT_FILE = "grades.json"
+
+
+def cmd_add(args: argparse.Namespace) -> None:
+    """添加学生"""
+    student = Student(name=args.name, student_id=args.id)
+    add_student(args.file, student)
+    print(f"学生 {args.name} ({args.id}) 已添加")
+
+
+def cmd_update(args: argparse.Namespace) -> None:
+    """更新成绩"""
+    student = update_grade(args.file, args.id, args.subject, args.score)
+    print(f"已更新 {student.name} 的 {args.subject} 成绩：{args.score}")
+
+
+def cmd_delete(args: argparse.Namespace) -> None:
+    """删除学生"""
+    delete_student(args.file, args.id)
+    print(f"已删除学号 {args.id}")
+
+
+def cmd_list(args: argparse.Namespace) -> None:
+    """列出所有学生"""
+    students = list_students(args.file)
+    if not students:
+        print("暂无学生数据")
+        return
+    print(f"  {'学号':<8} {'姓名':<8} {'科目数':<6} {'平均分':<8}")
+    print("  " + "-" * 36)
+    for s in rank_students(students):
+        print(f"  {s.student_id:<8} {s.name:<8} {len(s.grades):<6} {s.average():<8.2f}")
+
+
+def cmd_stats(args: argparse.Namespace) -> None:
+    """统计报告"""
+    students = list_students(args.file)
+    stats = subject_statistics(students, args.subject)
+    print(f"科目：{stats.subject}")
+    print(f"  平均分：{stats.average:.2f}")
+    print(f"  最高分：{stats.max_score:.2f}（{stats.max_student}）")
+    print(f"  最低分：{stats.min_score:.2f}（{stats.min_student}）")
+    dist_str = ", ".join(f"{k}={v}" for k, v in stats.distribution.items() if v > 0)
+    print(f"  等级分布：{dist_str}")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """构建命令行参数解析器"""
+    parser = argparse.ArgumentParser(description="学生成绩管理系统")
+    parser.add_argument("-f", "--file", default=DEFAULT_FILE, help="数据文件路径")
+    sub = parser.add_subparsers(dest="command", help="可用命令")
+
+    p_add = sub.add_parser("add", help="添加学生")
+    p_add.add_argument("--name", required=True, help="学生姓名")
+    p_add.add_argument("--id", required=True, help="学号")
+
+    p_update = sub.add_parser("update", help="更新成绩")
+    p_update.add_argument("--id", required=True, help="学号")
+    p_update.add_argument("--subject", required=True, help="科目名称")
+    p_update.add_argument("--score", required=True, type=float, help="成绩分数")
+
+    p_delete = sub.add_parser("delete", help="删除学生")
+    p_delete.add_argument("--id", required=True, help="学号")
+
+    sub.add_parser("list", help="列出所有学生")
+
+    p_stats = sub.add_parser("stats", help="统计报告")
+    p_stats.add_argument("--subject", required=True, help="科目名称")
+
+    return parser
+
+
+def main() -> None:
+    """主入口"""
+    parser = build_parser()
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+
+    commands = {
+        "add": cmd_add,
+        "update": cmd_update,
+        "delete": cmd_delete,
+        "list": cmd_list,
+        "stats": cmd_stats,
+    }
+
+    try:
+        commands[args.command](args)
+    except StorageError as e:
+        print(f"错误：{e}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```py title="Python"
+# src/grade_manager/__init__.py
+"""学生成绩管理系统"""
+```
+
+:::tip[交互式菜单版本]
+如果不想用 argparse，也可以用 `while` 循环做一个交互式菜单：
+
+```py
+def interactive_menu():
+    while True:
+        print("\n===== 学生成绩管理系统 =====")
+        print("1. 添加学生")
+        print("2. 录入成绩")
+        print("3. 查看列表")
+        print("0. 退出")
+        choice = input("请选择: ")
+        if choice == "0":
+            print("再见！")
+            break
+        elif choice == "1":
+            name = input("姓名: ")
+            sid = input("学号: ")
+            add_student(DEFAULT_FILE, Student(name, sid))
+```
+:::
+
+## 七、测试
+
+### conftest.py：共享 fixture
+
+```py title="Python"
+# tests/conftest.py
+import json
+import pytest
+from pathlib import Path
+
+from grade_manager.models import Student
+
+
+@pytest.fixture
+def sample_students() -> list[Student]:
+    """示例学生数据"""
+    return [
+        Student("张三", "S001", {"数学": 92, "英语": 85, "物理": 88}),
+        Student("李四", "S002", {"数学": 78, "英语": 91}),
+        Student("王五", "S003", {"数学": 95, "英语": 88, "物理": 90}),
+    ]
+
+
+@pytest.fixture
+def data_file(tmp_path: Path, sample_students: list[Student]) -> Path:
+    """临时数据文件"""
+    filepath = tmp_path / "test_grades.json"
+    data = [s.to_dict() for s in sample_students]
+    filepath.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return filepath
+
+
+@pytest.fixture
+def empty_file(tmp_path: Path) -> Path:
+    """空数据文件"""
+    filepath = tmp_path / "empty.json"
+    return filepath
+```
+
+### test_models.py
+
+```py title="Python"
+# tests/test_models.py
+import pytest
+from grade_manager.models import Student, GradeLevel
+
+
+def test_student_average():
+    s = Student("测试", "T001", {"数学": 90, "英语": 80})
+    assert s.average() == 85.0
+
+
+def test_student_average_empty():
+    s = Student("测试", "T001")
+    assert s.average() == 0.0
+
+
+def test_grade_level():
+    assert GradeLevel.from_score(95) == GradeLevel.A
+    assert GradeLevel.from_score(85) == GradeLevel.B
+    assert GradeLevel.from_score(75) == GradeLevel.C
+    assert GradeLevel.from_score(65) == GradeLevel.D
+    assert GradeLevel.from_score(50) == GradeLevel.F
+
+
+def test_to_dict_and_from_dict():
+    s = Student("张三", "S001", {"数学": 90})
+    d = s.to_dict()
+    s2 = Student.from_dict(d)
+    assert s2.name == "张三"
+    assert s2.student_id == "S001"
+    assert s2.grades == {"数学": 90}
+```
+
+### test_storage.py
+
+```py title="Python"
+# tests/test_storage.py
+import pytest
+from grade_manager.models import Student
+from grade_manager.storage import (
+    StorageError,
+    add_student,
+    delete_student,
+    list_students,
+    update_grade,
+)
+
+
+def test_add_and_list(empty_file):
+    add_student(empty_file, Student("张三", "S001"))
+    students = list_students(empty_file)
+    assert len(students) == 1
+    assert students[0].name == "张三"
+
+
+def test_add_duplicate_raises(empty_file):
+    add_student(empty_file, Student("张三", "S001"))
+    with pytest.raises(StorageError, match="已存在"):
+        add_student(empty_file, Student("张三", "S001"))
+
+
+def test_update_grade(data_file):
+    student = update_grade(data_file, "S001", "数学", 99.0)
+    assert student.grades["数学"] == 99.0
+
+
+def test_update_nonexistent_raises(data_file):
+    with pytest.raises(StorageError, match="未找到"):
+        update_grade(data_file, "X999", "数学", 90.0)
+
+
+def test_delete_student(data_file):
+    delete_student(data_file, "S001")
+    students = list_students(data_file)
+    assert all(s.student_id != "S001" for s in students)
+
+
+def test_delete_nonexistent_raises(data_file):
+    with pytest.raises(StorageError, match="未找到"):
+        delete_student(data_file, "X999")
+```
+
+### test_stats.py
+
+```py title="Python"
+# tests/test_stats.py
+import pytest
+from grade_manager.models import Student
+from grade_manager.stats import subject_statistics, rank_students
+
+
+@pytest.mark.parametrize("subject, expected_avg", [
+    ("数学", pytest.approx(88.33, abs=0.01)),
+    ("英语", pytest.approx(88.0, abs=0.01)),
+])
+def test_subject_statistics(subject, expected_avg, sample_students):
+    stats = subject_statistics(sample_students, subject)
+    assert stats.average == expected_avg
+
+
+def test_subject_statistics_max_min(sample_students):
+    stats = subject_statistics(sample_students, "数学")
+    assert stats.max_score == 95.0
+    assert stats.min_score == 78.0
+    assert stats.max_student == "王五"
+    assert stats.min_student == "李四"
+
+
+def test_subject_statistics_distribution(sample_students):
+    stats = subject_statistics(sample_students, "数学")
+    assert stats.distribution["A"] == 2  # 92, 95
+    assert stats.distribution["C"] == 1  # 78
+
+
+def test_subject_statistics_empty():
+    with pytest.raises(ValueError, match="没有找到"):
+        subject_statistics([], "数学")
+
+
+def test_rank_students(sample_students):
+    ranked = rank_students(sample_students)
+    assert ranked[0].name == "王五"  # 平均分最高
+    assert ranked[-1].name == "李四"  # 平均分最低
+```
+
+## 八、代码质量和打包
+
+### ruff 检查
+
+```bash title="Shell"
+# 检查代码风格
+uv run ruff check src/ tests/
+
+# 自动修复可修复的问题
+uv run ruff check --fix src/ tests/
+
+# 格式化代码
+uv run ruff format src/ tests/
+```
+
+### pyproject.toml
+
+```toml title="pyproject.toml"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "grade-manager"
+version = "0.1.0"
+description = "学生成绩管理系统"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+grade-manager = "grade_manager.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/grade_manager"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+```
+
+安装并运行：
+
+```bash title="Shell"
+uv sync
+uv run grade-manager add --name "张三" --id S001
+uv run grade-manager list
+```
+
+## 🎯 动手练习
+
+1. **导出 CSV**：在 `cli.py` 中添加 `export` 命令，将成绩导出为 CSV 文件
+2. **导入数据**：实现从 CSV 批量导入学生的功能
+3. **数据校验**：在 `Student.__post_init__` 中添加学号格式校验（如必须以 S 开头）
+4. **持久化菜单**：把交互式菜单版本补全，支持所有 CRUD 操作
+
+## 📚 延伸阅读
+
+- **Click / Typer**：更现代的 CLI 框架，比 argparse 更易用
+- **SQLite**：替代 JSON 文件，适合数据量较大的场景
+- **Rich**：终端美化输出库，让 CLI 更好看
+- **Poetry / PDM**：更强大的 Python 打包和依赖管理工具
+
+## 📊 速查表
+
+### 项目结构模板
+
+```text title="项目目录"
+my_project/
+├── pyproject.toml          # 项目元数据和工具配置
+├── src/
+│   └── my_package/
+│       ├── __init__.py
+│       ├── models.py       # 数据模型
+│       └── core.py         # 核心逻辑
+└── tests/
+    ├── conftest.py         # 共享 fixture
+    └── test_core.py
+```
+
+### 常用 dataclass 装饰器
+
+| 装饰器 | 用途 | 示例 |
+|--------|------|------|
+| `@dataclass` | 自动生成 `__init__` 等 | `@dataclass class User: name: str` |
+| `field(default_factory=...)` | 可变默认值 | `tags: list = field(default_factory=list)` |
+| `@dataclass(frozen=True)` | 不可变实例 | `@dataclass(frozen=True) class Config` |
+| `@dataclass(slots=True)` | 节省内存 | `@dataclass(slots=True) class Point` |
+
+### argparse 常用参数
+
+| 参数 | 用途 | 示例 |
+|------|------|------|
+| `add_argument()` | 添加参数 | `parser.add_argument("--name", required=True)` |
+| `add_subparsers()` | 子命令 | `sub = parser.add_subparsers(dest="command")` |
+| `type=float` | 类型转换 | `parser.add_argument("--score", type=float)` |
+| `default=` | 默认值 | `parser.add_argument("-f", default="data.json")` |
+| `choices=` | 限定选项 | `parser.add_argument("--level", choices=["A","B","C"])` |
+
+## ✅ 本节总结
+
+本节我们从零构建了一个完整的学生成绩管理系统，核心要点包括：
+
+- **需求驱动设计**：先明确功能再选技术，`dataclass` + `json` + `argparse` 组合轻量而实用
+- **模块化拆分**：`models.py` 管数据、`storage.py` 管存储、`stats.py` 管计算、`cli.py` 管交互，职责清晰
+- **dataclass 简化模型**：自动生成构造器和序列化方法，`field(default_factory=dict)` 处理可变默认值
+- **Enum 定义等级**：`GradeLevel.from_score()` 实现分数到等级的映射
+- **JSON 文件存储**：`json.loads` / `json.dumps` 配合 `pathlib.Path` 实现持久化
+- **argparse 构建 CLI**：子命令模式让每个功能独立入口，`--help` 自动生成帮助文档
+- **自定义异常**：`StorageError` 统一处理存储层错误，调用方代码更干净
+- **pytest 测试**：fixture 准备数据、`tmp_path` 管理临时文件、`parametrize` 参数化覆盖多组输入
+- **ruff + pyproject.toml**：一行命令检查代码质量，一个文件管理项目配置
+
+这个项目虽然不大，但涵盖了真实项目中的核心流程。把它当作模板，我们可以快速搭建更多 CLI 工具。

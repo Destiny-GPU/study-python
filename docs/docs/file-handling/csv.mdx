@@ -1,15 +1,15 @@
 ---
-sidebar_position: 4
 sidebar_label: 'CSV 处理'
-title: 📂 CSV 处理
+title: CSV 处理
 description: 使用标准库 csv 模块读写 CSV 文件，掌握 reader/writer、DictReader/DictWriter、分隔符与引号规则，以及与 pandas 的对比。
+tags: [文件操作]
 ---
 
 # 📂 CSV 处理
 
-CSV（Comma-Separated Values，逗号分隔值）是最简单的表格数据格式，被 Excel、数据库导出工具、数据科学工具广泛支持。Python 标准库的 `csv` 模块能正确处理各种边界情况（引号、换行、特殊字符），比手写 `split(',')` 可靠得多。本章带你全面掌握 CSV 的读写。
+CSV（Comma-Separated Values，逗号分隔值）是最简单的表格数据格式，被 Excel、数据库导出工具、数据科学工具广泛支持。Python 标准库的 `csv` 模块能正确处理各种边界情况（引号、换行、特殊字符），比手写 `split(',')` 可靠得多。本章系统介绍 CSV 的读写。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **永远用 csv 模块**：不要手写 `split(',')`，会被引号、逗号、换行符坑到
 - **newline=''**：打开 CSV 文件统一加，避免 Windows 上的换行符问题
 - **reader/writer**：按列表处理，适合无表头或简单场景
@@ -50,7 +50,7 @@ with open('data.csv', encoding='utf-8') as f:
 # ['李四', '25', '包含"引号"']
 ```
 
-:::warning 别再写 split(',')
+:::warning[别再写 split(',')]
 任何稍微正式一点的 CSV 都可能包含引号、逗号、换行符。**永远使用 `csv` 模块**，不要用 `str.split(',')`。
 :::
 
@@ -86,7 +86,7 @@ with open('users.csv', encoding='utf-8', newline='') as f:
 李四 25岁 来自上海
 ```
 
-:::note 为什么要加 newline=''？
+:::note[为什么要加 newline=''？]
 CSV 文件在写入时如果用默认的 `newline` 行为，Windows 上会出现 `\r\r\n` 这种多余换行。**打开 CSV 文件时统一加 `newline=''`**，让 `csv` 模块自己处理换行符。这是官方文档明确推荐的做法。
 :::
 
@@ -119,7 +119,7 @@ name,age,city
 王五,28,广州
 ```
 
-:::tip 自动类型转换
+:::tip[自动类型转换]
 `csv.writer` 会自动调用 `str()` 把数字、布尔值等转成字符串，不需要手动处理。
 :::
 
@@ -168,7 +168,7 @@ with open('users.csv', 'w', encoding='utf-8', newline='') as f:
     writer.writerows(rows)   # 写数据行
 ```
 
-:::warning 字段名必须匹配
+:::warning[字段名必须匹配]
 `DictWriter` 默认会严格检查字典的键。如果字典里有不在 `fieldnames` 中的键，会抛出 `ValueError`。可以用 `extrasaction='ignore'` 来忽略多余字段：
 
 ```py title="Python"
@@ -242,7 +242,7 @@ with open('numeric.csv', encoding='utf-8', newline='') as f:
 # [1.0, 2.0] ['float', 'float']
 ```
 
-:::note Excel 中文版的坑
+:::note[Excel 中文版的坑]
 Excel 中文版导出的 CSV 默认用 **GBK 编码 + 分号分隔**。读取这种文件要这样写：
 
 ```py title="Python"
@@ -343,7 +343,7 @@ df.to_csv('output.csv', index=False, encoding='utf-8')
 | 部署到嵌入式/受限环境 | `csv` 模块 |
 | 数据分析与可视化 | `pandas` |
 
-:::tip 体积差异
+:::tip[体积差异]
 `pandas` 安装包超过 50MB（依赖 numpy 等），而 `csv` 是标准库零依赖。如果只是简单地读写几行 CSV，没必要为此引入整个数据科学栈。
 :::
 
@@ -490,7 +490,7 @@ if __name__ == '__main__':
 5,1003,王五,72,80,68,220,73.33
 ```
 
-:::info 字段顺序很重要
+:::info[字段顺序很重要]
 `DictWriter` 输出的列顺序由 `fieldnames` 决定，与字典的插入顺序无关。**显式列出字段名**可以保证 CSV 的列顺序稳定，方便下游处理。
 :::
 
@@ -527,7 +527,7 @@ if __name__ == '__main__':
 - **[pandas 文档](https://pandas.pydata.org/docs/)** - 数据分析首选库
 - **[csvkit](https://csvkit.readthedocs.io/)** - 命令行 CSV 处理工具
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **永远用 `csv` 模块**，不要手写 `split(',')`，否则会被引号、逗号、换行符坑到
 - **打开 CSV 文件统一加 `newline=''`**，避免 Windows 上的换行符问题
@@ -536,4 +536,4 @@ if __name__ == '__main__':
 - **大文件直接迭代 `csv.reader` 即可**，内存友好；要分批处理可用 `itertools.islice`
 - **数据分析选 `pandas`**，简单脚本与流式处理选 `csv` 模块
 
-到这里，文件与 IO 章节就结束了。你已经掌握了文件读写、路径处理、JSON 和 CSV——这四样工具足以应对 90% 的日常数据读写需求。
+到这里，文件与 IO 章节就结束了。至此已掌握文件读写、路径处理、JSON 和 CSV——这四样工具足以应对 90% 的日常数据读写需求。

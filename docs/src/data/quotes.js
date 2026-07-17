@@ -16,7 +16,7 @@ const quotes = [
     tags: ['programming', 'best-practice', 'computer-science'],
   },
   {
-    id: 'knuth-2',
+    id: 'dijkstra-3',
     text: '计算机科学不仅仅是关于计算机，就像天文学不仅仅是关于望远镜一样。',
     author: 'Edsger Dijkstra',
     role: '结构化编程之父',

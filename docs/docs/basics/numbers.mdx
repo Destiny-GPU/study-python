@@ -1,15 +1,15 @@
 ---
-sidebar_position: 2
 sidebar_label: '数字类型'
-title: 📝 数字类型
+title: 数字类型
 description: 深入学习 Python 的 int、float、complex 数字类型，掌握算术运算、进制转换以及 decimal、fractions 等高级数值模块。
+tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 📝 数字类型
 
-数字是编程中最基础的数据类型之一。Python 提供了三种内置数字类型：**整数（int）**、**浮点数（float）** 和 **复数（complex）**，并配套了强大的算术运算与标准库模块。本节将系统讲解数字类型的用法、运算规则以及高精度场景下的 `decimal` 与 `fractions` 模块。
+数字是编程中最基础的数据类型之一。Python 提供了三种内置数字类型：**整数（int）**、**浮点数（float）** 和 **复数（complex）**，并配套了强大的算术运算与标准库模块。本节我们将一起探索数字类型的用法、运算规则以及高精度场景下的 `decimal` 与 `fractions` 模块。
 
 ## 📌 本节要点
 - 掌握 int、float、complex 三种数字类型及其特性
@@ -37,8 +37,8 @@ population = 1_400_000_000
 print(population)  # 1400000000
 ```
 
-:::tip Python 的"大整数"特性
-在 Python 中，整数运算永远不会溢出，内存会自动扩展来容纳更大的数。这意味着你可以直接计算 `2**1000` 这样的超大整数而无需任何特殊处理。这是 Python 与 C/Java 等语言在整数处理上的本质差异。
+:::tip[Python 的"大整数"特性]
+在 Python 中，整数运算永远不会溢出，内存会自动扩展来容纳更大的数。这意味着我们可以直接计算 `2**1000` 这样的超大整数而无需任何特殊处理。这是 Python 与 C/Java 等语言在整数处理上的本质差异。
 :::
 
 ## 浮点数 float
@@ -59,7 +59,7 @@ avogadro = 6.022e23
 print(avogadro)  # 6.022e+23
 ```
 
-:::warning 浮点数精度问题
+:::warning[浮点数精度问题]
 浮点数采用二进制存储，无法精确表示某些十进制小数（如 0.1），这会导致运算结果出现"看起来奇怪"的误差：
 
 ```py title="Python"
@@ -91,7 +91,7 @@ print(z1.conjugate())  # (3-4j)
 print(abs(z1))  # 5.0  (因为 √(3² + 4²) = 5)
 ```
 
-:::info 复数的应用场景
+:::info[复数的应用场景]
 复数在科学计算、信号处理、量子物理等领域应用广泛。Python 原生支持复数运算，无需导入额外库即可使用。注意复数不能直接比较大小（不支持 `<`、`>`），只能比较相等（`==`）。
 :::
 
@@ -132,7 +132,7 @@ print(7 // -2)   # -4
 print(7.5 // 2)  # 3.0
 ```
 
-:::warning 负数的整除与取模
+:::warning[负数的整除与取模]
 Python 的 `//` 和 `%` 遵循"向下取整"规则，与 C/Java 的"向零取整"不同。`-7 // 2` 在 Python 中是 `-4`，而在 C 中是 `-3`。Python 的设计保证 `a = (a // b) * b + (a % b)` 恒成立，且 `a % b` 与 `b` 同号。
 :::
 
@@ -181,7 +181,7 @@ print(round(3.5))          # 4
 print(round(2.675, 2))     # 2.67 (浮点精度问题)
 ```
 
-:::warning Python 的"银行家舍入"
+:::warning[Python 的"银行家舍入"]
 Python 的 `round()` 采用**"四舍六入五成双"**（银行家舍入）规则，而不是"四舍五入"。当末位是 5 时，会向最近的**偶数**舍入：`round(2.5)` 得 `2`，`round(3.5)` 得 `4`。这是为了避免大量数据求和时产生系统性偏差。如果需要传统四舍五入，可使用 `decimal` 模块。
 :::
 
@@ -270,7 +270,7 @@ print(math.gcd(12, 18))  # 6
 print(math.lcm(4, 6))    # 12 (Python 3.9+)
 ```
 
-:::tip math.gcd 与 math.lcm
+:::tip[math.gcd 与 math.lcm]
 `math.gcd(a, b)` 求最大公约数，`math.lcm(a, b)` 求最小公倍数（Python 3.9+）。它们都支持多参数：`math.gcd(12, 18, 24)` 返回 `6`。
 :::
 
@@ -302,7 +302,7 @@ getcontext().rounding = ROUND_HALF_UP
 print(Decimal("2.5").quantize(Decimal("1")))  # 3 (四舍五入)
 ```
 
-:::warning 一定要用字符串初始化 Decimal
+:::warning[一定要用字符串初始化 Decimal]
 `Decimal(0.1)` 会出现精度问题，因为 `0.1` 本身已经是浮点数（精度已丢失）。**始终使用字符串** `Decimal("0.1")` 来初始化，才能保留精确的十进制值。
 :::
 
@@ -357,7 +357,7 @@ print(Fraction.from_float(0.5))  # 1/2
 print(Fraction(3.14159).limit_denominator(100))  # 311/99
 ```
 
-:::tip 分数模块的应用
+:::tip[分数模块的应用]
 `fractions` 模块在需要精确表示有理数时非常有用，例如：
 - 解决数学问题（如分数加减乘除）
 - 表示比例关系
@@ -428,7 +428,7 @@ print(complex(3, 4))   # (3+4j)
 print(int.real if False else complex(3).real)  # 3.0
 ```
 
-:::warning 类型转换可能丢失精度
+:::warning[类型转换可能丢失精度]
 `int(3.9)` 直接截断小数部分得到 `3`，而不是四舍五入为 `4`。如需四舍五入请用 `round(3.9)`。此外，浮点数转字符串时可能显示一长串数字（如 `str(0.1 + 0.2)` 显示 `0.30000000000000004`）。
 :::
 
@@ -481,7 +481,7 @@ print(f"单利对比:   ¥{simple.quantize(Decimal('0.01'))}")  # 单利对比: 
 
 <PyodideRunner title="数字类型与精度">
 
-```python
+```py
 # 1. 整数运算：无大小限制
 big = 2 ** 100
 print(f"2^100 = {big}")

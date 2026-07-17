@@ -1,0 +1,303 @@
+/**
+ * 页面样式 - About 页面、响应式设计
+ */
+
+/* ==========================================
+   About Page Styles
+   ========================================== */
+
+/* Section alternating backgrounds */
+.about-section-alt {
+  background: linear-gradient(180deg,
+    var(--ifm-background-surface-color) 0%,
+    color-mix(in srgb, var(--ifm-background-surface-color) 95%, var(--ifm-background-color)) 100%);
+  padding: 0.5rem 0;
+}
+
+/* Story section */
+.about-story {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem;
+}
+
+.about-story h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.about-story p {
+  font-size: 1.05rem;
+  line-height: 2;
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 1.25rem;
+}
+
+.about-story blockquote {
+  position: relative;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 5%, transparent),
+    color-mix(in srgb, var(--ifm-color-violet) 3%, transparent));
+  border-left: 3px solid var(--ifm-color-primary);
+  border-radius: 0 var(--ifm-radius-md) var(--ifm-radius-md) 0;
+  padding: 1.75rem 2rem;
+  margin: 2rem 0;
+  font-size: 1.05rem;
+  line-height: 1.9;
+  color: var(--ifm-font-color-base);
+}
+
+.about-story blockquote p {
+  margin-bottom: 0.75rem;
+  color: var(--ifm-font-color-base);
+}
+
+.about-story blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Research section */
+.about-research .cardEmoji {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 8%, transparent),
+    color-mix(in srgb, var(--ifm-color-violet) 5%, transparent));
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  font-size: 2rem;
+}
+
+.about-research .card:hover .cardEmoji {
+  transform: scale(1.1);
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 12%, transparent),
+    color-mix(in srgb, var(--ifm-color-violet) 8%, transparent));
+}
+
+/* Tech stack section - compact cards */
+.about-tech .card {
+  padding: 1.5rem 1.25rem;
+}
+
+.about-tech .cardEmoji {
+  font-size: 2.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.about-tech .cardBody h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.about-tech .cardContent {
+  font-size: 0.88rem;
+  color: var(--ifm-color-emphasis-800);
+}
+
+/* Education section - prominent cards */
+.about-education {
+  padding: 0.5rem 0;
+}
+
+.about-education h2 {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.about-education .card {
+  border: none;
+  background: var(--ifm-background-color);
+  border-radius: var(--ifm-radius-lg);
+  padding: 2.5rem 2rem;
+  box-shadow: var(--ifm-shadow-md);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.about-education .card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--ifm-shadow-2xl);
+}
+
+.about-education .card::before {
+  display: none;
+}
+
+.about-education .cardLink:hover .card {
+  border-color: transparent;
+}
+
+.about-education .cardLogo {
+  height: 100px;
+  width: auto;
+  max-width: 200px;
+  margin: 0 auto 1.5rem;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.06));
+  transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+.about-education .card:hover .cardLogo {
+  transform: scale(1.06);
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.06));
+}
+
+[data-theme='dark'] .about-education .cardLogo {
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.1));
+}
+
+[data-theme='dark'] .about-education .card:hover .cardLogo {
+  filter: drop-shadow(0 4px 16px rgba(255, 255, 255, 0.1));
+}
+
+.about-education .cardBody {
+  text-align: center;
+}
+
+.about-education .cardBody h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ifm-font-color-base);
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.about-education .cardContent {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ifm-color-emphasis-800);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Education field */
+.about-education .edu-field {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.about-education .edu-label {
+  flex-shrink: 0;
+  display: inline-block;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 8%, transparent),
+    color-mix(in srgb, var(--ifm-color-primary) 4%, transparent));
+  color: var(--ifm-color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* Connect section */
+.about-connect {
+  padding: 0.5rem 0;
+}
+
+.about-connect h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.about-connect .card {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  text-align: center;
+}
+
+.about-connect .card:hover {
+  border-color: var(--ifm-color-primary);
+}
+
+.about-connect .cardEmoji {
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--ifm-color-primary) 8%, transparent),
+    color-mix(in srgb, var(--ifm-color-violet) 5%, transparent));
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  font-size: 1.75rem;
+}
+
+/* Email section */
+.about-email {
+  text-align: center;
+  padding: 2rem 0 1rem;
+  color: var(--ifm-color-emphasis-600);
+  font-size: 0.95rem;
+}
+
+.about-email strong {
+  color: var(--ifm-font-color-base);
+  font-weight: 600;
+}
+
+.about-email a {
+  color: var(--ifm-color-primary);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.about-email a:hover {
+  color: var(--ifm-color-primary-darker);
+  border-bottom-color: var(--ifm-color-primary-darker);
+}
+
+/* Footer quote */
+.about-footer-quote {
+  text-align: center;
+  padding: 1.5rem 0 3rem;
+  color: var(--ifm-color-emphasis-400);
+  font-style: italic;
+  font-size: 0.9rem;
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ==========================================
+   Responsive Design
+   ========================================== */
+
+@media (max-width: 996px) {
+  .navbar {
+    background: var(--ifm-background-color);
+    backdrop-filter: none;
+  }
+
+  .sidebar {
+    backdrop-filter: blur(20px);
+  }
+
+  .theme-doc-markdown h1 {
+    font-size: 2.5rem;
+  }
+
+  .theme-doc-markdown h2 {
+    font-size: 1.875rem;
+  }
+
+  .theme-doc-markdown h3 {
+    font-size: 1.5rem;
+  }
+
+  .footer {
+    padding: 3rem 0 2rem;
+  }
+}

@@ -1,26 +1,28 @@
 ---
-sidebar_position: 2
 sidebar_label: '调试技巧'
-title: '🔍 调试技巧'
+title: 调试技巧
 description: 代码出 bug 了？别慌。掌握 print 调试、pdb 断点、IDE 调试器三种方法，从简单到高效，快速定位问题。
+tags: [测试调试]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # 🔍 调试技巧
 
 代码跑不通、输出不对、莫名报错——每个程序员都会遇到。"调试"就是找到问题原因的过程。本节介绍三种最实用的方法：`print` 调试、`pdb` 断点调试、IDE 可视化调试，从简单到高效逐步升级。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - `print` 是最快的调试手段，适合快速排查
 - `breakpoint()` + pdb 可以暂停程序、检查变量、单步执行
 - IDE 调试器（VS Code / PyCharm）提供图形化断点、变量监视、调用栈
-- 遇到报错先读 Traceback，它会告诉你出错的文件、行号、调用链
+- 遇到报错先读 Traceback，它会标明出错的文件、行号、调用链
 :::
 
 <PyodideRunner title="调试技巧快速体验">
 
-```python
+```py
 # print 调试
 def find_max(numbers):
     """找到列表中的最大值"""
@@ -70,7 +72,8 @@ process_data([-1, 0, 1, 2, 3])
 
 </PyodideRunner>
 
-## 方法一：print 调试
+<Tabs>
+  <TabItem value="print" label="方法一：print 调试">
 
 最朴素但最快的方法——在关键位置插入 `print`，看变量值：
 
@@ -84,7 +87,7 @@ def calculate_average(numbers):
     return avg
 ```
 
-### print 的增强技巧
+## print 的增强技巧
 
 ```py title="Python"
 # 1. 打印变量名 + 值
@@ -104,7 +107,7 @@ for i in range(100):
         print(f"处理到第 {i} 项")
 ```
 
-:::tip print 调试的局限
+:::tip[print 调试的局限]
 - 需要改代码 → 改完记得删掉
 - 看不到完整的调用栈和变量作用域
 - 多个变量时输出杂乱
@@ -112,7 +115,8 @@ for i in range(100):
 适合简单快速的问题。复杂问题请升级到 pdb 或 IDE 调试器。
 :::
 
-## 方法二：pdb 断点调试
+  </TabItem>
+  <TabItem value="pdb" label="方法二：pdb 断点调试">
 
 Python 自带调试器 pdb，可以在代码中设置断点，暂停执行后交互式检查变量。
 
@@ -168,7 +172,7 @@ def process_data(data):
 
 暂停后可以逐行查看 `item`、`processed` 的值：
 
-```text title="Output"
+```text title="输出"
 > /home/user/project/main.py(6)process_data()
 -> result.append(processed)
 (Pdb) p item
@@ -190,7 +194,8 @@ PYTHONNOUSERSITE=1 python -c "breakpoint()"   # 不会暂停
 
 或者在 `.env` 文件中加 `PYTHONBREAKPOINT=0`。
 
-## 方法三：IDE 可视化调试
+  </TabItem>
+  <TabItem value="ide" label="方法三：IDE 可视化调试">
 
 VS Code 和 PyCharm 都提供图形化调试器，体验远优于 pdb。
 
@@ -223,18 +228,21 @@ VS Code 和 PyCharm 都提供图形化调试器，体验远优于 pdb。
 2. 右键文件 → Debug
 3. 暂停后底部面板显示：Variables（变量）、Watches（监视）、Console（控制台）
 
-:::tip IDE 调试 vs pdb
+:::tip[IDE 调试 vs pdb]
 - **pdb**：轻量、终端内完成，适合远程服务器或快速排查
 - **IDE 调试器**：可视化、支持条件断点、变量修改、多线程调试，日常开发首选
 
 两种方式可以混用——IDE 调试器底层也是 pdb。
 :::
 
+  </TabItem>
+</Tabs>
+
 ## 读懂 Traceback
 
 Python 报错时会打印 Traceback（回溯信息），这是调试的起点：
 
-```text title="Output"
+```text title="输出"
 Traceback (most recent call last):
   File "main.py", line 10, in <module>
     result = process(data)
@@ -249,7 +257,7 @@ KeyError: 'key'
 2. **倒数第二行**：出错的代码 — `value = data["key"]`
 3. **再往上**：调用链 — 谁调用了这个函数
 
-:::tip 调试思路
+:::tip[调试思路]
 1. 看异常类型：`KeyError` → 字典缺键、`ValueError` → 值不对、`TypeError` → 类型错误
 2. 看出错行号：`line 5` → 打开文件看第 5 行
 3. 看调用链：从下往上追踪调用路径
@@ -298,7 +306,7 @@ print(f"长度是：{result.length}")       # ← bug 在这里
 uv run python buggy.py
 ```
 
-```text title="Output"
+```text title="输出"
 最长的单词是：cherry
 Traceback (most recent call last):
   File "buggy.py", line 12, in <module>

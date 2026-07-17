@@ -1,8 +1,8 @@
 ---
-sidebar_position: 2
 sidebar_label: 'for 循环'
-title: 🔀 for 循环
+title: for 循环
 description: 学习 Python 的 for 循环、range、enumerate、zip 等遍历技巧，以及 for...else 与循环变量作用域。
+tags: [控制流]
 ---
 import { PyodideRunner } from '@site/src/components';
 
@@ -10,9 +10,18 @@ import { PyodideRunner } from '@site/src/components';
 
 Python 的 `for` 循环与 C/Java 中的 `for` 不同，它本质上是 **遍历可迭代对象** 的迭代器协议语法糖。无论遍历列表、字符串、字典，还是数字序列，`for` 都能优雅地处理。
 
+## 📌 本节要点
+
+- `for` 循环本质是迭代器协议的语法糖，遍历任何可迭代对象
+- `range()` 生成整数序列，支持步长和倒序
+- `enumerate()` 同时获取索引和值，替代手动计数
+- `zip()` 并行遍历多个可迭代对象
+- `for...else`：循环正常结束时执行 else 块
+- 循环变量在循环结束后仍然存在，注意作用域
+
 <PyodideRunner title="for 循环快速体验">
 
-```python
+```py
 # enumerate 和 zip 的实际应用
 fruits = ["苹果", "香蕉", "橙子", "葡萄"]
 prices = [5.0, 3.5, 4.0, 8.0]
@@ -47,6 +56,18 @@ for fruit in fruits:
 橙子
 ```
 
+for 循环的执行流程：
+
+```mermaid
+flowchart TD
+    A["for item in iterable"] --> B["调用 iter() 获取迭代器"]
+    B --> C["调用 __next__()"]
+    C --> D{"StopIteration?"}
+    D -- 否 --> E["执行循环体"]
+    E --> C
+    D -- 是 --> F["退出循环"]
+```
+
 ```py title="Python"
 # 遍历字符串
 for char in "Python":
@@ -61,7 +82,7 @@ for key in person:
     print(f"{key}: {person[key]}")
 ```
 
-:::tip 同时获取键和值
+:::tip[同时获取键和值]
 遍历字典时，使用 `.items()` 方法可以同时拿到键和值，比通过键查值更清晰：
 
 ```py title="Python"
@@ -100,7 +121,7 @@ for i in range(5, 0, -1):
 # 输出：5 4 3 2 1
 ```
 
-:::note range 是惰性序列
+:::note[range 是惰性序列]
 `range()` 返回的并非列表，而是 `range` 对象，它按需生成数字，不会一次性占用内存。因此 `range(10_000_000)` 几乎不消耗内存。需要列表时可用 `list(range(5))` 转换。
 :::
 
@@ -129,7 +150,7 @@ for index, fruit in enumerate(fruits, start=1):
     print(f"第 {index} 个：{fruit}")
 ```
 
-:::warning 不要用 range(len(...))
+:::warning[不要用 range(len(...))]
 很多初学者会写出这样的代码：
 
 ```py title="Python"
@@ -162,7 +183,7 @@ for name, age, city in zip(names, ages, cities):
 小刚，19 岁，来自广州
 ```
 
-:::note zip 的长度
+:::note[zip 的长度]
 `zip()` 以最短的可迭代对象为准。如果想让长的截断补默认值，可使用 `itertools.zip_longest`：
 
 ```py title="Python"
@@ -209,7 +230,7 @@ for row in matrix:
 7 8 9
 ```
 
-:::tip 用推导式简化嵌套
+:::tip[用推导式简化嵌套]
 扁平化嵌套循环可以用列表推导式或生成器表达式。例如把二维矩阵展平为一维列表：
 
 ```py title="Python"
@@ -239,7 +260,7 @@ find_even([1, 3, 5, 7, 8])  # 找到偶数：8
 find_even([1, 3, 5])        # 没有偶数。
 ```
 
-:::warning for...else 容易误用
+:::warning[for...else 容易误用]
 `for...else` 是 Python 中较少见的语法，许多开发者甚至不知道它的存在。它的"正常结束"语义容易被误解为"没找到元素时执行"。在团队代码中，建议用更显式的方式（如设置标志变量或提前 `return`）替代，以提升可读性。
 :::
 
@@ -253,7 +274,7 @@ for i in range(3):
 print(i)  # 2
 ```
 
-:::warning 注意空可迭代对象
+:::warning[注意空可迭代对象]
 如果可迭代对象为空，循环体一次都不执行，循环变量 **未定义**，访问会抛出 `NameError`：
 
 ```py title="Python"
@@ -318,7 +339,7 @@ multiplication_table()
 1×9=9  2×9=18 3×9=27 4×9=36 5×9=45 6×9=54 7×9=63 8×9=72 9×9=81 
 ```
 
-:::tip f-string 对齐技巧
+:::tip[f-string 对齐技巧]
 - `f"{x:<2}"` 表示左对齐，宽度为 2
 - `f"{x:>2}"` 表示右对齐
 - `f"{x:^4}"` 表示居中，宽度为 4

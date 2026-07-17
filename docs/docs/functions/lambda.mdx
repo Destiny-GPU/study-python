@@ -1,19 +1,29 @@
 ---
-sidebar_position: 3
 sidebar_label: 'Lambda'
-title: ⚙️ Lambda 匿名函数
+title: Lambda 匿名函数
 description: 学习 lambda 表达式语法、与 def 的区别、作为参数传递、operator 模块及其与列表推导式的对比
+tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # ⚙️ Lambda 匿名函数
 
-`lambda` 是 Python 中创建匿名函数（anonymous function）的关键字。它适合定义简单、一次性使用的函数，常用于 `sorted`、`map`、`filter` 等需要函数作为参数的场景。理解 lambda 的语法和适用范围能帮助你写出更简洁的代码。
+`lambda` 是 Python 中创建匿名函数（anonymous function）的关键字。它适合定义简单、一次性使用的函数，常用于 `sorted`、`map`、`filter` 等需要函数作为参数的场景。理解 lambda 的语法和适用范围有助于写出更简洁的代码。
+
+## 📌 本节要点
+
+- `lambda` 语法：`lambda 参数: 表达式`，只能包含一个表达式
+- 与 `def` 的区别：lambda 是表达式（可赋值），def 是语句（创建命名函数）
+- 常见搭配：`sorted(key=lambda)`、`map(lambda, ...)`、`filter(lambda, ...)`
+- `operator` 模块提供常用操作的函数版本，比 lambda 更高效
+- 复杂逻辑应用命名函数，lambda 保持简洁
 
 <PyodideRunner title="Lambda 函数快速体验">
 
-```python
+```py
 from operator import itemgetter
 
 # Lambda 用于排序
@@ -104,6 +114,9 @@ print(format_freq(440.0))  # 输出：440.00 Hz
 | 装饰器 | 支持 `@decorator` | 不支持 |
 | 可读性 | 适合复杂逻辑 | 适合简短逻辑 |
 
+<Tabs>
+  <TabItem value="def" label="def">
+
 ```py title="Python"
 # def 版本：计算信号的 RMS 值
 def rms(signal):
@@ -111,18 +124,25 @@ def rms(signal):
     import math
     return math.sqrt(sum(x**2 for x in signal) / len(signal))
 
+print(rms([1.0, 2.0, 3.0]))           # 输出：2.1602...
+print(rms.__doc__)           # 输出：计算信号的均方根值（Root Mean Square）。
+```
+
+  </TabItem>
+  <TabItem value="lambda" label="lambda">
+
+```py title="Python"
 # lambda 版本
 rms_lambda = lambda sig: (sum(x**2 for x in sig) / len(sig)) ** 0.5
 
-print(rms([1.0, 2.0, 3.0]))           # 输出：2.1602...
 print(rms_lambda([1.0, 2.0, 3.0]))    # 输出：2.1602...
-
-# 文档字符串差异
-print(rms.__doc__)           # 输出：计算信号的均方根值（Root Mean Square）。
 print(rms_lambda.__doc__)    # 输出：None（lambda 不支持 docstring）
 ```
 
-:::warning 不要滥用 lambda
+  </TabItem>
+</Tabs>
+
+:::warning[不要滥用 lambda]
 将 lambda 赋值给变量后当作普通函数使用，是一种反模式（PEP 8 不推荐）：
 ```py title="Python"
 # 不推荐
@@ -204,17 +224,29 @@ print([s["name"] for s in low_noise])
 # 输出：['加速度计', '陀螺仪']
 ```
 
-:::info map/filter vs 列表推导式
+:::info[map/filter vs 列表推导式]
 虽然 `map` 和 `filter` 配合 lambda 很常见，但 Python 社区更推荐使用列表推导式，因为可读性更好：
+
+<Tabs>
+  <TabItem value="mapfilter" label="map/filter">
+
 ```py title="Python"
 # map/filter 写法
 intervals = list(map(lambda fs: 1.0 / fs, sampling_rates))
 high_freq = list(filter(lambda s: s["sampling_rate"] > 200, sensors))
+```
 
+  </TabItem>
+  <TabItem value="comprehension" label="列表推导式">
+
+```py title="Python"
 # 列表推导式写法（更 Pythonic）
 intervals = [1.0 / fs for fs in sampling_rates]
 high_freq = [s for s in sensors if s["sampling_rate"] > 200]
 ```
+
+  </TabItem>
+</Tabs>
 :::
 
 ## 常用场景
@@ -305,7 +337,7 @@ f = lambda x: (y := x + 1) * 2  # 海象运算符可以在表达式内赋值
 print(f(5))  # 输出：12
 ```
 
-:::tip 海象运算符 :=
+:::tip[海象运算符 :=]
 `:=` 赋值表达式可以在表达式内部赋值。配合 lambda 能突破部分限制：
 ```py title="Python"
 # 计算信号能量并返回原始值和能量
@@ -391,7 +423,7 @@ print(rates)  # 输出：[1000.0, 500.0, 200.0]
 rates = [float(s) for s in rate_strings]
 ```
 
-:::info 选择建议
+:::info[选择建议]
 - 简单转换：列表推导式更 Pythonic
 - 配合已有函数（无 lambda）：`map`/`filter` 仍然简洁
 - 复杂逻辑：使用 `def` 定义具名函数
@@ -467,7 +499,7 @@ print(sorted_sensors)
 # 输出：[Sensor(name='陀螺仪', ...), Sensor(name='加速度计', ...), Sensor(name='气压计', ...)]
 ```
 
-:::tip itemgetter 性能更好
+:::tip[itemgetter 性能更好]
 `itemgetter`、`attrgetter`、`methodcaller` 由 C 实现，比 lambda 略快。在性能敏感场景下推荐使用。
 :::
 
@@ -550,7 +582,7 @@ for s in by_type_cost:
 #   气压 BARO_2    ¥1500
 ```
 
-:::tip 多字段排序技巧
+:::tip[多字段排序技巧]
 - 同方向（都升序/都降序）：用 `itemgetter("a", "b")` 一次取出元组
 - 混合方向：数值字段可用 `-value` 反转，字符串字段较复杂，需多次 `sorted`（Python 的 `sorted` 是稳定排序）
 ```py title="Python"

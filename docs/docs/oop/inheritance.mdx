@@ -1,8 +1,8 @@
 ---
-sidebar_position: 2
 sidebar_label: '继承'
-title: 🏗️ 继承
+title: 继承
 description: 学习单继承、多继承、super()、MRO、方法重写、isinstance/issubclass、object 基类与抽象基类，构建层级化的类型体系。
+tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 继承（inheritance）是面向对象的核心机制之一：子类可以复用父类的属性和方法，并在此基础上扩展或修改行为。通过继承，我们能建立"是一个（is-a）"的关系层次，例如"低通滤波器是滤波器"、"自适应滤波器是滤波器"，从而减少重复代码、提升复用性，并为多态奠定基础。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - 单继承语法：`class 子类(父类):`，子类自动获得父类所有属性和方法
 - 方法重写与 `super()` 调用父类方法（实际调用 MRO 中的下一个类）
 - MRO（方法解析顺序）由 C3 线性化算法决定，用 `类.__mro__` 查看
@@ -19,11 +19,10 @@ import { PyodideRunner } from '@site/src/components';
 - Mixin 模式：增加单一功能的小巧类
 - `isinstance`（匹配子类）与 `issubclass`（判断继承关系）
 - `abc.ABC` + `@abstractmethod` 定义接口契约，强制子类实现关键方法
-:::
 
 <PyodideRunner title="继承快速体验">
 
-```python
+```py
 # 基类
 class Animal:
     def __init__(self, name):
@@ -103,7 +102,7 @@ print(f"原始信号长度: {len(signal)}")    # 输出：原始信号长度: 10
 print(f"滤波后长度: {len(filtered)}")    # 输出：滤波后长度: 1000
 ```
 
-:::tip 没有 `()` 的类
+:::tip[没有 `()` 的类]
 写 `class SignalFilter:` 等价于 `class SignalFilter(object):`，所有类最终都继承自 `object`。
 :::
 
@@ -126,8 +125,8 @@ print(f.__class__)    # 输出：<class '__main__.AnyFilter'>
 print(f == f)          # 输出：True（默认按对象身份比较）
 ```
 
-:::note 默认的 __eq__
-`object.__eq__` 默认按 `is`（同一对象）比较。如果想按值比较，需要自己重写 `__eq__`（同时建议重写 `__hash__`，详见[魔术方法](./magic-methods.mdx)一节）。
+:::note[默认的 __eq__]
+`object.__eq__` 默认按 `is`（同一对象）比较。如果想按值比较，需要自己重写 `__eq__`（同时建议重写 `__hash__`，详见[魔术方法](./magic-methods)一节）。
 :::
 
 ## 方法重写
@@ -212,7 +211,7 @@ filtered = bpf.apply(signal, fs=1000)
 print(bpf.describe())  # 输出：截止频率=50.0Hz，阶数=4，频带=[20, 80]Hz
 ```
 
-:::tip 无参数 super()
+:::tip[无参数 super()]
 Python 3 中可以直接写 `super()`（无需 `super(子类, self)`），它会自动获取当前类和实例。
 :::
 
@@ -244,7 +243,7 @@ print(D().hi())
 # 输出：D -> B -> C -> A
 ```
 
-:::info C3 线性化
+:::info[C3 线性化]
 Python 使用 **C3 线性化**算法计算 MRO，保证：
 1. 子类在父类之前。
 2. 多个父类按声明顺序。
@@ -252,6 +251,19 @@ Python 使用 **C3 线性化**算法计算 MRO，保证：
 
 如果继承结构无法线性化，会抛出 `TypeError: Cannot create a consistent method resolution`。
 :::
+
+C3 线性化算法确定方法解析顺序：
+
+```mermaid
+graph TD
+    A["object"] --> B["Base"]
+    B --> C["DerivedA"]
+    B --> D["DerivedD"]
+    C --> E["DerivedC"]
+    D --> E
+```
+
+MRO: `DerivedC → DerivedA → DerivedD → Base → object`
 
 ## 多继承
 
@@ -324,7 +336,7 @@ print(C.__mro__)
 # 输出：(<class 'C'>, <class 'A'>, <class 'B'>, <class 'object'>)
 ```
 
-:::warning 多继承的"菱形继承"
+:::warning[多继承的"菱形继承"]
 当一个类同时继承自两个有共同祖先的类时，会出现"菱形继承"：
 
 ```
@@ -369,7 +381,7 @@ D()
 这种"参数向上传、方法向下调"的模式称为**协作式多继承**，是多继承的推荐写法。
 :::
 
-:::tip Mixin 模式
+:::tip[Mixin 模式]
 多继承最实用的场景是 **Mixin**：一种小巧的、为类增加单一功能的类。命名通常以 `Mixin` 结尾：
 
 ```py title="Python"
@@ -424,7 +436,7 @@ print(isinstance(lpf, (HighPassFilter, LowPassFilter)))  # 输出：True
 print(isinstance(42, (int, float))) # 输出：True
 ```
 
-:::warning isinstance vs type
+:::warning[isinstance vs type]
 - `type(obj) is LowPassFilter` 只匹配**精确类型**，不认子类。
 - `isinstance(obj, LowPassFilter)` 还匹配子类实例。
 
@@ -539,7 +551,7 @@ s.store(np.array([1.0, 2.0, 3.0]))
 print(s.get(0))  # 输出：[1. 2. 3.]
 ```
 
-:::note 装饰器顺序
+:::note[装饰器顺序]
 `@property` 和 `@abstractmethod` 一起用时，`@property` 在外、`@abstractmethod` 在内。`@classmethod` 同理。
 :::
 
@@ -567,7 +579,7 @@ print("lowpass" in fc)        # 输出：True（Sequence 自动提供 __contains
 print(list(reversed(fc)))  # 输出：['bandpass', 'highpass', 'lowpass']（Sequence 自动提供）
 ```
 
-实现 `__getitem__` 和 `__len__` 后，`Sequence` 自动帮你补全 `__contains__`、`__iter__`、`index`、`count` 等方法。
+实现 `__getitem__` 和 `__len__` 后，`Sequence` 自动补全 `__contains__`、`__iter__`、`index`、`count` 等方法。
 
 ## 实战：滤波器层级系统
 
@@ -809,7 +821,7 @@ LowPassFilter 的 MRO: ['LowPassFilter', 'FrequencyFilter', 'SignalFilter', 'ABC
 | 协作式多继承 | `super()` + `**kwargs` | 菱形继承推荐写法 |
 | 精确类型匹配 | `type(obj) is cls` | 不匹配子类 |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们学习了继承机制，核心要点包括：
 
@@ -821,4 +833,4 @@ LowPassFilter 的 MRO: ['LowPassFilter', 'FrequencyFilter', 'SignalFilter', 'ABC
 - **类型检查用 isinstance**：匹配子类实例，符合里氏替换原则
 - **抽象基类定义契约**：`abc.ABC` + `@abstractmethod` 强制子类实现关键方法
 
-掌握继承后，你将能够设计出层次清晰、高度复用的类体系。下一节将深入**多态**——同一接口在不同对象上表现出不同行为。
+掌握继承后，便能设计出层次清晰、高度复用的类体系。下一节将深入**多态**——同一接口在不同对象上表现出不同行为。

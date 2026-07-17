@@ -1,0 +1,29 @@
+---
+title: 异常处理
+description: 优雅地处理程序运行中的错误与异常，编写健壮可靠的代码。
+sidebar_position: 0
+tags: [异常处理]
+---
+
+# 🛡️ 异常处理
+
+程序运行中难免遇到错误——文件不存在、网络超时、除零、类型不匹配。异常处理让你的程序在遇到问题时优雅恢复，而不是直接崩溃。
+
+:::tip[🎯 本章目标]
+学完本章，你将能：
+- 用 `try-except` 捕获和处理异常
+- 理解 Python 异常层次结构，选择正确的捕获粒度
+- 自定义异常类，表达业务错误语义
+- 用上下文管理器（`with`）自动管理资源
+:::
+
+:::info[📋 前置知识]
+学习本章前，建议先完成：
+- [基础语法](./basics) — 变量、数据类型
+- [函数](./functions) — 定义与调用函数
+:::
+
+- [异常基础](./error-handling/exceptions) — 异常是什么、层次结构、Traceback 阅读
+- [try-except](./error-handling/try-except) — 完整结构、多异常捕获、raise、ExceptionGroup
+- [自定义异常](./error-handling/custom-exceptions) — 创建异常类、异常设计模式
+- [上下文管理器](./error-handling/context-managers) — with 语句、contextlib、ExitStack

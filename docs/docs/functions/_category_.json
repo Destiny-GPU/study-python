@@ -2,7 +2,7 @@
   "label": "⚙️ 函数",
   "position": 6,
   "link": {
-    "type": "generated-index",
-    "description": "封装可复用代码，掌握参数、作用域、装饰器、生成器等进阶用法。"
+    "type": "doc",
+    "id": "functions/index"
   }
 }

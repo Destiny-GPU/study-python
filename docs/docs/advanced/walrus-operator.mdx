@@ -1,8 +1,8 @@
 ---
-sidebar_position: 5
 sidebar_label: '海象运算符'
-title: 🚀 海象运算符
+title: 海象运算符
 description: 学习 Python 3.8+ 的海象运算符 :=，掌握赋值表达式在条件、循环、推导式中的应用与可读性权衡。
+tags: [进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 海象运算符 `:=`（walrus operator，PEP 572）是**赋值表达式**语法。它让"赋值"可以作为表达式出现在原本不允许的位置——`if` 条件、`while` 循环、列表推导式等。这个看似微小的语法改进，能消除大量"先赋值、再判断"的重复代码，是现代 Python 代码风格的重要组成。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **:= 是赋值表达式**：计算值、赋值、并返回值，让赋值能嵌入表达式
 - **与 = 不同**：`:=` 是表达式有返回值，但不支持链式赋值和元组解包
 - **if 条件**：赋值并判断，避免重复调用——`if (n := func()) > 0:`
@@ -21,13 +21,13 @@ import { PyodideRunner } from '@site/src/components';
 - **可读性优先**：用 `:=` 减少重复、提升清晰度，而非少写代码
 :::
 
-:::info 为什么叫"海象"
+:::info[为什么叫"海象"]
 `:=` 看起来像一只海象的眼睛和象牙——冒号是眼睛，等号是两颗朝下的象牙。这是社区起的昵称，正式名称是 **赋值表达式（assignment expression）** 或 **命名表达式（named expression）**。
 :::
 
 <PyodideRunner title="海象运算符快速体验">
 
-```python
+```py
 # 海象运算符 := 在条件中使用
 numbers = [1, -2, 3, -4, 5]
 
@@ -87,7 +87,7 @@ print(value)  # [1, 2, 3]
 print(data)   # [1, 2, 3]（value 就是 data 的值）
 ```
 
-:::tip := 返回的是赋值的值
+:::tip[:= 返回的是赋值的值]
 `(n := 10)` 整个表达式的值就是 `10`，同时 `n` 也被赋值为 `10`。这让 `:=` 能嵌套在任何需要"值"的地方。
 :::
 
@@ -115,7 +115,7 @@ z = 15
 # 不能解包：(a, b) := (1, 2)  # 语法错误
 ```
 
-:::warning := 的语法限制
+:::warning[:= 的语法限制]
 `:=` 的优先级很低，必要时要用括号。下面两种写法效果不同：
 
 ```py title="Python"
@@ -165,7 +165,7 @@ if (user_input := get_input()) is not None:
     print(f"收到输入：{user_input}")
 ```
 
-:::tip 消除"调用两次"的反模式
+:::tip[消除"调用两次"的反模式]
 海象运算符最经典的应用是消除"先调用取值、判断时又调用一次"的重复。对于 `input()`、`re.match()`、`dict.get()` 等返回值可能为"空"或"需要复用"的调用，`:=` 让代码更紧凑：
 
 ```py title="Python"
@@ -284,7 +284,7 @@ valid = [norm for t in raw_texts if (norm := normalize(t)) is not None]
 print(valid)  # ['hello', 'world', 'python']
 ```
 
-:::tip 推导式中 := 的价值
+:::tip[推导式中 := 的价值]
 推导式中如果过滤条件调用了"昂贵"的函数，`:=` 能避免在过滤和转换时调用两次。即使不昂贵，避免重复调用也是好习惯——尤其当函数有副作用或返回值可能变化时。
 :::
 
@@ -378,7 +378,7 @@ prefix_sums = [(total := total + n) for n in nums]
 print(prefix_sums)  # [1, 3, 6, 10, 15]
 ```
 
-:::warning 推导式中滥用 := 的陷阱
+:::warning[推导式中滥用 := 的陷阱]
 虽然 `:=` 能在推导式中累积状态，但这会**破坏推导式的纯函数性**，让代码难以理解。上例虽然能工作，但传统循环更清晰。`:=` 的最佳用途是"避免重复计算"，而非"在推导式里写有状态逻辑"。
 
 ```py title="Python"
@@ -408,7 +408,7 @@ adder = lambda x: x + 5
 print(adder(3))  # 8
 ```
 
-:::note 这个用法很少见
+:::note[这个用法很少见]
 `:=` 在 lambda 默认参数中的用法比较小众，主要场景是需要在默认值中"修改"某个外部变量。日常代码中很少用到，了解即可。
 :::
 
@@ -495,7 +495,7 @@ if (n := 10) > 5:  # n 永远是 10，直接写 if 10 > 5
     pass
 ```
 
-:::tip 可读性第一
+:::tip[可读性第一]
 `:=` 的目标是**减少重复、提升清晰度**，而非"少写代码"。如果一个 `:=` 让代码更难理解，就拆成多行用普通 `=`。代码被阅读的次数远多于被编写的次数。
 :::
 
@@ -589,7 +589,7 @@ for err in errors:
 #   2024-01-01 10:00:02 - Connection: timeout
 ```
 
-:::tip 综合应用
+:::tip[综合应用]
 上面的推导式综合运用了 `:=`：
 1. `if log["level"] == "ERROR"` 先过滤错误日志
 2. `and (m := error_pattern.search(...))` 在 `and` 中赋值——只有前面的条件为真时才会执行
@@ -670,7 +670,7 @@ print(f"\n总共 {chunks_count} 块，{total_bytes} 字节")
 - **[PEP 572](https://peps.python.org/pep-0572/)** - 海象运算符规范
 - **[赋值表达式 vs 赋值语句](https://docs.python.org/zh-cn/3/reference/simple_stmts.html#assignment-statements)** - Python 语法参考
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`:=` 是赋值表达式**，计算值、赋值、并返回值，让赋值能嵌入表达式
 - **与 `=` 不同**，`:=` 是表达式有返回值，但不支持链式赋值和元组解包

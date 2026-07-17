@@ -1,0 +1,636 @@
+---
+sidebar_label: '调试进阶'
+title: 调试进阶
+description: 掌握 logging 模块、远程调试、异步调试和经典 bug 模式，成为调试高手。
+tags: [测试调试]
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🔍 调试进阶
+
+## 📌 本节要点
+
+- 用 `logging` 模块替代 `print`，实现分级日志与持久化
+- 掌握条件断点和高级 pdb 调试技巧
+- 配置 debugpy 实现远程调试和 VS Code attach
+- 调试异步代码的常见陷阱
+- 识别 Python 经典 bug 模式，防患于未然
+
+---
+
+## 1. logging 模块
+
+### 1.1 为什么 logging 比 print 好
+
+`print` 适合调试时快速查看，但生产环境需要更专业的方案：
+
+| 对比项 | print | logging |
+|--------|-------|---------|
+| 级别控制 | 无 | DEBUG/INFO/WARNING/ERROR/CRITICAL |
+| 持久化 | 手动重定向 | 内置 FileHandler |
+| 格式化 | 字符串拼接 | 结构化格式 |
+| 模块区分 | 困难 | Logger 名称自动区分 |
+
+### 1.2 基本配置
+
+```py title="Python"
+import logging
+
+# 基本配置
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+logging.debug('调试信息')
+logging.info('普通信息')
+logging.warning('警告信息')
+logging.error('错误信息')
+logging.critical('严重错误')
+```
+
+### 1.3 日志级别
+
+从低到高排列，级别越低输出越多：
+
+```
+DEBUG(10) → INFO(20) → WARNING(30) → ERROR(40) → CRITICAL(50)
+```
+
+### 1.4 Logger / Handler / Formatter 架构
+
+```py title="Python"
+import logging
+
+# 创建 logger
+logger = logging.getLogger('my_app')
+logger.setLevel(logging.DEBUG)
+
+# Console handler
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+
+# File handler
+file_handler = logging.FileHandler('app.log')
+file_handler.setLevel(logging.DEBUG)
+
+# Formatter
+fmt = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s: %(message)s')
+console.setFormatter(fmt)
+file_handler.setFormatter(fmt)
+
+# 添加 handlers
+logger.addHandler(console)
+logger.addHandler(file_handler)
+
+# 使用
+logger.debug('这条只写入文件')
+logger.info('这条控制台和文件都有')
+```
+
+### 1.5 字典配置
+
+```py title="Python"
+import logging.config
+
+config = {
+    'version': 1,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'INFO',
+            'formatter': 'detailed',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'app.log',
+            'level': 'DEBUG',
+            'formatter': 'detailed',
+        },
+    },
+    'formatters': {
+        'detailed': {
+            'format': '%(asctime)s %(name)s %(levelname)s: %(message)s'
+        },
+    },
+    'root': {
+        'level': 'DEBUG',
+        'handlers': ['console', 'file'],
+    },
+}
+
+logging.config.dictConfig(config)
+logging.info('字典配置生效')
+```
+
+<PyodideRunner
+  title="logging 配置示例"
+  code={`import logging
+
+# 简化版配置（无文件）
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s'
+)
+
+# 创建 logger
+logger = logging.getLogger('demo')
+logger.debug('调试级别')
+logger.info('信息级别')
+logger.warning('警告级别')
+logger.error('错误级别')
+logger.critical('严重级别')
+
+# 自定义 logger
+child = logging.getLogger('demo.child')
+child.info('子模块日志')`}
+/>
+
+---
+
+## 2. 条件断点和高级 pdb
+
+### 2.1 pdb 基本用法
+
+```py title="Python"
+import pdb
+
+def calculate(n):
+    result = 0
+    for i in range(n):
+        pdb.set_trace()  # 在此处暂停
+        result += i
+    return result
+
+calculate(5)
+```
+
+### 2.2 条件断点
+
+```py title="Python"
+import pdb
+
+def process_items(items):
+    for idx, item in enumerate(items):
+        # 只在 item 为 None 时暂停
+        if item is None:
+            pdb.set_trace()
+        print(f'Processing: {item}')
+
+process_items(['a', None, 'b', None, 'c'])
+```
+
+### 2.3 常用 pdb 命令
+
+| 命令 | 说明 |
+|------|------|
+| `n` (next) | 执行下一行 |
+| `s` (step) | 进入函数内部 |
+| `c` (continue) | 继续执行到下一个断点 |
+| `p expr` | 打印表达式值 |
+| `l` (list) | 显示当前代码 |
+| `w` (where) | 显示调用栈 |
+| `q` (quit) | 退出调试器 |
+
+### 2.4 ipdb 改进版
+
+```bash title="Shell"
+pip install ipdb
+```
+
+```py title="Python"
+import ipdb
+
+def buggy_function(data):
+    result = []
+    for item in data:
+        ipdb.set_trace()  # 语法高亮、自动补全
+        result.append(item * 2)
+    return result
+```
+
+---
+
+## 3. 远程调试
+
+### 3.1 debugpy 安装
+
+```bash title="Shell"
+pip install debugpy
+```
+
+### 3.2 服务端启动
+
+```py title="Python"
+import debugpy
+
+# 监听 5678 端口，等待 VS Code 连接
+debugpy.listen(('0.0.0.0', 5678))
+print('等待调试器连接...')
+debugpy.wait_for_client()  # 可选：阻塞等待
+debugpy.breakpoint()       # 可选：自动断点
+
+# 你的应用代码
+def main():
+    x = 10
+    y = 20
+    print(x + y)
+
+if __name__ == '__main__':
+    main()
+```
+
+### 3.3 VS Code launch.json 配置
+
+```json title="launch.json"
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Attach",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "."
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 3.4 SSH 远程调试流程
+
+```bash title="Shell"
+# 1. 在远程机器启动 debugpy
+python -m debugpy --listen 0.0.0.0:5678 --wait-for-client your_script.py
+
+# 2. SSH 端口转发
+ssh -L 5678:localhost:5678 user@remote-server
+
+# 3. VS Code Attach 到 localhost:5678
+```
+
+---
+
+## 4. 调试异步代码
+
+### 4.1 开启 asyncio debug 模式
+
+```py title="Python"
+import asyncio
+
+async def fetch_data():
+    await asyncio.sleep(1)
+    return {'data': 'value'}
+
+async def main():
+    result = await fetch_data()
+    print(result)
+
+# debug=True 检测未 await 的协程和慢回调
+asyncio.run(main(), debug=True)
+```
+
+### 4.2 常见异步 bug
+
+```py title="Python"
+import asyncio
+
+# BUG 1: 忘记 await
+async def bad_example():
+    asyncio.sleep(1)  # 缺少 await，返回协程对象而非结果
+
+# BUG 2: 阻塞调用
+async def also_bad():
+    import time
+    time.sleep(1)  # 阻塞整个事件循环！
+
+# BUG 3: 任务未取消
+async def leaked_task():
+    while True:
+        await asyncio.sleep(1)
+
+async def main():
+    task = asyncio.create_task(leaked_task())
+    # 忘记取消 task，程序不会退出
+```
+
+### 4.3 调试技巧
+
+```py title="Python"
+import asyncio
+
+async def worker(name):
+    await asyncio.sleep(1)
+    return f'{name} done'
+
+async def main():
+    tasks = [worker(f'task-{i}') for i in range(3)]
+    results = await asyncio.gather(*tasks)
+    print(results)
+
+    # 查看所有运行中的任务
+    all_tasks = asyncio.all_tasks()
+    print(f'运行中的任务数: {len(all_tasks)}')
+
+asyncio.run(main())
+```
+
+<PyodideRunner
+  title="异步任务追踪"
+  code={`import asyncio
+
+async def fetch(n):
+    await asyncio.sleep(0.5)
+    return f'Result-{n}'
+
+async def main():
+    # 并发执行多个任务
+    tasks = [fetch(i) for i in range(5)]
+    results = await asyncio.gather(*tasks)
+    
+    for r in results:
+        print(r)
+
+asyncio.run(main())`}
+/>
+
+---
+
+## 5. 经典 bug 模式
+
+### 5.1 可变默认参数
+
+```py title="Python"
+# 经典陷阱
+def append_to(element, target=[]):
+    target.append(element)
+    return target
+
+print(append_to(1))  # [1]
+print(append_to(2))  # [1, 2] ← 期望 [2]！
+
+# 正确写法
+def append_to_fixed(element, target=None):
+    if target is None:
+        target = []
+    target.append(element)
+    return target
+
+print(append_to_fixed(1))  # [1]
+print(append_to_fixed(2))  # [2] ← 正确
+```
+
+### 5.2 闭包中的循环变量
+
+```py title="Python"
+# 经典陷阱
+functions = [lambda x: x * i for i in range(5)]
+print([f(10) for f in functions])  # [40, 40, 40, 40, 40]
+
+# 正确写法：用默认参数捕获当前值
+functions = [lambda x, i=i: x * i for i in range(5)]
+print([f(10) for f in functions])  # [0, 10, 20, 30, 40]
+```
+
+### 5.3 浮点数精度
+
+```py title="Python"
+# 经典陷阱
+print(0.1 + 0.2)         # 0.30000000000000004
+print(0.1 + 0.2 == 0.3)  # False
+
+# 正确写法
+import math
+print(math.isclose(0.1 + 0.2, 0.3))  # True
+
+from decimal import Decimal
+a = Decimal('0.1') + Decimal('0.2')
+print(a == Decimal('0.3'))  # True
+```
+
+### 5.4 隐式字符串拼接
+
+```py title="Python"
+# 意外拼接
+result = (
+    "第一部分"
+    "第二部分"
+)
+print(result)  # 第一部分第二部分
+
+# 用于分隔长字符串是好的，但要小心
+query = (
+    "SELECT * FROM users "
+    "WHERE name = 'test'"
+)
+```
+
+### 5.5 is vs ==
+
+```py title="Python"
+# == 比较值
+# is 比较身份（内存地址）
+
+a = [1, 2, 3]
+b = [1, 2, 3]
+print(a == b)   # True
+print(a is b)   # False
+
+# 小整数缓存（-5 到 256）
+x = 256
+y = 256
+print(x is y)   # True（CPython 优化）
+
+x = 257
+y = 257
+print(x is y)   # False（可能）
+
+# 正确用法
+print(a is None)   # 推荐：检查 None
+print(a == None)   # 不推荐
+```
+
+### 5.6 列表推导式变量泄漏
+
+```py title="Python"
+# Python 2 问题（Python 3 已修复）
+# x 会泄漏到外部作用域
+
+# Python 3 中列表推导式有自己的作用域
+[print(i) for i in range(5)]  # 输出 0-4
+try:
+    print(i)  # NameError: i 未定义
+except NameError:
+    print('i 在列表推导式外不可见')
+
+# 但生成器表达式也泄漏变量（Python 2）
+# 保持良好习惯，不要依赖此行为
+```
+
+---
+
+## 6. 实战：调试有多个隐蔽 bug 的程序
+
+<PyodideRunner
+  title="调试实战"
+  code={`import math
+
+# Bug 1: 可变默认参数
+def process_data(items, cache=[]):
+    for item in items:
+        cache.append(item * 2)
+    return cache
+
+# Bug 2: 闭包陷阱
+def create_multipliers():
+    return [lambda x: x * i for i in range(4)]
+
+# Bug 3: 浮点精度
+def calculate_average(numbers):
+    total = 0.0
+    for n in numbers:
+        total += n
+    return total / len(numbers)
+
+# 测试
+data1 = [1, 2, 3]
+data2 = [4, 5, 6]
+
+# Bug 1 复现
+result1 = process_data(data1)
+result2 = process_data(data2)
+print(f'Cache 泄漏: {result1}')  # 期望 [2,4,6]，实际 [2,4,6,8,10,12]
+
+# Bug 2 复现
+multipliers = create_multipliers()
+print([m(10) for m in multipliers])  # 期望 [0,10,20,30]，实际 [30,30,30,30]
+
+# Bug 3 复现
+avg = calculate_average([0.1, 0.2])
+print(f'平均值: {avg}')  # 浮点误差
+print(f'等于 0.15? {avg == 0.15}')  # False`}
+/>
+
+### 修复后的代码
+
+```py title="Python"
+import math
+
+# 修复 Bug 1
+def process_data(items, cache=None):
+    if cache is None:
+        cache = []
+    for item in items:
+        cache.append(item * 2)
+    return cache
+
+# 修复 Bug 2
+def create_multipliers():
+    return [lambda x, i=i: x * i for i in range(4)]
+
+# 修复 Bug 3
+def calculate_average(numbers):
+    total = sum(numbers)
+    avg = total / len(numbers)
+    return avg
+
+# 验证
+data1 = [1, 2, 3]
+data2 = [4, 5, 6]
+print(process_data(data1))  # [2, 4, 6]
+print(process_data(data2))  # [8, 10, 12] ← 正确隔离
+
+multipliers = create_multipliers()
+print([m(10) for m in multipliers])  # [0, 10, 20, 30]
+
+avg = calculate_average([0.1, 0.2])
+print(math.isclose(avg, 0.15))  # True
+```
+
+---
+
+## 🎯 动手练习
+
+1. **logging 练习**：为一个模拟 Web 服务器配置日志，INFO 级别输出到控制台，DEBUG 级别写入文件
+2. **pdb 练习**：用条件断点调试一个数据处理函数，只在数据为负数时暂停
+3. **bug 修复**：修复以下代码中的可变默认参数和闭包陷阱
+
+```py title="Python"
+def count_items(items, counter={}):
+    for item in items:
+        counter[item] = counter.get(item, 0) + 1
+    return counter
+
+# 找出问题并修复
+```
+
+---
+
+## 📚 延伸阅读
+
+- [Python logging 官方文档](https://docs.python.org/3/library/logging.html)
+- [debugpy 文档](https://github.com/microsoft/debugpy)
+- [Python 异步编程指南](https://docs.python.org/3/library/asyncio.html)
+- [Fluent Python - Python 陷阱](https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/)
+
+---
+
+## 📊 速查表
+
+### logging 级别速查
+
+| 级别 | 数值 | 使用场景 |
+|------|------|----------|
+| DEBUG | 10 | 开发调试，详细信息 |
+| INFO | 20 | 确认程序按预期运行 |
+| WARNING | 30 | 潜在问题，但程序仍可运行 |
+| ERROR | 40 | 严重问题，功能无法执行 |
+| CRITICAL | 50 | 程序可能无法继续运行 |
+
+### pdb 命令速查
+
+| 命令 | 缩写 | 说明 |
+|------|------|------|
+| next | n | 执行下一行（不进入函数） |
+| step | s | 进入函数内部 |
+| continue | c | 继续执行到下一断点 |
+| print | p | 打印表达式值 |
+| list | l | 显示当前代码上下文 |
+| where | w | 显示调用栈 |
+| quit | q | 退出调试器 |
+| break | b | 设置断点 |
+| clear | cl | 清除断点 |
+
+### 常见异常速查表
+
+| 异常 | 原因 | 解决方案 |
+|------|------|----------|
+| `NameError` | 变量未定义 | 检查拼写和作用域 |
+| `TypeError` | 类型不匹配 | 检查参数类型 |
+| `ValueError` | 值无效 | 检查输入值范围 |
+| `IndexError` | 索引越界 | 检查列表长度 |
+| `KeyError` | 字典键不存在 | 用 `.get()` 或检查键 |
+| `AttributeError` | 对象无此属性 | 检查对象类型和方法名 |
+| `ImportError` | 模块导入失败 | 检查模块名和安装 |
+
+---
+
+## ✅ 本节总结
+
+- **logging 模块**：替代 print，实现分级、持久化、格式化日志
+- **高级 pdb**：条件断点和 ipdb 提升调试效率
+- **远程调试**：debugpy + VS Code 实现远程 attach
+- **异步调试**：开启 debug 模式，注意 await 和任务管理
+- **经典 bug 模式**：可变默认参数、闭包陷阱、浮点精度等陷阱要牢记
+
+掌握这些调试技巧，便能高效定位和修复各种隐蔽的 bug！

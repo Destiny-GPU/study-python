@@ -1,15 +1,17 @@
 ---
-sidebar_position: 7
 sidebar_label: '输入与输出'
-title: 📝 输入与输出
+title: 输入与输出
 description: 掌握 Python 的 print 函数参数、input 输入、多种格式化输出方式、sys.stdin/stdout/stderr 流，以及 rich 库的终端美化输出。
+tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # 📝 输入与输出
 
-输入与输出（I/O）是程序与外界交互的桥梁。Python 提供了简洁强大的 `print()` 与 `input()` 函数，以及灵活的标准流（`sys.stdin` / `sys.stdout` / `sys.stderr`）。本节将系统讲解它们的高级用法、多种格式化输出方式，并介绍用于终端美化的 `rich` 库。
+输入与输出（I/O）是程序与外界交互的桥梁。Python 提供了简洁强大的 `print()` 与 `input()` 函数，以及灵活的标准流（`sys.stdin` / `sys.stdout` / `sys.stderr`）。本节我们将一起探索它们的高级用法、多种格式化输出方式，并介绍用于终端美化的 `rich` 库。
 
 ## 📌 本节要点
 - 掌握 print() 函数的 sep、end、file、flush 参数
@@ -44,7 +46,7 @@ print("a", "b", "c")  # a b c
 print("2024", "01", "15", sep="-")   # 2024-01-15
 print("Alice", "Bob", "Charlie", sep=", ")  # Alice, Bob, Charlie
 print("a", "b", "c", sep="")  # abc (无分隔)
-print("序号", "姓名", "成绩", sep="\t")  # 序号	姓名	成绩 (制表符分隔)
+print("序号", "姓名", "成绩", sep="\t")  # 序号  姓名  成绩 (制表符分隔)
 print("a", "b", "c", sep="\n")  # 每个元素换行
 ```
 
@@ -73,7 +75,7 @@ for i in range(101):
 print("\n完成！")
 ```
 
-:::tip \r 与进度条
+:::tip[\r 与进度条]
 `end="\r"`（回车符）让光标回到行首而不换行，是实现终端进度条、动态刷新的核心技巧。结合 `end=""` 不换行，可创建动态更新的输出。
 :::
 
@@ -119,7 +121,7 @@ for i in range(3):
     time.sleep(0.5)
 ```
 
-:::info 何时需要 flush=True？
+:::info[何时需要 flush=True？]
 在以下场景中，输出可能不会立即显示，需要 `flush=True`：
 1. **管道输出**：`python script.py | grep xxx` 时，stdout 是块缓冲的
 2. **进度条/实时刷新**：确保信息立即显示
@@ -149,7 +151,7 @@ except ValueError:
     print("输入的不是有效数字")
 ```
 
-:::warning input() 永远返回字符串
+:::warning[input() 永远返回字符串]
 `input()` 不管你输入什么，返回的都是字符串。输入 `123` 得到的是 `"123"` 而不是数字 `123`，需要用 `int()` 或 `float()` 转换。忘记转换是初学者的常见错误。
 :::
 
@@ -285,7 +287,51 @@ user = {"name": "Alice", "age": 25}
 print(f"用户: {user["name"]} ({user["age"]} 岁)")
 ```
 
-:::tip f-string 调试语法 \{x=\}（Python 3.8+）
+<Tabs>
+  <TabItem value="fstring" label="f-string">
+
+```py title="Python"
+name = "Alice"
+age = 25
+print(f"我叫 {name}，今年 {age} 岁")
+
+# 格式化数字
+print(f"身高: {1.68:.2f} 米")      # 1.68
+print(f"成绩: {85.5:>10.2f}")       # 右对齐
+print(f"通过率: {0.856:.2%}")       # 85.60%
+
+# 调试输出（Python 3.8+）
+x = 42
+print(f"{x=}")  # x=42
+```
+
+  </TabItem>
+  <TabItem value="format" label="format()">
+
+```py title="Python"
+name = "Alice"
+age = 25
+
+print("我叫 {}，今年 {} 岁".format(name, age))
+print("我叫 {n}，今年 {a} 岁".format(n=name, a=age))
+print("身高: {:.2f}".format(1.68))
+```
+
+  </TabItem>
+  <TabItem value="percent" label="% 格式化">
+
+```py title="Python"
+name = "Alice"
+age = 25
+
+print("我叫 %s，今年 %d 岁" % (name, age))
+print("身高: %.2f 米" % 1.68)
+```
+
+  </TabItem>
+</Tabs>
+
+:::tip[f-string 调试语法 \{x=\}（Python 3.8+）]
 在变量名后加 `=` 可以同时输出变量名和值，非常适合调试：
 
 ```py title="Python"
@@ -297,32 +343,7 @@ for i in range(3):
 ```
 :::
 
-### 2. format() 方法（遗留）
-
-`format()` 是 f-string 之前的格式化方式，新代码应使用 f-string。了解它是因为你会在旧代码中遇到：
-
-```py title="Python"
-name = "Alice"
-age = 25
-
-print("我叫 {}，今年 {} 岁".format(name, age))
-print("我叫 {n}，今年 {a} 岁".format(n=name, a=age))
-print("身高: {:.2f}".format(1.68))
-```
-
-### 3. % 格式化（遗留）
-
-`%` 格式化是 C 风格的格式化，仅在维护旧代码时遇到：
-
-```py title="Python"
-name = "Alice"
-age = 25
-
-print("我叫 %s，今年 %d 岁" % (name, age))
-print("身高: %.2f 米" % 1.68)
-```
-
-:::tip 格式化方式选择
+:::tip[格式化方式选择]
 新代码一律使用 **f-string**，它是最快、最简洁、可读性最好的方式。
 :::
 
@@ -496,7 +517,7 @@ data = {
 rprint(data)  # 自动带语法高亮和缩进
 ```
 
-:::tip rich 的应用场景
+:::tip[rich 的应用场景]
 `rich` 在以下场景特别有用：
 1. **CLI 工具**：让命令行工具输出更专业
 2. **数据可视化**：终端表格、树形结构展示
@@ -505,32 +526,6 @@ rprint(data)  # 自动带语法高亮和缩进
 5. **日志系统**：替代传统 logging 输出
 
 它的 `print` 函数完全兼容内置 `print`，可以作为平滑升级。
-:::
-
-## 文件输出基础（预告）
-
-写入文件是输出的重要场景，这里做一个简单预告，详细内容在"文件操作"章节讲解：
-
-```py title="Python"
-# 写入文本文件
-with open("output.txt", "w", encoding="utf-8") as f:
-    f.write("第一行\n")
-    f.write("第二行\n")
-    # 也可以用 print 写入
-    print("第三行（用 print）", file=f)
-
-# 追加写入
-with open("output.txt", "a", encoding="utf-8") as f:
-    f.write("追加的一行\n")
-
-# 读取文件
-with open("output.txt", "r", encoding="utf-8") as f:
-    content = f.read()
-    print(content)
-```
-
-:::info with 语句与文件操作
-`with` 语句会自动管理资源（自动关闭文件），即使中间发生异常也能保证文件被正确关闭。这是 Python 处理文件、网络连接等资源的推荐方式。
 :::
 
 ## 实战：交互式成绩录入系统
@@ -692,7 +687,7 @@ print_report(demo_students)
 
 <PyodideRunner title="格式化输出练习">
 
-```python
+```py
 # 1. f-string 格式化大全
 name = "Alice"
 score = 95.678

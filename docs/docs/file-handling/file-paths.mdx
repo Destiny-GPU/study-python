@@ -1,8 +1,8 @@
 ---
-sidebar_position: 2
 sidebar_label: '路径处理'
-title: 📂 路径处理
+title: 路径处理
 description: 使用 pathlib 进行现代路径操作，掌握 Path 对象基础用法。
+tags: [文件操作]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 `pathlib` 是 Python 处理文件路径的现代工具，提供面向对象、跨平台的路径处理 API。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **pathlib 优先**：新项目推荐 `Path` 对象，代码更短、跨平台、面向对象
 - **`/` 运算符**：路径拼接，比 `os.path.join` 更直观
 - **属性访问**：`.name` / `.stem` / `.suffix` / `.parent` 替代 `os.path.basename` 等函数
@@ -20,7 +20,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="pathlib 快速体验">
 
-```python
+```py
 from pathlib import Path
 
 # 创建 Path 对象
@@ -75,7 +75,7 @@ parent = full.parent
 exists = full.exists()
 ```
 
-:::tip 推荐使用 pathlib
+:::tip[推荐使用 pathlib]
 对于新项目，**强烈推荐使用 `pathlib`**：代码更短、可读性更好、自动处理平台差异（Windows 用 `\`，Linux/macOS 用 `/`）。`os.path` 仅在维护老代码时才需要。
 :::
 
@@ -159,7 +159,7 @@ data = p.read_bytes()
 print(data)  # b'\x89PNG\r\n\x1a\n'
 ```
 
-:::warning 注意一次性读写
+:::warning[注意一次性读写]
 `read_text()` 和 `write_text()` 是一次性操作，会把整个文件读入/写入内存。**只适合中小文件**，大文件还是要用 `open()` 迭代。
 :::
 
@@ -198,7 +198,7 @@ p.mkdir(parents=True, exist_ok=True)
 # exist_ok=True：目录已存在时不报错
 ```
 
-:::warning 默认参数会报错
+:::warning[默认参数会报错]
 `mkdir()` 默认 `parents=False, exist_ok=False`。如果目录已存在或父目录不存在，会抛出 `FileExistsError` / `FileNotFoundError`。**实际开发中通常都加 `parents=True, exist_ok=True`**。
 :::
 
@@ -241,7 +241,7 @@ for f in Path('.').glob('**/*.py'):
     print(f)
 ```
 
-:::warning glob 结果未排序
+:::warning[glob 结果未排序]
 `Path.glob()` 返回的结果**顺序是不确定的**（取决于文件系统）。如果需要稳定顺序，请用 `sorted(Path('.').glob('*.txt'))`。
 :::
 
@@ -249,14 +249,14 @@ for f in Path('.').glob('**/*.py'):
 
 本节介绍了 pathlib 的基础用法。如需深入了解 pathlib 的完整功能（包括 `PurePath` 体系、目录遍历、路径安全性、跨平台技巧等），请参阅：
 
-:::info 深入学习 pathlib
-**[pathlib 完整教程](/docs/standard-library/pathlib)** — 涵盖 `PurePath` vs `Path`、`Path.walk()` 方法、Python 3.12 新特性、批量重命名实战等高级内容。
+:::info[深入学习 pathlib]
+**[pathlib 完整教程](../standard-library/pathlib)** — 涵盖 `PurePath` vs `Path`、`Path.walk()` 方法、Python 3.12 新特性、批量重命名实战等高级内容。
 :::
 
 - **[pathlib 官方文档](https://docs.python.org/zh-cn/3/library/pathlib.html)** - 完整 API 参考
 - **[PEP 428](https://peps.python.org/pep-0428/)** - pathlib 模块规范
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **优先使用 `pathlib.Path`** 而非 `os.path`，代码更短、跨平台、面向对象
 - **路径拼接用 `/` 运算符**，访问属性用 `.name` / `.stem` / `.suffix` / `.parent`
@@ -264,5 +264,17 @@ for f in Path('.').glob('**/*.py'):
 - **判断存在用 `exists()`**，判断类型用 `is_file()` / `is_dir()`
 - **创建目录用 `mkdir(parents=True, exist_ok=True)`**，删除文件用 `unlink(missing_ok=True)`
 - **查找文件用 `glob()` 当前层，`rglob()` 递归**，结果**未排序**，需要排序用 `sorted()`
+
+## 🎯 动手练习
+
+### 基础题
+
+1. 用 `pathlib` 创建一个多层目录结构 `project/src/tests`，然后用 `glob` 查找所有 `.py` 文件。
+2. 给定一个文件路径，用 pathlib 属性提取文件名、扩展名、父目录，并用 `with_suffix` 将 `.txt` 改为 `.md`。
+
+### 进阶题
+
+3. 写一个函数，接收目录路径，递归统计该目录下所有文件的总大小（字节），并按大小降序返回前 10 个文件。
+4. 用 pathlib 实现一个简单的文件备份工具：比较源目录和目标目录，找出新增和修改的文件并复制过去。
 
 下一章我们将学习如何在 Python 中读写 JSON——一种最流行的数据交换格式。

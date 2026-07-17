@@ -1,8 +1,8 @@
 ---
-sidebar_position: 6
 sidebar_label: '数据类'
-title: 🏗️ 数据类
+title: 数据类
 description: 学习 @dataclass 装饰器、字段默认值、field(default_factory)、frozen、slots、kw_only、__post_init__ 以及与 NamedTuple 的对比。
+tags: [面向对象, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 数据类（dataclass）由 `dataclasses` 模块提供，用于**自动生成**以数据存储为主的类的样板代码：`__init__`、`__repr__`、`__eq__` 等。当我们需要一个"装数据的容器"时，数据类能比手写类省去大量重复样板，并自带合理的默认行为。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - `@dataclass` 自动生成 `__init__`、`__repr__`、`__eq__`，省去样板代码
 - 字段必须有类型注解，带默认值的字段必须放在无默认值字段后面
 - 可变默认值必须用 `field(default_factory=callable)`，避免共享陷阱
@@ -24,7 +24,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="数据类快速体验">
 
-```python
+```py
 from dataclasses import dataclass, field
 
 @dataclass
@@ -90,7 +90,7 @@ print(state == FlightState3D(10.0, 20.0, 50.0))   # 输出：False
 | `__eq__`       | 按所有字段比较（生成 `__eq__`，并把 `__hash__` 设为 None） |
 | `__str__`      | 回退到 `__repr__`                              |
 
-:::note 类型注解是必须的
+:::note[类型注解是必须的]
 数据类的字段**必须**有类型注解（如 `x: float`）。没有注解的赋值会被当作类属性，不进入 `__init__`：
 ```py title="Python"
 @dataclass
@@ -123,7 +123,7 @@ print(cfg1)  # 输出：ExperimentConfig(name='exp_001', model_type='transformer
 print(cfg3)  # 输出：ExperimentConfig(name='exp_003', model_type='cnn', learning_rate=0.005, batch_size=64, epochs=200)
 ```
 
-:::warning 可变默认值陷阱
+:::warning[可变默认值陷阱]
 **不能**用可变对象（list、dict、set）作为默认值，否则所有实例会共享同一个对象：
 
 ```py title="Python"
@@ -192,7 +192,7 @@ s2 = SensorConfig("GPS", 1.0, firmware_version="2.2.0")
 print(s1 == s2)  # 输出：True（firmware_version 因 compare=False 被忽略）
 ```
 
-:::tip field 常用参数
+:::tip[field 常用参数]
 - `default`：不可变默认值
 - `default_factory`：可变默认值工厂
 - `init`（默认 True）：是否进入 `__init__`
@@ -245,7 +245,7 @@ for t in sorted(tasks):
 # Priority(level=3, name='低')
 ```
 
-:::warning order 比较顺序
+:::warning[order 比较顺序]
 `order=True` 按字段声明顺序比较（元组式比较）。如果想让某字段不参与排序，用 `field(compare=False)`。
 :::
 
@@ -272,13 +272,13 @@ print(hash(params))  # 输出：某个整数
 print(params in {SimulationParams(0.01, 10.0), SimulationParams(0.02, 5.0)})  # 输出：True
 ```
 
-:::tip 何时用 frozen？
+:::tip[何时用 frozen？]
 - 当数据类表示**值对象**（如仿真参数、坐标、时间戳）时用 `frozen=True`
 - 需要把实例放入集合、用作字典键时用 `frozen=True`
 - 多线程/并发场景下，不可变对象更安全
 :::
 
-:::warning frozen 字段仍可被内部可变对象修改
+:::warning[frozen 字段仍可被内部可变对象修改]
 `frozen` 只阻止**重新赋值字段**，不能阻止字段引用的可变对象被修改：
 
 ```py title="Python"
@@ -318,7 +318,7 @@ state = FlightState3D(10.0, 20.0, 100.0)
 
 `slots=True` 自动生成 `__slots__`，相比手动声明更省事，且与数据类机制完美兼容。
 
-:::note slots 的注意事项
+:::note[slots 的注意事项]
 - `slots=True` 时不能给实例动态添加属性
 - 子类如果也想要 slots，需要继续声明 `@dataclass(slots=True)`
 - 想同时支持弱引用，加 `weakref_slot=True`（Python 3.11+）
@@ -483,7 +483,7 @@ print(sys.getsizeof(s_nt))  # 输出：64 左右
 print(sys.getsizeof(s_dc) + sys.getsizeof(s_dc.__dict__))  # 输出：更大
 ```
 
-:::tip 选哪个？
+:::tip[选哪个？]
 - **NamedTuple**：数据是"一组值"、需要不可变、需要解包/索引、内存敏感时（如飞行状态坐标、传感器读数）
 - **dataclass**：需要可变、需要默认工厂、需要 `__post_init__`、需要继承、需要更灵活的默认值时
 - **frozen dataclass**：需要不可变但又不想要 tuple 行为（如仿真参数、配置值对象）
@@ -517,7 +517,7 @@ print(sensor)  # 输出：InheritedSensor(name='accelerometer', sampling_rate=50
 #     range: float          # TypeError: non-default argument 'range' follows default argument
 ```
 
-:::note 字段顺序
+:::note[字段顺序]
 子类的字段会**追加**到父类字段之后，整体顺序是"父类字段 + 子类字段"。如果有默认值混排问题，可以用 `kw_only=True` 解决。
 :::
 
@@ -667,7 +667,7 @@ print(env_config.hardware.name, env_config.hardware.port)  # 输出：LIDAR 6543
 print(env_config.debug)  # 输出：True
 ```
 
-:::tip 常用工具函数
+:::tip[常用工具函数]
 - `asdict(obj)`：把数据类实例递归转为字典（适合 JSON 序列化）
 - `astuple(obj)`：转为元组
 - `replace(obj, **changes)`：返回修改部分字段后的新实例（不可变修改）
@@ -701,7 +701,7 @@ print(fc.gains)  # 输出：{'kp': 1.0, 'ki': 0.1, 'kd': 0.01}
 # fc.loop_rate = 200  # FrozenInstanceError
 ```
 
-:::note frozen 中修改字段
+:::note[frozen 中修改字段]
 `frozen=True` 时普通赋值会抛 `FrozenInstanceError`。在 `__post_init__` 中需要修改字段时，用 `object.__setattr__(self, name, value)` 绕过冻结检查（这是合法用法，标准库也这么做）。
 :::
 
@@ -738,7 +738,7 @@ print(fc.gains)  # 输出：{'kp': 1.0, 'ki': 0.1, 'kd': 0.01}
 | 转字典 | `asdict(obj)` | 递归转为嵌套字典 |
 | 修改副本 | `replace(obj, **changes)` | 返回修改后的新实例 |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们学习了数据类，核心要点包括：
 
@@ -752,4 +752,4 @@ print(fc.gains)  # 输出：{'kp': 1.0, 'ki': 0.1, 'kd': 0.01}
 - **`InitVar` 传递参数不存储**：适合校准数据等只需初始化时使用但不保留的数据
 - **NamedTuple vs dataclass**：前者是不可变元组、可解包、更省内存；后者更灵活、可变、可继承
 
-至此，面向对象章节的内容告一段落。综合运用类、继承、多态、封装、魔术方法和数据类，你已经能写出结构清晰、行为地道、可维护性强的 Python 程序了。
+至此，面向对象章节的内容告一段落。综合运用类、继承、多态、封装、魔术方法和数据类，已能写出结构清晰、行为地道、可维护性强的 Python 程序了。

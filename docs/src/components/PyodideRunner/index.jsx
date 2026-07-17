@@ -1,8 +1,23 @@
-import { useState, useCallback, useRef, useEffect, Suspense, lazy } from 'react';
+import { useState, useCallback, useRef, useEffect, Suspense, lazy, Component } from 'react';
 import { loadPyodide } from './loader';
 import styles from './styles.module.css';
 
 const CodeMirror = lazy(() => import('@uiw/react-codemirror'));
+
+class ErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className={styles.editor} style={{ padding: '1rem', color: 'var(--ifm-color-danger)' }}>
+          Editor failed to load. Please refresh the page.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 /**
  * Interactive Python code runner using Pyodide (WebAssembly).
@@ -118,20 +133,22 @@ sys.stderr = sys.__stderr__
       {title && <div className={styles.title}>{title}</div>}
 
       <div className={styles.editorWrapper}>
-        <Suspense fallback={<div className={styles.editor}>Loading editor...</div>}>
-          <CodeMirror
-            value={code}
-            onChange={(value) => setCode(value)}
-            extensions={pythonLang ? [pythonLang()] : []}
-            theme={theme}
-            basicSetup={{
-              lineNumbers: true,
-              foldGutter: false,
-              highlightActiveLine: true,
-            }}
-            className={styles.editor}
-          />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<div className={styles.editor} style={{ padding: '1rem', color: 'var(--ifm-color-text-secondary)' }}>Loading editor...</div>}>
+            <CodeMirror
+              value={code}
+              onChange={(value) => setCode(value)}
+              extensions={pythonLang ? [pythonLang()] : []}
+              theme={theme}
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: false,
+                highlightActiveLine: true,
+              }}
+              className={styles.editor}
+            />
+          </Suspense>
+        </ErrorBoundary>
       </div>
 
       <div className={styles.toolbar}>

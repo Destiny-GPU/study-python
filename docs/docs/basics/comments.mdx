@@ -1,15 +1,15 @@
 ---
-sidebar_position: 6
 sidebar_label: '注释与文档'
-title: 📝 注释与文档字符串
+title: 注释与文档字符串
 description: 学习 Python 注释的多种形式、文档字符串（docstring）的规范写法、Sphinx 风格，以及 __doc__ 属性与 help() 函数的使用。
+tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 📝 注释与文档字符串
 
-注释是写给人看的"代码说明"，而文档字符串（docstring）则是 Python 中一种特殊的"内置文档"机制，能为模块、函数、类、方法生成可访问的说明文档。良好的注释与文档是高质量代码的重要标志。本节将系统讲解 Python 的注释形式、docstring 规范、Sphinx 风格，以及 `__doc__` 与 `help()` 的使用。
+注释是写给人看的"代码说明"，而文档字符串（docstring）则是 Python 中一种特殊的"内置文档"机制，能为模块、函数、类、方法生成可访问的说明文档。良好的注释与文档是高质量代码的重要标志。本节我们将一起探索 Python 的注释形式、docstring 规范、Sphinx 风格，以及 `__doc__` 与 `help()` 的使用。
 
 ## 📌 本节要点
 - 掌握单行注释与多行注释的正确使用方式
@@ -32,7 +32,7 @@ print("Hello")  # 这也是注释，行末注释
 x = 10  # 这是一个变量
 ```
 
-:::tip 注释的使用原则
+:::tip[注释的使用原则]
 - **解释"为什么"**，而不是"做什么"——代码本身已经说明了做什么
 - 在复杂逻辑、巧妙算法、业务规则处添加注释
 - 保持注释与代码同步更新，过时的注释比没有注释更糟糕
@@ -93,7 +93,7 @@ def func():
 print(func.__doc__)  # 这是 docstring，不是注释
 ```
 
-:::warning 三引号字符串 vs 真正的注释
+:::warning[三引号字符串 vs 真正的注释]
 三引号字符串 `"""..."""` 在不被赋值时会被解释器**实际执行**（创建字符串对象然后立即丢弃），而 `#` 注释则被词法分析器完全忽略。虽然性能差异可忽略不计，但在以下场景需要注意：
 - 在函数/类/模块开头的三引号字符串会被识别为 **docstring**，可通过 `__doc__` 访问
 - 普通位置的"多行注释"只是被立即丢弃的字符串表达式
@@ -181,7 +181,7 @@ class BankAccount:
         return self.balance
 ```
 
-:::info docstring 的位置规则
+:::info[docstring 的位置规则]
 docstring 必须位于模块、函数、类、方法定义的**第一行**（紧接 `def` / `class` 声明之后），并且是字符串字面量（单行或三引号）。一旦放在其他位置，就只是普通字符串，不会被识别为文档。
 :::
 
@@ -275,7 +275,7 @@ def fetch_data(url: str, timeout: int = 30) -> dict:
     ...
 ```
 
-:::tip 如何选择 docstring 风格？
+:::tip[如何选择 docstring 风格？]
 - **个人/小项目**：Google 风格可读性最好，推荐入门使用
 - **科学计算/数据处理**：NumPy 风格是行业标准
 - **需要 Sphinx 生成文档**：reStructuredText 风格原生支持
@@ -389,7 +389,7 @@ import math
 # help(math)
 ```
 
-:::info help() 与 __doc__ 的区别
+:::info[help() 与 __doc__ 的区别]
 - `__doc__` 返回原始的 docstring 字符串，需要自己格式化
 - `help()` 自动格式化输出，包含函数签名、模块信息等，更适合交互式查询
 - 在交互式 Python 解释器（REPL）中，`help()` 是学习未知对象的最佳工具
@@ -469,7 +469,7 @@ class User:
 | `.. versionadded::`  | 版本新增       | `.. versionadded:: 2.0`       |
 | `.. deprecated::`    | 已废弃         | `.. deprecated:: 3.0`         |
 
-:::tip 在 Docusaurus 中使用 Admonition
+:::tip[在 Docusaurus 中使用 Admonition]
 Docusaurus 不直接支持 Sphinx 的 `.. note::` 等指令，但提供了类似的 Admonition 语法：`:::note`、`:::tip`、`:::warning`、`:::info`。在写 Docusaurus 文档时优先使用 Admonition。
 :::
 
@@ -564,7 +564,7 @@ def get_discount(level: int) -> float:
     return 1.0
 ```
 
-:::warning 过时注释的危害
+:::warning[过时注释的危害]
 过时的注释比没有注释更糟糕——它会误导读者，让人花费大量时间调试"看似有问题但实际正确"的代码。修改代码时，**同步更新相关注释**。在代码审查（code review）中，过时注释是常见的 review 意见。
 :::
 
@@ -580,7 +580,7 @@ def process_payment(amount: float) -> bool:
     return True
 ```
 
-:::tip 常用注释标记约定
+:::tip[常用注释标记约定]
 - `TODO`: 待完成的功能或优化
 - `FIXME`: 已知的 bug 或问题
 - `HACK`: 临时解决方案（绕过问题）
@@ -737,7 +737,7 @@ Slug: hello-world-我是-alice
 
 <PyodideRunner title="Docstring 演示">
 
-```python
+```py
 # 1. 函数的 docstring 可以通过 __doc__ 访问
 def calculate_bmi(weight: float, height: float) -> float:
     """计算身体质量指数（BMI）

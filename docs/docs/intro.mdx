@@ -1,33 +1,34 @@
 ---
 sidebar_position: 1
 sidebar_label: 'Python 简介'
-title: 🐍 Python 简介
-description: 了解 Python 语言的历史、特点、应用领域与版本演进，开启你的 Python 学习之旅。
+title: Python 简介
+description: 了解 Python 语言的历史、特点、应用领域与版本演进，开启 Python 学习之旅。
+tags: [入门]
 ---
 
-import { LearningPath } from '@site/src/components';
+import { LearningPath, TrackSelector, ProgressTracker } from '@site/src/components';
 
 # 🐍 Python 简介
 
-Python 是一门简洁、优雅且功能强大的通用编程语言。从 Web 开发到人工智能，从自动化脚本到科学计算，Python 几乎无处不在。本教程将带你系统学习 Python 3.12+ 的现代写法，从语法基础一路走向工程实战。
+Python 是一门简洁、优雅且功能强大的通用编程语言。从 Web 开发到人工智能，从自动化脚本到科学计算，Python 几乎无处不在。本教程将系统学习 Python 3.12+ 的现代写法，从语法基础一路走向工程实战。
 
-无论你是零基础的新手，还是希望从其他语言转过来的开发者，Python 都能让你在极短的时间内写出可运行的程序，并用最少的代码表达最清晰的意图。
+无论零基础的新手，还是希望从其他语言转过来的开发者，Python 都能在极短的时间内写出可运行的程序，并用最少的代码表达最清晰的意图。
 
 ## 📌 本节要点
 
-学完本节后，你将了解：
+学完本节后，我们将了解：
 
 - Python 的设计哲学与核心特点
 - Python 的主要应用领域与典型框架
 - Python 版本演进历程与关键特性
 - 本教程的学习路径与使用方法
-- 如何运行你的第一个 Python 程序
+- 如何运行第一个 Python 程序
 
 ## Python 是什么
 
 Python 是一种**解释型、跨平台、动态类型**的高级编程语言。它由 Guido van Rossum（吉多·范罗苏姆）于 1989 年底开始设计，并在 1991 年发布了第一个公开发行版。Python 的设计哲学强调代码的可读性与简洁性，尤其注重用显著的空白来划分语句块，而不是花括号或关键字。
 
-Python 是一门" batteries included "（自带电池）的语言——它的标准库覆盖了网络通信、文件处理、正则表达式、数据序列化、并发编程等几乎所有常见需求，让你无需安装第三方依赖就能完成大量工作。
+Python 是一门" batteries included "（自带电池）的语言——它的标准库覆盖了网络通信、文件处理、正则表达式、数据序列化、并发编程等几乎所有常见需求，无需安装第三方依赖就能完成大量工作。
 
 ```py title="Python"
 # 一段典型的 Python 程序：简洁且易读
@@ -44,8 +45,8 @@ for name in pick_lucky(names, count=2):
 # 输出: 🎉 幸运儿：王五
 ```
 
-:::tip Python 之禅
-在 Python 解释器中输入 `import this`，你会看到一首描述 Python 设计哲学的短诗。其中最著名的一句是：**"Simple is better than complex."（简洁胜于复杂）**。这也是本教程贯穿始终的写作理念。
+:::tip[Python 之禅]
+在 Python 解释器中输入 `import this`，会看到一首描述 Python 设计哲学的短诗。其中最著名的一句是：**"Simple is better than complex."（简洁胜于复杂）**。这也是本教程贯穿始终的写作理念。
 :::
 
 ## Python 的主要特点
@@ -62,7 +63,7 @@ print(f"奇数之和：{total}")
 
 ### 2. 动态类型与渐进式类型注解
 
-变量无需声明类型，但你可以通过**类型注解**让代码更清晰、让工具更好地帮助你。Python 3.12 引入了全新的类型参数语法（PEP 695），让泛型写法前所未有地简洁：
+变量无需声明类型，但我们可以通过**类型注解**让代码更清晰、让工具更好地辅助开发。Python 3.12 引入了全新的类型参数语法（PEP 695），让泛型写法前所未有地简洁：
 
 ```py title="Python"
 # Python 3.12+ 全新的泛型函数语法
@@ -84,7 +85,7 @@ Python 拥有全球第二大包仓库 PyPI（Python Package Index），截至 20
 
 ### 5. 多范式编程
 
-Python 同时支持面向对象、函数式和过程式编程，你可以根据场景灵活选择：
+Python 同时支持面向对象、函数式和过程式编程，我们可以根据场景灵活选择：
 
 ```py title="Python"
 # 面向对象
@@ -121,7 +122,7 @@ Python 的应用范围之广，几乎涵盖了所有主流技术方向：
 | **游戏开发** | Pygame、Arcade | 2D 游戏、教学 |
 | **金融量化** | backtrader、Zipline | 策略回测 |
 
-:::info 一个真实案例
+:::info[一个真实案例]
 Instagram、Dropbox、Spotify、Netflix 等知名公司的核心服务都大量使用 Python。例如 Instagram 用 Django 处理每天数十亿次的请求，证明 Python 在生产环境中同样能扛住高并发。
 :::
 
@@ -205,18 +206,48 @@ print("并发任务全部完成")
 
 <LearningPath />
 
+### 选择你的学习路径
+
+不同的学习背景适合不同的起点。选择最适合你的路径：
+
+<TrackSelector />
+
+<ProgressTracker />
+
+### 学习路径总览
+
+```mermaid
+flowchart TD
+    A["🐍 Python 简介"] --> B["getting-started<br/>环境搭建"]
+    B --> C["basics<br/>基础语法"]
+    C --> D["control-flow<br/>流程控制"]
+    D --> E["data-structures<br/>数据结构"]
+    E --> F["functions<br/>函数"]
+    F --> G["oop<br/>面向对象"]
+    G --> H["modules<br/>模块与包"]
+    H --> I["error-handling<br/>异常处理"]
+    I --> J["file-handling<br/>文件操作"]
+    J --> K["standard-library<br/>标准库"]
+    K --> L["scientific-computing<br/>科学计算"]
+    L --> M["parallel-computing<br/>并行计算"]
+    M --> N["advanced<br/>进阶特性"]
+    N --> O["performance<br/>性能优化"]
+    O --> P["testing-debugging<br/>测试与调试"]
+    P --> Q["project-tutorial<br/>项目实战"]
+```
+
 每篇教程都包含**知识点讲解、可运行代码示例、实战练习**三部分。遇到不懂的地方，不必死磕——先把代码跑起来，理解大致思路，随着后续章节的学习自然会融会贯通。
 
 ## 如何使用本教程
 
 - **边读边敲**：所有代码示例都可直接运行，建议在自己的环境中复现一遍
-- **善用搜索**：左侧的搜索框可以快速定位你关心的知识点
+- **善用搜索**：左侧的搜索框可以快速定位关心的知识点
 - **关注提示框**：`:::tip` 是实用技巧，`:::warning` 是常见坑，`:::note` 是补充说明
-- **尝试修改示例**：把示例里的数字、字符串改成你自己的，观察行为变化
+- **尝试修改示例**：把示例里的数字、字符串改成自己的，观察行为变化
 - **记录学习笔记**：本站的"学习笔记"板块会持续更新一些扩展心得
 
-:::tip 关于 Python 版本
-本教程推荐使用 **Python 3.12 或更高版本**。如果你尚未安装，请先跳转到 [安装 Python 环境](./getting-started/installation.mdx) 完成环境搭建，再回到这里继续。
+:::tip[关于 Python 版本]
+本教程推荐使用 **Python 3.12 或更高版本**。如果尚未安装，请先跳转到 [安装 Python 环境](./getting-started/installation) 完成环境搭建，再回到这里继续。
 :::
 
 ## 第一个程序：Hello, World!
@@ -241,8 +272,8 @@ Hello, World!
 
 虽然只有一行，但它背后完成了：加载 Python 解释器、编译源码为字节码、执行 `print` 函数、向标准输出写入字符串。后续章节会逐步揭开这些机制的神秘面纱。
 
-:::note 接下来
-环境已经就绪的同学可以直接前往 [入门准备](./getting-started/installation.mdx) 章节，正式开始动手实践。
+:::note[接下来]
+环境已经就绪的同学可以直接前往 [入门准备](./getting-started/installation) 章节，正式开始动手实践。
 :::
 
 ## 🎯 动手练习
@@ -250,8 +281,8 @@ Hello, World!
 尝试完成以下练习，巩固本节知识：
 
 1. **运行 Python 之禅**：在终端或 Python 交互环境中输入 `import this`，阅读并理解 Python 的设计哲学
-2. **检查 Python 版本**：在终端运行 `python --version`，确认你使用的是 Python 3.12 或更高版本
-3. **修改 Hello World**：将 `print("Hello, World!")` 修改为打印你自己的名字和一句欢迎语
+2. **检查 Python 版本**：在终端运行 `python --version`，确认使用的是 Python 3.12 或更高版本
+3. **修改 Hello World**：将 `print("Hello, World!")` 修改为打印自己的名字和一句欢迎语
 4. **探索标准库**：尝试运行 `import random; print(random.randint(1, 100))`，体验 Python 标准库的便捷
 
 ## 📚 延伸阅读

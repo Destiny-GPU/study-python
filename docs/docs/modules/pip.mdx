@@ -1,22 +1,21 @@
 ---
-sidebar_position: 3
 sidebar_label: 'pip 包管理'
 title: 🧩 pip 包管理
 description: 掌握 pip install、requirements.txt、pip freeze、pyproject.toml 依赖声明、本地/git 安装、pip-tools 与发布简单包的完整流程。
+tags: [模块与包]
 ---
 
-# 🧩 pip 包管理
+# 🔧 pip 包管理
 
-`pip` 是 Python 官方的包管理工具。它让你能从 [PyPI](https://pypi.org)（Python Package Index）一键安装数十万个第三方库，也可以从本地、Git、URL 安装。本节系统讲解 pip 的核心用法、依赖管理最佳实践，并带你完整走一遍"发布一个简单包"的流程。
+`pip` 是 Python 官方的包管理工具。它能从 [PyPI](https://pypi.org)（Python Package Index）一键安装数十万个第三方库，也可以从本地、Git、URL 安装。本节系统讲解 pip 的核心用法、依赖管理最佳实践，并完整走一遍"发布一个简单包"的流程。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **pip install**：从 PyPI 安装包，支持版本约束、extras、预发布版本
 - **requirements.txt**：配合 `pip install -r` 复现环境，推荐用 **pip-tools** 生成可追溯锁文件
 - **pyproject.toml**：现代依赖声明标准（PEP 621），支持 PEP 508 环境标记
 - **本地/Git 安装**：`pip install .` 本地安装，`pip install git+https://...` 从 Git 安装
 - **发布包流程**：写 `pyproject.toml` → `python -m build` → `twine upload`，先 TestPyPI 后 PyPI
 - **pip-tools**：`pip-compile` 生成精确锁文件，`pip-sync` 同步环境
-:::
 
 ## pip install
 
@@ -51,8 +50,8 @@ pip install "pytest[testing]"
 pip install --user requests
 ```
 
-:::warning 优先使用虚拟环境
-`--user` 仍然会让多个项目共享同一份依赖。**强烈推荐**为每个项目创建独立虚拟环境（见下一节），把依赖完全隔离。本节后续示例都假设你已在虚拟环境中。
+:::warning[优先使用虚拟环境]
+`--user` 仍然会让多个项目共享同一份依赖。**强烈推荐**为每个项目创建独立虚拟环境（见下一节），把依赖完全隔离。本节后续示例都假设已在虚拟环境中。
 :::
 
 ### 安装预发布版本
@@ -126,11 +125,11 @@ requests==2.32.3
 urllib3==2.2.2
 ```
 
-:::warning pip freeze 的局限
-`pip freeze` 输出**所有传递依赖**，包括你项目根本没直接用到的。这会导致：
+:::warning[pip freeze 的局限]
+`pip freeze` 输出**所有传递依赖**，包括项目根本没直接用到的。这会导致：
 - 锁文件冗长难读
 - 升级某个直接依赖时，传递依赖可能不一致
-- 难以分辨哪些是你"真正声明"的依赖
+- 难以分辨哪些是"真正声明"的依赖
 
 推荐使用 **pip-tools**（见下文）生成精确锁文件，同时保留 `requirements.in` 声明的直接依赖。
 :::
@@ -192,7 +191,7 @@ pip check
 requests 2.32.3 requires urllib3<3,>=1.21.1, but you have urllib3 2.0.0 which is incompatible.
 ```
 
-:::tip 把 pip check 加入 CI
+:::tip[把 pip check 加入 CI]
 在 CI 流水线中加入 `pip check` 能在依赖冲突早期就发现问题。例如 GitHub Actions：
 ```yaml
 - run: pip install -r requirements.txt
@@ -269,7 +268,7 @@ git+https://github.com/psf/requests.git@main
 git+ssh://git@github.com/yourorg/private.git@v1.0.0#egg=private
 ```
 
-:::info egg 已废弃但仍可用
+:::info[egg 已废弃但仍可用]
 旧式写法 `?egg=包名` 用于指定包名，PEP 508 之后已不强制要求，pip 会自动从 `pyproject.toml` 推断。但有时从 URL 安装时仍需要它来唯一标识。
 :::
 
@@ -402,7 +401,7 @@ pip-compile --upgrade-package requests
 pip-compile --upgrade
 ```
 
-:::tip pip-compile 的核心价值
+:::tip[pip-compile 的核心价值]
 - **可追溯**：每个传递依赖都标注了"via 哪个直接依赖"
 - **可复现**：精确版本让团队成员、CI、生产环境完全一致
 - **可审计**：配合 `--generate-hashes` 还能校验下载包的完整性，防供应链攻击
@@ -574,7 +573,7 @@ dist/
 └── sayhi_example-0.1.0.tar.gz            ← sdist：源码包，作为兜底
 ```
 
-:::info sdist vs wheel
+:::info[sdist vs wheel]
 - **wheel**（`.whl`）：预构建的二进制包，安装时无需运行 `setup.py`，速度快，是默认首选
 - **sdist**（`.tar.gz`）：源码包，包含完整源码，用于无法用 wheel 安装的平台/版本
 :::
@@ -591,7 +590,7 @@ twine upload --repository testpypi dist/*
 
 在 [test.pypi.org](https://test.pypi.org) 注册账号后，按提示输入用户名/密码或 API token。
 
-:::warning TestPyPI vs PyPI
+:::warning[TestPyPI vs PyPI]
 - **TestPyPI** 是 PyPI 的测试镜像，可以随便上传、覆盖，不会污染正式仓库
 - 首次发布**强烈推荐先发到 TestPyPI**，验证安装无误后再发到正式 PyPI
 - PyPI 一旦上传某个版本号（如 `0.1.0`）就**不能覆盖**，只能发更高版本号
@@ -618,7 +617,7 @@ sayhi Alice -l zh
 twine upload dist/*
 ```
 
-上传后访问 [pypi.org/project/sayhi-example](https://pypi.org/project/sayhi-example/) 查看项目页面，全世界都能用 `pip install sayhi-example` 安装你的包了。
+上传后访问 [pypi.org/project/sayhi-example](https://pypi.org/project/sayhi-example/) 查看项目页面，全世界都能用 `pip install sayhi-example` 安装这个包了。
 
 ### 8. 后续版本发布流程
 
@@ -632,7 +631,7 @@ python -m build
 twine upload dist/*
 ```
 
-:::tip 自动化发布
+:::tip[自动化发布]
 手动发布易出错，可用 GitHub Actions 自动化：
 ```yaml
 # .github/workflows/publish.yml
@@ -694,7 +693,7 @@ jobs:
 - **[Python Packaging Guide](https://packaging.python.org/en/latest/)** - Python 打包官方指南
 - **[PyPI 官方](https://pypi.org)** - Python Package Index
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`pip install` 从 PyPI 安装**，支持版本约束（`==`、`>=`、`~=`）、extras（`[all]`）、预发布版本（`--pre`）
 - **`requirements.txt` 配合 `pip install -r` 复现环境**，但推荐用 **pip-tools** 生成可追溯的锁文件

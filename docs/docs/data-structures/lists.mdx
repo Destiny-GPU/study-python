@@ -1,8 +1,8 @@
 ---
-sidebar_position: 1
 sidebar_label: '列表'
-title: 📦 列表（List）
+title: 列表（List）
 description: Python 列表是最常用的可变序列，支持任意类型元素的有序存储与灵活的增删改查操作。
+tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,9 +11,18 @@ import { PyodideRunner } from '@site/src/components';
 
 列表（`list`）是 Python 中最灵活、使用频率最高的内置数据结构之一。它是一个**有序、可变**的序列容器，能够容纳任意类型的对象，并支持高效的尾部增删以及丰富的操作方法。掌握列表是写出 Pythonic 代码的第一步。
 
+## 📌 本节要点
+
+- 列表是有序、可变序列，支持任意类型元素混存
+- 增删改查：`append`、`insert`、`pop`、`remove`、`del`
+- 切片 `[start:stop:step]` 实现子序列提取、步长遍历、反转
+- 列表推导式 `[expr for x in iter if cond]` 是创建列表的 Pythonic 方式
+- 浅拷贝 vs 深拷贝：`list()` / `[:]` 浅拷贝，`copy.deepcopy()` 深拷贝
+- `sort()` 原地排序 vs `sorted()` 返回新列表，`key` 参数自定义排序规则
+
 <PyodideRunner title="列表操作快速体验">
 
-```python
+```py
 # 列表推导式与常用操作
 numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -59,7 +68,7 @@ mixed = [1, "two", 3.0, [4, 5], True]
 print(mixed)  # [1, 'two', 3.0, [4, 5], True]
 ```
 
-:::tip 使用类型注解
+:::tip[使用类型注解]
 在 Python 3.9+ 中，可以直接使用 `list[int]` 作为类型注解，无需从 `typing` 导入 `List`。Python 3.12 进一步强化了对泛型容器的注解支持。
 :::
 
@@ -86,7 +95,7 @@ print(nums[::2])   # [10, 30, 50]  步长为 2
 print(nums[::-1])  # [60, 50, 40, 30, 20, 10]  反转列表
 ```
 
-:::warning 索引越界
+:::warning[索引越界]
 直接用超出范围的索引访问会抛出 `IndexError`。切片则不会越界报错，而是返回可用的部分，这是切片和索引的一个重要差异。
 :::
 
@@ -134,7 +143,7 @@ more = fruits + ["fig"]
 print(more[-1])  # fig
 ```
 
-:::info append vs extend
+:::info[append vs extend]
 `append` 把参数作为**一个整体**加进去；`extend` 把可迭代对象**展开**逐个追加。混用是初学者常见的坑。
 :::
 
@@ -273,7 +282,7 @@ words.sort(key=len)
 print(words)  # ['date', 'apple', 'banana', 'cherry']
 ```
 
-:::tip key 函数
+:::tip[key 函数]
 `key` 接受一个函数，对每个元素计算"排序键"。常用 `len`、`str.lower`、`abs`，或用 `lambda` 自定义。
 :::
 
@@ -318,13 +327,13 @@ deep[0][0] = 99
 print(original)  # [[1, 2], [3, 4]]  完全独立
 ```
 
-:::warning 嵌套结构的拷贝陷阱
+:::warning[嵌套结构的拷贝陷阱]
 对于一维列表，浅拷贝就够用。但只要列表里装着可变对象（嵌套列表、字典等），想让副本完全独立就必须用 `copy.deepcopy`。
 :::
 
 ## 列表推导式预告
 
-列表推导式是 Python 中创建列表的优雅写法，本节先做铺垫，详细内容见[推导式](./comprehensions.mdx)一章。
+列表推导式是 Python 中创建列表的优雅写法，本节先做铺垫，详细内容见[推导式](./comprehensions)一章。
 
 ```py title="Python"
 # 传统写法
@@ -350,7 +359,7 @@ print("date" not in fruits)  # True
 print(len(fruits))  # 3
 ```
 
-:::info 线性查找
+:::info[线性查找]
 列表的 `in` 操作是线性扫描，时间复杂度 O(n)。如果需要频繁判断成员存在，建议改用集合（`set`），其查找是 O(1)。
 :::
 
@@ -383,7 +392,7 @@ identity = [[1 if i == j else 0 for j in range(3)] for i in range(3)]
 print(identity)  # [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 ```
 
-:::warning 初始化嵌套列表的陷阱
+:::warning[初始化嵌套列表的陷阱]
 不要用 `[[0] * 3] * 3` 创建矩阵，外层的三个引用指向同一个内层列表，改一行会全跟着变。应使用推导式：`[[0] * 3 for _ in range(3)]`。
 :::
 
@@ -449,16 +458,111 @@ if __name__ == "__main__":
   2. [ ] (P2) 复习切片操作
 ```
 
-:::tip 真实场景
+:::tip[真实场景]
 实际项目中，待办事项更适合用字典或自定义类来表达，本例主要演示列表作为容器的用法。`enumerate(todos, start=1)` 是生成带序号输出的常用技巧。
 :::
 
+## ⚡ 性能对比
+
+### 列表 vs 其他数据结构
+
+| 数据结构 | 成员查找 | 末尾追加 | 任意插入 | 适用场景 |
+|----------|----------|----------|----------|----------|
+| `list` | O(n) | O(1) | O(n) | 需要按索引访问的有序集合 |
+| `tuple` | O(n) | N/A | N/A | 不可变序列，字典键 |
+| `set` | O(1) | O(1) | O(n) | 去重、成员测试 |
+| `deque` | O(n) | O(1) | O(n) | 频繁头部操作 |
+
+### 常见操作性能对比
+
+```py title="Python"
+import timeit
+from collections import deque
+
+# 列表头部插入 vs deque 头部插入
+list_time = timeit.timeit('lst.insert(0, 1)', setup='lst = list(range(10000))', number=1000)
+deque_time = timeit.timeit('d.appendleft(1)', setup='from collections import deque; d = deque(range(10000))', number=1000)
+
+print(f"列表头部插入: {list_time:.4f}s")
+print(f"deque 头部插入: {deque_time:.4f}s")
+print(f"deque 快 {list_time/deque_time:.1f} 倍")
+```
+
+## ✅ 最佳实践
+
+### 1. 选择合适的数据结构
+
+```py title="Python"
+# ❌ 需要频繁成员测试时使用列表
+if item in large_list:  # O(n)
+    process(item)
+
+# ✅ 转换为 set 进行 O(1) 成员测试
+large_set = set(large_list)
+if item in large_set:  # O(1)
+    process(item)
+```
+
+### 2. 避免在循环中修改列表
+
+```py title="Python"
+# ❌ 危险：边遍历边删除
+nums = [1, 2, 3, 4, 5]
+for n in nums:
+    if n % 2 == 0:
+        nums.remove(n)  # 可能跳过元素
+
+# ✅ 正确：使用列表推导式创建新列表
+nums = [n for n in nums if n % 2 != 0]
+```
+
+### 3. 使用生成器处理大数据
+
+```py title="Python"
+# ❌ 内存占用大
+def get_squares(n):
+    return [x**2 for x in range(n)]
+
+# ✅ 惰性求值，内存友好
+def get_squares(n):
+    return (x**2 for x in range(n))
+```
+
+### 4. 优先使用内置函数
+
+```py title="Python"
+# ❌ 手动实现
+total = 0
+for x in nums:
+    total += x
+
+# ✅ 使用内置 sum
+total = sum(nums)
+```
+
 ## 🎯 动手练习
 
-1. **列表去重**：分别使用 `set()`、`dict.fromkeys()` 和循环实现列表去重，对比保序与非保序的差异
-2. **矩阵操作**：编写函数实现矩阵转置（使用嵌套推导式和 `zip(*matrix)` 两种方式）
-3. **浅拷贝陷阱**：创建一个嵌套列表 `[[1, 2], [3, 4]]`，演示浅拷贝和深拷贝的区别
-4. **性能对比**：使用 `timeit` 对比 `list.insert(0, x)` 和 `deque.appendleft(x)` 的性能差异
+### 🟢 入门题
+
+1. **列表创建**：创建一个包含 5 个数字的列表，然后分别使用 `append()`、`insert()`、`extend()` 添加元素
+2. **切片练习**：使用切片操作提取列表的奇数索引元素和偶数索引元素
+3. **列表排序**：使用 `sort()` 和 `sorted()` 对列表进行排序，对比原地排序和返回新列表的区别
+
+### 🟡 进阶题
+
+4. **列表去重**：分别使用 `set()`、`dict.fromkeys()` 和循环实现列表去重，对比保序与非保序的差异
+5. **矩阵操作**：编写函数实现矩阵转置（使用嵌套推导式和 `zip(*matrix)` 两种方式）
+6. **浅拷贝陷阱**：创建一个嵌套列表 `[[1, 2], [3, 4]]`，演示浅拷贝和深拷贝的区别
+
+### 🔴 挑战题
+
+7. **性能对比**：使用 `timeit` 对比 `list.insert(0, x)` 和 `deque.appendleft(x)` 的性能差异
+8. **自定义列表**：实现一个支持负数索引的自定义列表类（`MyList`）
+
+### 💭 思考题
+
+9. 为什么 Python 的列表使用动态数组而不是链表？这对性能有什么影响？
+10. 列表的 `in` 操作时间复杂度是 O(n)，如何优化频繁的成员测试？
 
 ## 📚 延伸阅读
 
@@ -466,6 +570,13 @@ if __name__ == "__main__":
 - [PEP 8 - 编程建议](https://peps.python.org/pep-0008/#programming-recommendations) - 列表操作的最佳实践
 - [collections.deque 文档](https://docs.python.org/zh-cn/3/library/collections.html#collections.deque) - 双端队列详解
 - [copy 模块文档](https://docs.python.org/zh-cn/3/library/copy.html) - 浅拷贝与深拷贝机制
+
+## 🔗 进阶话题
+
+如需深入了解：
+- [性能分析与优化](/docs/performance/profiling) - 掌握 cProfile、line_profiler 等性能分析工具
+- [推导式进阶](/docs/data-structures/comprehensions) - 列表、集合、字典推导式的高级用法
+- [Pythonic 风格](/docs/advanced/pythonic) - 编写地道的 Python 代码
 
 ## 📊 速查表
 

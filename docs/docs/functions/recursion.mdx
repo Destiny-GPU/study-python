@@ -1,19 +1,27 @@
 ---
-sidebar_position: 5
 sidebar_label: '递归'
-title: ⚙️ 递归
+title: 递归
 description: 学习递归思想、基线条件、递归深度限制、典型应用（飞行包线计算/轨迹规划/组件层级遍历/决策树）以及递归与迭代的对比
+tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # ⚙️ 递归
 
-递归（recursion）是一种函数调用自身来解决问题的编程技巧。它特别适合处理可以分解为**同类型子问题**的场景，例如飞行包线边界计算、递归轨迹规划、飞行系统组件层级遍历等。掌握递归能让你以更优雅的方式解决许多复杂问题，但同时要注意 Python 中的递归深度限制和性能问题。
+递归（recursion）是一种函数调用自身来解决问题的编程技巧。它特别适合处理可以分解为**同类型子问题**的场景，例如飞行包线边界计算、递归轨迹规划、飞行系统组件层级遍历等。掌握递归能以更优雅的方式解决许多复杂问题，但同时要注意 Python 中的递归深度限制和性能问题。
+
+## 📌 本节要点
+
+- 递归三要素：基线条件、递归调用、问题规模缩小
+- `sys.getrecursionlimit()` 查看递归深度限制，`@lru_cache` 记忆化避免重复计算
+- 树形结构遍历、分治算法、回溯问题是递归的经典应用场景
+- 递归转迭代：用显式栈替代系统调用栈，突破深度限制
+- 尾递归在 Python 中不被优化，了解其原理但不必强求
 
 <PyodideRunner title="递归快速体验">
 
-```python
+```py
 from functools import lru_cache
 
 # 阶乘函数
@@ -63,6 +71,19 @@ hanoi(3, "A", "C", "B")
 1. **基线条件（base case）**：不再递归，直接返回结果的终止条件
 2. **递归条件（recursive case）**：调用自身处理规模更小的子问题
 
+递归调用栈（以 factorial(4) 为例）：
+
+```mermaid
+graph TD
+    A["factorial(4)"] --> B["4 * factorial(3)"]
+    B --> C["3 * factorial(2)"]
+    C --> D["2 * factorial(1)"]
+    D --> E["factorial(1) = 1  基准情况"]
+    E --> F["返回 2 * 1 = 2"]
+    F --> G["返回 3 * 2 = 6"]
+    G --> H["返回 4 * 6 = 24"]
+```
+
 ```py title="Python"
 import numpy as np
 
@@ -86,7 +107,7 @@ countdown_altitude(5000)
 # 已到达地面！
 ```
 
-:::warning 必须有基线条件
+:::warning[必须有基线条件]
 没有基线条件的递归会无限调用自己，最终触发 `RecursionError`：
 ```py title="Python"
 def infinite_check():
@@ -154,7 +175,7 @@ sys.setrecursionlimit(5000)  # 调高上限
 print(recursive_altitude_check(2000))  # 输出：done
 ```
 
-:::warning 不要盲目调高上限
+:::warning[不要盲目调高上限]
 Python 没有真正的尾调用优化（TCO），每次递归调用都会在调用栈上保留帧。调得过高可能导致：
 - 栈溢出（segfault，解释器崩溃）
 - 内存暴涨
@@ -458,7 +479,7 @@ def compute_max_speed_tail(
 print(compute_max_speed_tail(5000))  # 输出：约 207.9
 ```
 
-:::warning Python 没有尾调用优化
+:::warning[Python 没有尾调用优化]
 理论上尾递归可以转化为循环，不增加调用栈深度。但 **CPython 解释器不做尾调用优化**，因此尾递归在 Python 中并不能避免 `RecursionError`。
 
 如果递归深度可能很大，应该手动改写为循环：
@@ -508,7 +529,7 @@ print(f"递归：{sum_energy_recursive(energy_data):.1f}")  # 输出：1001.4
 print(f"迭代：{sum_energy_iterative(energy_data):.1f}")  # 输出：1001.4
 ```
 
-:::tip 选择建议
+:::tip[选择建议]
 - **天然递归结构**（树、图、分治、回溯）：用递归更自然
 - **简单循环**（求和、累加、计数）：用迭代更高效
 - **递归深度大**（> 几百层）：必须用迭代
@@ -566,7 +587,7 @@ print(f"原地排序：{data}")
 # 输出：[900, 1500, 2100, 3200, 3200, 4800, 5600]
 ```
 
-:::info 分治与递归
+:::info[分治与递归]
 快速排序、归并排序、二分查找都是典型的分治算法，思路都是：
 1. **分**：把问题分解为子问题
 2. **治**：递归求解子问题

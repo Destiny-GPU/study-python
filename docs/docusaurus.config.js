@@ -16,8 +16,14 @@ const config = {
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
-    faster: true, // Enable SWC, Rspack, LightningCSS for faster builds
+    v4: {
+      removeLegacyPostBuildHeadAttribute: true,
+      useCssCascadeLayers: true,
+      siteStorageNamespacing: true,
+      fasterByDefault: true,
+      mdx1CompatDisabledByDefault: true,
+    },
+    faster: true,
   },
 
   // 生产环境 URL（Vercel 部署后可在此修改为自定义域名）
@@ -29,6 +35,8 @@ const config = {
   organizationName: 'Destiny-GPU',
   projectName: 'study-python',
   trailingSlash: false,
+
+  titleDelimiter: ' · ',
 
   onBrokenLinks: 'throw',
 
@@ -57,6 +65,8 @@ const config = {
         docs: {
           sidebarPath: './sidebars.js',
           editUrl,
+          showLastUpdateTime: true,
+          showLastUpdateAuthor: true,
         },
         blog: {
           showReadingTime: true,
@@ -80,18 +90,50 @@ const config = {
     ],
   ],
 
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: [
+    '@docusaurus/theme-mermaid',
+    ['@easyops-cn/docusaurus-search-local', {
+      hashed: true,
+      language: ['zh', 'en'],
+      highlightSearchTermsOnTargetPage: true,
+      explicitSearchResultPath: true,
+    }],
+  ],
 
-  scripts: [
+  stylesheets: [
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+  ],
+
+  headTags: [
     {
-      src: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
-      async: true,
+      tagName: 'link',
+      attributes: {
+        rel: 'preconnect',
+        href: 'https://fonts.googleapis.com',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossorigin: true,
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'preload',
+        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
+        as: 'style',
+      },
     },
   ],
 
   clientModules: [
     require.resolve('./src/clientModules/progressBar.js'),
     require.resolve('./src/clientModules/constellation.js'),
+    require.resolve('./src/clientModules/progressTracker.js'),
   ],
 
   themeConfig:
@@ -101,6 +143,15 @@ const config = {
       metadata: [
         {name: 'author', content: 'Destiny - 自动控制 + 强化学习博士'},
         {name: 'keywords', content: 'Python, 强化学习, 飞行控制, 深度学习, 自动控制, 智能决策'},
+        {property: 'og:type', content: 'website'},
+        {property: 'og:title', content: 'Study Python - 从入门到精通的 Python 系统学习之旅'},
+        {property: 'og:description', content: '现代 Python 学习指南，从零开始到高级特性，包含丰富的代码示例和实战项目。'},
+        {property: 'og:image', content: 'https://study-python-zj.pages.dev/img/docusaurus-social-card.jpg'},
+        {name: 'twitter:card', content: 'summary_large_image'},
+        {name: 'twitter:site', content: '@Destiny_GPU'},
+        {name: 'twitter:title', content: 'Study Python - 从入门到精通的 Python 系统学习之旅'},
+        {name: 'twitter:description', content: '现代 Python 学习指南，从零开始到高级特性，包含丰富的代码示例和实战项目。'},
+        {name: 'twitter:image', content: 'https://study-python-zj.pages.dev/img/docusaurus-social-card.jpg'},
       ],
       colorMode: {
         respectPrefersColorScheme: true,

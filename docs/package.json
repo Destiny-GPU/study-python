@@ -4,12 +4,17 @@
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
+    "generate-doc-tags": "python3 scripts/generate-doc-tags.py",
+    "prestart": "npm run generate-doc-tags",
     "start": "docusaurus start",
+    "prebuild": "npm run generate-doc-tags",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
-    "serve": "docusaurus serve"
+    "serve": "docusaurus serve",
+    "lint": "markdownlint-cli2 \"docs/**/*.mdx\" \"blog/**/*.mdx\"",
+    "lint:fix": "markdownlint-cli2 --fix \"docs/**/*.mdx\" \"blog/**/*.mdx\""
   },
   "dependencies": {
     "@codemirror/lang-python": "^6.2.1",
@@ -26,7 +31,10 @@
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.2",
-    "@docusaurus/types": "^3.10.2"
+    "@docusaurus/types": "^3.10.2",
+    "@easyops-cn/docusaurus-search-local": "^0.55.2",
+    "lunr-languages": "^1.20.0",
+    "markdownlint-cli2": "^0.23.0"
   },
   "browserslist": {
     "production": [

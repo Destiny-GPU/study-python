@@ -1,0 +1,518 @@
+---
+sidebar_label: 'pytest 进阶'
+title: 🧪 pytest 进阶
+description: 掌握 Mock 模拟、conftest 进阶、markers、覆盖率和常用插件，让测试更专业。
+tags: [测试调试]
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# 🧪 pytest 进阶
+
+## 📌 本节要点
+
+- 使用 `unittest.mock` 模拟外部依赖（数据库、API）
+- conftest.py 进阶：fixture 复用、自动应用、依赖链、teardown
+- markers 机制：跳过、条件跳过、预期失败、自定义标记
+- 测试覆盖率配置与报告解读
+- 常用 pytest 插件：并行测试与随机顺序
+- 实战：为网络请求函数编写完整测试套件
+
+---
+
+## Mock 与 patch
+
+"Mock"指**用假对象替代真实依赖**，让测试不依赖外部服务，专注于被测逻辑本身。
+
+### patch 装饰器
+
+`unittest.mock.patch` 用装饰器替换目标对象，测试结束后自动恢复：
+
+```py title="Python"
+from unittest.mock import patch
+import requests
+
+def get_user_info(user_id):
+    resp = requests.get(f"https://api.example.com/users/{user_id}")
+    return resp.json()["name"]
+
+@patch("your_module.requests.get")
+def test_get_user_info(mock_get):
+    mock_get.return_value.json.return_value = {"name": "Alice"}
+    result = get_user_info(1)
+    assert result == "Alice"
+    mock_get.assert_called_once_with("https://api.example.com/users/1")
+```
+
+### MagicMock 配置
+
+```py title="Python"
+from unittest.mock import MagicMock
+
+mock = MagicMock()
+
+# return_value — 模拟函数返回值
+mock.return_value = 42
+assert mock() == 42
+
+# side_effect — 按序返回或抛异常
+mock.side_effect = [1, 2, 3]
+assert mock() == 1
+mock.side_effect = ValueError("bad input")
+# mock() 会抛出 ValueError
+
+# 调用断言
+mock("hello")
+mock.assert_called_with("hello")
+assert mock.call_count == 1
+```
+
+### patch 上下文管理器
+
+```py title="Python"
+from unittest.mock import patch
+
+def test_with_context():
+    with patch("your_module.requests.get") as mock_get:
+        mock_get.return_value.json.return_value = {"status": "ok"}
+        result = your_function()
+        assert result["status"] == "ok"
+    # 退出 with 后，requests.get 恢复原样
+```
+
+### PyodideRunner 交互示例：模拟天气 API
+
+<PyodideRunner
+  id="mock-weather"
+  title="模拟天气 API 查询"
+  code={`from unittest.mock import MagicMock, patch
+
+def get_weather(city):
+    import requests
+    resp = requests.get(f"https://wttr.in/{city}?format=j1")
+    data = resp.json()
+    return data["current_condition"][0]["temp_C"]
+
+with patch("requests.get") as mock_get:
+    mock_get.return_value.json.return_value = {
+        "current_condition": [{"temp_C": "25"}]
+    }
+    result = get_weather("Beijing")
+    print(f"北京当前温度: {result}°C")
+    print(f"mock 调用次数: {mock_get.call_count}")
+    mock_get.assert_called_once_with("https://wttr.in/Beijing?format=j1")
+    print("断言全部通过")`}
+/>
+
+---
+
+## conftest.py 进阶
+
+conftest.py 是 pytest 的"共享配置中心"，用于定义 fixture、hook 和插件注册。
+
+### fixture 复用
+
+根目录的 conftest.py 对所有测试生效，子目录的只对当前目录生效：
+
+```
+tests/
+├── conftest.py          # 全局（所有测试可用）
+├── test_auth.py
+└── unit/
+    ├── conftest.py      # 仅 unit/ 目录
+    └── test_utils.py
+```
+
+```py title="Python"
+# tests/conftest.py（全局）
+import pytest
+
+@pytest.fixture
+def sample_user():
+    return {"id": 1, "name": "Alice", "role": "admin"}
+
+# tests/test_auth.py（无需导入，直接使用）
+def test_user_role(sample_user):
+    assert sample_user["role"] == "admin"
+```
+
+### autouse=True 自动应用
+
+`autouse=True` 让 fixture 在所有测试中自动运行，无需显式声明：
+
+```py title="Python"
+import pytest, tempfile, os
+
+@pytest.fixture(autouse=True)
+def setup_temp_database():
+    """每个测试前创建临时数据库，测试后清理"""
+    db_path = tempfile.mktemp(suffix=".db")
+    os.environ["TEST_DB_PATH"] = db_path
+    yield  # 测试执行
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+# 无需在参数中声明，所有测试自动拥有临时数据库
+def test_create_table():
+    import sqlite3
+    conn = sqlite3.connect(os.environ["TEST_DB_PATH"])
+    conn.execute("CREATE TABLE users (id INTEGER, name TEXT)")
+    conn.close()
+```
+
+### fixture 依赖链
+
+fixture 可以调用其他 fixture，形成依赖链：
+
+```py title="Python"
+import pytest
+
+@pytest.fixture
+def db_config():
+    return {"host": "localhost", "port": 5432, "database": "test_db"}
+
+@pytest.fixture
+def db_connection(db_config):
+    """依赖 db_config，建立数据库连接"""
+    class FakeConn:
+        def __init__(self, config):
+            self.config = config
+        def query(self, sql):
+            return f"Executed: {sql}"
+        def close(self):
+            print("连接已关闭")
+    conn = FakeConn(db_config)
+    yield conn
+    conn.close()
+
+def test_query(db_connection):
+    result = db_connection.query("SELECT * FROM users")
+    assert "SELECT * FROM users" in result
+```
+
+### yield fixture 的清理逻辑
+
+`yield` 将 fixture 分为 setup/teardown 两阶段：
+
+```py title="Python"
+import pytest
+
+@pytest.fixture
+def api_client():
+    client = {"token": None, "logged_in": False}
+    # —— setup ——
+    client["token"] = "abc123"
+    client["logged_in"] = True
+    yield client
+    # —— teardown ——
+    client["token"] = None
+    client["logged_in"] = False
+
+def test_api_call(api_client):
+    assert api_client["logged_in"] is True
+    assert api_client["token"] == "abc123"
+```
+
+---
+
+## 常用 markers
+
+### 跳过与条件跳过
+
+```py title="Python"
+import sys, pytest
+
+@pytest.mark.skip(reason="功能尚未实现")
+def test_future_feature():
+    pass
+
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows 不支持")
+def test_linux_only():
+    pass
+```
+
+### 预期失败
+
+```py title="Python"
+@pytest.mark.xfail(strict=True)
+def test_known_bug():
+    """strict=True：测试意外通过时报错"""
+    result = 1 / 0
+
+@pytest.mark.xfail(reason="第三方库 bug，待修复")
+def test_workaround():
+    assert False
+```
+
+### 自定义 markers
+
+在 `pyproject.toml` 中注册：
+
+```py title="Python"
+# pyproject.toml
+[tool.pytest.ini_options]
+markers = [
+    "slow: 运行较慢的测试，CI 中可选跳过",
+    "integration: 需要外部服务的集成测试",
+    "smoke: 冒烟测试，每次提交必跑",
+]
+```
+
+使用自定义标记：
+
+```py title="Python"
+@pytest.mark.smoke
+def test_login():
+    assert True
+
+@pytest.mark.slow
+def test_large_dataset():
+    import time; time.sleep(2)
+    assert True
+```
+
+### 运行时过滤
+
+```bash title="Shell"
+pytest -m slow              # 只运行 slow 测试
+pytest -m "not slow"        # 排除 slow 测试
+pytest -m "smoke and not integration"  # 组合条件
+```
+
+---
+
+## 测试覆盖率
+
+覆盖率衡量测试执行了多少源代码，帮助发现未覆盖的代码。
+
+### 安装与生成报告
+
+```bash title="Shell"
+uv add --dev pytest-cov
+
+# 终端摘要（含未覆盖行号）
+pytest --cov=src --cov-report=term-missing
+
+# HTML 报告
+pytest --cov=src --cov-report=html
+```
+
+### 覆盖率报告解读
+
+```
+Name                     Stmts   Miss  Cover   Missing
+------------------------------------------------------
+src/study_python/calc.py     15      3    80%   42-44, 50
+src/study_python/utils.py    20      5    75%   12, 18-20
+------------------------------------------------------
+TOTAL                        35      8    77%
+```
+
+- **Stmts**：语句总数 | **Miss**：未覆盖数 | **Cover**：覆盖率 | **Missing**：具体行号
+
+### 排除代码
+
+```py title="Python"
+def calculate_area(radius):
+    return 3.14159 * radius ** 2
+
+if __name__ == "__main__":  # pragma: no cover
+    print(calculate_area(5))
+```
+
+### 覆盖率阈值
+
+```bash title="Shell"
+pytest --cov=src --cov-fail-under=80
+```
+
+`pyproject.toml` 中永久配置：
+
+```py title="Python"
+# pyproject.toml
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80",
+]
+```
+
+---
+
+## 常用插件
+
+### pytest-xdist：并行测试
+
+```bash title="Shell"
+uv add --dev pytest-xdist
+pytest -n auto      # 自动检测 CPU 核心数
+pytest -n 4         # 指定 4 个 worker
+```
+
+:::warning[注意]
+并行测试要求测试之间没有共享状态（文件、数据库、全局变量），否则可能产生竞态条件。
+:::
+
+### pytest-randomly：随机测试顺序
+
+```bash title="Shell"
+uv add --dev pytest-randomly
+pytest                          # 随机顺序
+pytest --randomly-seed=12345    # 指定种子复现
+```
+
+如果测试 A 必须在测试 B 之前运行才通过，说明存在隐式依赖——应修复。
+
+---
+
+## 实战：网络请求函数完整测试
+
+**被测函数：**
+
+```py title="Python"
+# src/study_python/weather.py
+import requests
+
+def fetch_weather(city):
+    """获取城市天气信息"""
+    try:
+        resp = requests.get(f"https://wttr.in/{city}?format=j1", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        return {
+            "city": city,
+            "temp_c": data["current_condition"][0]["temp_C"],
+            "description": data["current_condition"][0]["weatherDesc"][0]["value"],
+        }
+    except requests.Timeout:
+        raise ConnectionError("请求超时")
+    except requests.HTTPError as e:
+        raise ConnectionError(f"HTTP 错误: {e.response.status_code}")
+    except (KeyError, IndexError):
+        raise ValueError("数据格式异常")
+```
+
+**完整测试文件：**
+
+```py title="Python"
+# tests/test_weather.py
+import pytest
+from unittest.mock import patch, MagicMock
+from src.study_python.weather import fetch_weather
+
+def _ok_resp(temp="28", desc="Sunny"):
+    """构造成功响应 mock"""
+    resp = MagicMock()
+    resp.raise_for_status = MagicMock()
+    resp.json.return_value = {
+        "current_condition": [{"temp_C": temp, "weatherDesc": [{"value": desc}]}]
+    }
+    return resp
+
+def test_fetch_weather_success():
+    with patch("src.study_python.weather.requests.get", return_value=_ok_resp()):
+        result = fetch_weather("Beijing")
+        assert result["city"] == "Beijing"
+        assert result["temp_c"] == "28"
+
+def test_fetch_weather_timeout():
+    with patch("src.study_python.weather.requests.get") as mock_get:
+        mock_get.side_effect = __import__("requests").Timeout("timed out")
+        with pytest.raises(ConnectionError, match="请求超时"):
+            fetch_weather("Beijing")
+
+def test_fetch_weather_http_error():
+    with patch("src.study_python.weather.requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = __import__("requests").HTTPError(
+            response=MagicMock(status_code=404)
+        )
+        mock_get.return_value = mock_resp
+        with pytest.raises(ConnectionError, match="HTTP 错误: 404"):
+            fetch_weather("InvalidCity")
+
+def test_fetch_weather_bad_json():
+    with patch("src.study_python.weather.requests.get") as mock_get:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"unexpected": "format"}
+        mock_get.return_value = mock_resp
+        with pytest.raises(ValueError, match="数据格式异常"):
+            fetch_weather("Beijing")
+
+def test_fetch_weather_correct_url():
+    with patch("src.study_python.weather.requests.get") as mock_get:
+        mock_get.return_value = _ok_resp("15", "Cloudy")
+        fetch_weather("Shanghai")
+        mock_get.assert_called_once_with("https://wttr.in/Shanghai?format=j1", timeout=5)
+```
+
+---
+
+## 🎯 动手练习
+
+1. **Mock 缓存服务**：mock `get_from_cache(key)` 返回 `None`，验证被测函数调用了数据库查询。
+2. **自定义 marker**：注册 `slow` marker，写两个测试并用 `-m "not slow"` 过滤运行。
+3. **覆盖率报告**：运行 `pytest --cov=src/study_python --cov-report=term-missing`，补写未覆盖的测试。
+
+---
+
+## 📚 延伸阅读
+
+- [pytest 官方文档 — Mock](https://docs.pytest.org/en/latest/how-to/monkeypatch.html)
+- [unittest.mock 官方文档](https://docs.python.org/3/library/unittest.mock.html)
+- [pytest-cov 文档](https://pytest-cov.readthedocs.io/)
+- [pytest-xdist 文档](https://pytest-xdist.readthedocs.io/)
+
+---
+
+## 📊 速查表
+
+### Mock 常用方法
+
+| 方法 | 说明 |
+|------|------|
+| `mock.return_value = x` | 设置返回值 |
+| `mock.side_effect = [a, b]` | 按顺序返回值 |
+| `mock.side_effect = Exception()` | 抛出异常 |
+| `mock.assert_called_with(...)` | 断言调用参数 |
+| `mock.assert_called_once()` | 断言只调用一次 |
+| `mock.assert_not_called()` | 断言未被调用 |
+| `mock.call_count` | 调用次数 |
+| `mock.reset_mock()` | 重置状态 |
+
+### Markers 速查
+
+| Marker | 用途 |
+|--------|------|
+| `@pytest.mark.skip(reason=...)` | 无条件跳过 |
+| `@pytest.mark.skipif(cond, reason=...)` | 条件跳过 |
+| `@pytest.mark.xfail(strict=True)` | 预期失败 |
+| `@pytest.mark.parametrize(...)` | 参数化测试 |
+| `-m "not slow"` | 运行时排除 |
+
+### 常用 pytest 命令
+
+| 命令 | 说明 |
+|------|------|
+| `pytest -v` | 详细输出 |
+| `pytest -k "test_name"` | 按名称过滤 |
+| `pytest -m "smoke"` | 按 marker 过滤 |
+| `pytest -n auto` | 并行运行 |
+| `pytest --cov=src` | 生成覆盖率 |
+| `pytest --cov-fail-under=80` | 覆盖率阈值 |
+| `pytest -x` | 首次失败即停止 |
+| `pytest --lf` | 只运行上次失败的测试 |
+
+---
+
+## ✅ 本节总结
+
+| 知识点 | 核心要点 |
+|--------|----------|
+| Mock 与 patch | `@patch` 替换依赖，`MagicMock` 配置返回值/异常，`assert_called_*` 验证调用 |
+| conftest.py | 全局 fixture 共享，`autouse=True` 自动应用，依赖链，`yield` teardown |
+| markers | `skip/skipif/xfail` 控制执行，自定义标记，`-m` 运行时过滤 |
+| 覆盖率 | `pytest-cov` 报告，`--cov-fail-under` 阈值，`# pragma: no cover` 排除 |
+| 插件 | `pytest-xdist` 并行，`pytest-randomly` 发现隐式依赖 |

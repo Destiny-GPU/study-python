@@ -2,7 +2,7 @@
   "label": "🔀 控制流",
   "position": 4,
   "link": {
-    "type": "generated-index",
-    "description": "通过条件判断和循环控制程序的执行流程。"
+    "type": "doc",
+    "id": "control-flow/index"
   }
 }

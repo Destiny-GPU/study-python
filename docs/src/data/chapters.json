@@ -1,0 +1,66 @@
+{
+  "phases": [
+    {
+      "emoji": "📘",
+      "label": "Phase 1 · 必修基础",
+      "description": "从零开始，掌握 Python 核心语法",
+      "categories": ["getting-started", "basics", "control-flow", "data-structures"]
+    },
+    {
+      "emoji": "📗",
+      "label": "Phase 2 · 核心技能",
+      "description": "函数、面向对象、模块化编程",
+      "categories": ["functions", "oop", "modules", "error-handling"]
+    },
+    {
+      "emoji": "📙",
+      "label": "Phase 3 · 实用技能",
+      "description": "文件操作、标准库、测试调试",
+      "categories": ["file-handling", "standard-library", "testing-debugging"]
+    },
+    {
+      "emoji": "📕",
+      "label": "Phase 4 · 科学计算",
+      "description": "第三方库、并行计算、性能优化、项目实战",
+      "categories": ["scientific-computing", "parallel-computing", "performance", "project-tutorial"]
+    },
+    {
+      "emoji": "📓",
+      "label": "Phase 5 · 进阶深造",
+      "description": "类型系统、异步编程、Pythonic 哲学",
+      "categories": ["advanced"]
+    }
+  ],
+  "categories": {
+    "getting-started": { "emoji": "🛠️", "title": "入门准备", "position": 2 },
+    "basics": { "emoji": "📝", "title": "基础语法", "position": 3 },
+    "control-flow": { "emoji": "🔀", "title": "控制流", "position": 4 },
+    "data-structures": { "emoji": "📦", "title": "数据结构", "position": 5 },
+    "functions": { "emoji": "⚙️", "title": "函数", "position": 6 },
+    "oop": { "emoji": "🏗️", "title": "面向对象", "position": 7 },
+    "modules": { "emoji": "🧩", "title": "模块与包", "position": 8 },
+    "error-handling": { "emoji": "🛡️", "title": "异常处理", "position": 9 },
+    "file-handling": { "emoji": "📂", "title": "文件与 IO", "position": 10 },
+    "standard-library": { "emoji": "🧰", "title": "标准库", "position": 11 },
+    "scientific-computing": { "emoji": "📚", "title": "第三方库", "position": 12 },
+    "parallel-computing": { "emoji": "⚡", "title": "并行计算", "position": 13 },
+    "advanced": { "emoji": "🚀", "title": "进阶特性", "position": 14 },
+    "performance": { "emoji": "🏎️", "title": "性能分析", "position": 15 },
+    "testing-debugging": { "emoji": "🔍", "title": "测试与调试", "position": 16 },
+    "project-tutorial": { "emoji": "🎯", "title": "项目实战", "position": 17 }
+  },
+  "learningPath": [
+    { "slug": "getting-started", "emoji": "🛠️", "title": "入门准备", "desc": "搭建环境，运行第一个程序", "to": "/docs/getting-started/installation" },
+    { "slug": "basics", "emoji": "📝", "title": "基础语法", "desc": "变量、字符串、数字、运算符", "to": "/docs/basics/variables" },
+    { "slug": "control-flow", "emoji": "🔀", "title": "流程控制", "desc": "条件判断、循环、模式匹配", "to": "/docs/control-flow/if-else" },
+    { "slug": "data-structures", "emoji": "📦", "title": "数据结构", "desc": "列表、字典、集合、推导式", "to": "/docs/data-structures/lists" },
+    { "slug": "functions", "emoji": "⚙️", "title": "函数", "desc": "定义、参数、作用域、装饰器", "to": "/docs/functions/defining" },
+    { "slug": "oop", "emoji": "🏗️", "title": "面向对象", "desc": "类、继承、数据类、魔术方法", "to": "/docs/oop/classes" },
+    { "slug": "modules", "emoji": "🧩", "title": "模块与包", "desc": "import、虚拟环境、uv 工具链", "to": "/docs/modules/" },
+    { "slug": "error-handling", "emoji": "🛡️", "title": "异常处理", "desc": "try-except、自定义异常、调试", "to": "/docs/error-handling/try-except" },
+    { "slug": "file-handling", "emoji": "📂", "title": "文件与 IO", "desc": "读写文件、路径处理、JSON/CSV", "to": "/docs/file-handling/read-write" },
+    { "slug": "standard-library", "emoji": "🧰", "title": "标准库巡礼", "desc": "collections、datetime、pathlib 等", "to": "/docs/standard-library/collections" },
+    { "slug": "testing-debugging", "emoji": "🔍", "title": "测试与调试", "desc": "pytest 基础、调试技巧", "to": "/docs/testing-debugging/pytest-basics" },
+    { "slug": "advanced", "emoji": "🚀", "title": "进阶特性", "desc": "类型注解、异步、Pythonic 写法", "to": "/docs/advanced/type-hints" }
+  ]
+}

@@ -1,17 +1,19 @@
 ---
-sidebar_position: 5
 sidebar_label: '魔术方法'
-title: 🏗️ 魔术方法
+title: 魔术方法
 description: 系统学习 Python 魔术方法（dunder methods）：__init__/__new__、__str__/__repr__、容器协议、迭代、比较、运算符、上下文管理器、__call__ 等。
+tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # 🏗️ 魔术方法
 
 魔术方法（magic methods，又称 dunder methods，即 **d**ouble **under**score）是 Python 以双下划线开头和结尾的特殊方法，如 `__init__`、`__str__`、`__len__`。它们构成了 Python 的**对象协议（data model）**——通过重写这些方法，自定义类就能参与内置语法和函数的行为，比如 `len(obj)`、`obj[i]`、`for x in obj`、`with obj as o`、`a + b` 等。掌握魔术方法是写出"地道"Python 类的关键。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - `__new__`（创建实例）与 `__init__`（初始化实例）的分工
 - `__str__`（用户友好）与 `__repr__`（开发者明确）的区别与应用
 - 容器协议：`__len__`、`__getitem__`、`__setitem__`、`__delitem__`、`__contains__`
@@ -24,7 +26,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="魔术方法快速体验">
 
-```python
+```py
 class Point:
     def __init__(self, x, y):
         self.x = x
@@ -100,7 +102,7 @@ print(a.name)       # 输出：GPS
 print(b.name)       # 输出：GPS
 ```
 
-:::warning 单例中 __init__ 重复执行
+:::warning[单例中 __init__ 重复执行]
 `SensorRegistry("GPS")` 仍会调用 `__init__`，把已存在实例的 `name` 改为 "GPS"。如果想避免，可以在 `__init__` 中用 `if hasattr(self, "name"): return` 跳过，或在 `__new__` 中检查后再调用。
 :::
 
@@ -139,7 +141,7 @@ print(p.x)      # 输出：100
 # p.x = 0  # AttributeError（只读）
 ```
 
-:::info 不可变 vs 真正的不可变
+:::info[不可变 vs 真正的不可变]
 Python 没有语言级别的不可变对象（`frozen=True` 的 dataclass 通过 `__setattr__` 强制实现）。上面的例子通过约定（不提供 setter）来实现"逻辑不可变"。如果需要严格不可变，可以使用 `@dataclass(frozen=True)` 或 namedtuple。
 :::
 
@@ -169,7 +171,7 @@ print([attitude, attitude])  # 输出：[Attitude(roll=15.3, ...), ...]  ← 容
 print(f"{attitude!s} / {attitude!r}")  # 输出：R:15.3° P:-5.2° Y:90.0° / Attitude(roll=15.3, ...)
 ```
 
-:::tip 实用建议
+:::tip[实用建议]
 如果只写一个，优先写 `__repr__`——未定义 `__str__` 时会回退到 `__repr__`。
 :::
 
@@ -269,7 +271,8 @@ print(cache)  # 输出：{'altitude': [1000, 1050], 'airspeed': [55]}
 
 实现迭代协议后，对象就能用于 `for`、`list()`、`sum()`、生成器表达式等。
 
-### 方式一：可迭代对象 + 迭代器
+<Tabs>
+  <TabItem value="iterclass" label="方式一：迭代器类">
 
 ```py title="Python"
 class Range2:
@@ -314,9 +317,8 @@ for x in r:
 print("嵌套循环正常完成")
 ```
 
-### 方式二：生成器（更简洁）
-
-让 `__iter__` 返回生成器，是最 Pythonic 的写法：
+  </TabItem>
+  <TabItem value="generator" label="方式二：生成器（更简洁）">
 
 ```py title="Python"
 class TrajectoryGenerator:
@@ -350,7 +352,10 @@ for wp in trajectory:
 #   航路点: x=500, y=300, z=500
 ```
 
-:::tip 可迭代 vs 迭代器
+  </TabItem>
+</Tabs>
+
+:::tip[可迭代 vs 迭代器]
 - **可迭代对象（Iterable）**：实现 `__iter__`，能用于 `for`。
 - **迭代器（Iterator）**：同时实现 `__iter__` 和 `__next__`，且耗尽即废弃。
 - 生成器函数返回的对象天然是迭代器。
@@ -411,7 +416,7 @@ print(sorted(states))
 # 输出：[StateVector(t=0, ...), StateVector(t=1, ...), StateVector(t=2, ...)]
 ```
 
-:::warning 重写 __eq__ 必须重写 __hash__
+:::warning[重写 __eq__ 必须重写 __hash__]
 一旦定义了 `__eq__`，Python 会自动把 `__hash__` 设为 `None`，使对象不可哈希（不能用作字典键、不能放入集合）。要么：
 - 重写 `__hash__` 让对象可哈希（保证 a == b 时 hash(a) == hash(b)）
 - 设 `__hash__ = None` 显式标记不可哈希
@@ -514,7 +519,7 @@ print(vel[0])           # 输出：10
 print(sum(vel))         # 输出：13  ← __iter__ 让 sum 可用
 ```
 
-:::info 常用算术运算符方法
+:::info[常用算术运算符方法]
 | 运算符      | 方法           | 反向方法          |
 |-------------|----------------|-------------------|
 | `+`         | `__add__`      | `__radd__`        |
@@ -621,7 +626,7 @@ with FlightTestSession("T-42"):
 print("with 块外继续执行")  # 异常被吞掉，继续执行
 ```
 
-:::tip 用 contextlib 简化
+:::tip[用 contextlib 简化]
 写上下文管理器不必每次定义类，可以用 `@contextmanager` 装饰器把生成器函数转换：
 
 ```py title="Python"
@@ -683,7 +688,7 @@ print(len(states))  # 输出：4
 print(callable(step))  # 输出：True
 ```
 
-:::tip __call__ 的应用场景
+:::tip[__call__ 的应用场景]
 - **函数对象**：保存状态的可调用对象（如带缓存的函数）
 - **装饰器类**：既可保存状态又能当装饰器
 - **配置化策略**：把策略封装成对象，传给需要函数的地方
@@ -966,7 +971,7 @@ print(f"{vel:raw} | {vel}")  # 输出：Vector3D(10, 5, -2) | ⟨10.000, 5.000, 
 | `__bool__` | `bool(obj)` / `if obj` | `FlightEnvelope` 是否在安全包线内 |
 | `__format__` | `f"{obj:spec}"` | `FlightEnvelope` 自定义格式化 |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们以飞行动力学为背景，系统学习了魔术方法，核心要点包括：
 
@@ -979,4 +984,4 @@ print(f"{vel:raw} | {vel}")  # 输出：Vector3D(10, 5, -2) | ⟨10.000, 5.000, 
 - **上下文管理器**：`FlightRecorder` 自动管理飞行数据记录，`__exit__` 可捕获异常保证安全退出
 - **`__call__` 让实例可调用**：`StateTransition` 作为状态转移函数，适合物理仿真、控制律等场景
 
-掌握魔术方法后，你的自定义类将能无缝融入 Python 的语法生态，写出真正"Pythonic"的飞行动力学代码。下一节将介绍**数据类**——用 `@dataclass` 装饰器自动生成样板代码，让数据建模更简洁。
+掌握魔术方法后，自定义类将能无缝融入 Python 的语法生态，写出真正"Pythonic"的飞行动力学代码。下一节将介绍**数据类**——用 `@dataclass` 装饰器自动生成样板代码，让数据建模更简洁。

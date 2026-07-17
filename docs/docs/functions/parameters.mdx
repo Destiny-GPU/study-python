@@ -1,19 +1,28 @@
 ---
-sidebar_position: 2
 sidebar_label: '参数详解'
-title: ⚙️ 参数详解
+title: 参数详解
 description: 深入理解位置参数、关键字参数、默认值、*args、**kwargs、关键字只参数、位置只参数以及参数解包
+tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # ⚙️ 参数详解
 
-函数参数是函数与外部交互的接口。Python 提供了极其丰富的参数形式：位置参数、关键字参数、默认值、可变参数 `*args` 和 `**kwargs`、以及通过 `/` 和 `*` 分隔的"位置只参数"和"关键字只参数"。理解这些机制能让你编写出更灵活、更易用的 API。
+函数参数是函数与外部交互的接口。Python 提供了极其丰富的参数形式：位置参数、关键字参数、默认值、可变参数 `*args` 和 `**kwargs`、以及通过 `/` 和 `*` 分隔的"位置只参数"和"关键字只参数"。理解这些机制有助于编写出更灵活、更易用的 API。
+
+## 📌 本节要点
+
+- 位置参数按顺序传递，关键字参数按名称传递
+- 默认值参数放在参数列表末尾，注意可变默认值陷阱
+- `*args` 收集多余位置参数为元组，`**kwargs` 收集关键字参数为字典
+- `/` 前的参数只能位置传递，`*` 后的参数只能关键字传递
+- 参数解包：`*list` 解包位置参数，`**dict` 解包关键字参数
+- 参数顺序规则：位置只 → 位置 → 关键字 → 关键字只
 
 <PyodideRunner title="函数参数快速体验">
 
-```python
+```py
 # *args 和 **kwargs 示例
 def create_profile(name, age, *hobbies, **extras):
     """创建用户配置"""
@@ -78,7 +87,7 @@ describe_person("Alice", city="北京", age=30)  # 合法
 # describe_person(name="Alice", 30, city="北京")  # 语法错误！
 ```
 
-:::warning 混用规则
+:::warning[混用规则]
 位置参数不能出现在关键字参数之后，下面的写法会报错：
 ```py title="Python"
 describe_person(name="Alice", 30, city="北京")
@@ -99,7 +108,7 @@ greet("Bob", "Hi")         # 输出：Hi，Bob！
 greet("Charlie", greeting="早上好")  # 输出：早上好，Charlie！
 ```
 
-:::warning 默认参数必须是不可变对象
+:::warning[默认参数必须是不可变对象]
 默认参数值在函数定义时只计算一次，因此**可变对象作为默认值会引发"共享状态"问题**：
 ```py title="Python"
 def add_item(item, lst=[]):  # 危险！
@@ -228,7 +237,7 @@ connect("localhost", 8080, retry=5, timeout=20)  # 合法
 # connect("localhost", 8080, 5)                  # 错误！timeout 必须用关键字
 ```
 
-:::tip 何时使用关键字只参数
+:::tip[何时使用关键字只参数]
 当一个函数有多个布尔型或数值型参数时，调用 `func(True, False, True)` 几乎无法阅读。强制使用关键字能让代码意图清晰：
 ```py title="Python"
 send_email(to="alice@x.com", subject="通知", html=True, attach=False)
@@ -248,7 +257,7 @@ print(power(2, 10))         # 合法
 # print(power(base=2, exp=10))  # 错误！位置只参数不能用关键字
 ```
 
-:::info 位置只参数的用途
+:::info[位置只参数的用途]
 1. **参数名不固定时**：调用者依赖位置而非参数名，未来可以重命名参数而不破坏调用方。
 2. **性能优化**：某些场景下位置匹配更快。
 3. **与 C 函数一致**：内置函数（如 `len(obj)`、`pow(x, y, z)`）大多用位置只参数，避免 `obj` 等通用名称被当作关键字。
@@ -295,7 +304,7 @@ print(greet(*args, **kwargs))
 # 输出：Hello，Alice!
 ```
 
-:::tip 解包的实际用途
+:::tip[解包的实际用途]
 参数解包在动态调用函数时特别有用，例如把参数从配置文件或数据库读取后再调用函数：
 ```py title="Python"
 config = {"host": "localhost", "port": 8080, "timeout": 5}
@@ -411,7 +420,7 @@ print(log("开始处理", **ctx))
 # 输出示例：[2025-01-15 10:30:00] [INFO] 开始处理 (request_id=abc-123 user_id=42)
 ```
 
-:::tip 设计 API 的原则
+:::tip[设计 API 的原则]
 - 默认参数放在末尾，让常见的简单调用只需少量参数
 - 布尔/数值型参数尽量设为关键字只参数，避免 `func(True, False)` 这种难读的调用
 - 接收任意元数据时使用 `**kwargs`，比硬编码一堆参数更灵活

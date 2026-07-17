@@ -2,14 +2,16 @@
 slug: uv-workflow
 title: 用 uv 打造高效的 Python 开发工作流
 authors: [destiny]
-tags: [python, 工具]
+tags: [python, tools]
 ---
 
-如果你还在用 `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` 这套三连击，那么这篇文章会改变你的工作流。本教程默认使用 **uv** 作为依赖管理工具，本文解释为什么，以及怎么用。
+如果你还在用 `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` 这套三连击，那么这篇文章会改变你的工作流。
+
+说真的，我用了好几年的 pip + venv，直到有一天装一个 Django 项目等了 40 秒，旁边的同事用 uv 3 秒就装完了。那一刻我意识到：**工具的差距不是「快一点」，而是「质变」**。本教程默认使用 **uv** 作为依赖管理工具，本文解释为什么，以及怎么用。
 
 {/* truncate */}
 
-## 一、uv 是什么
+## uv 是什么
 
 [uv](https://github.com/astral-sh/uv) 是 Astral 公司（也就是做 Ruff 那家）用 Rust 写的 Python 包管理工具，定位上同时是：
 
@@ -18,13 +20,13 @@ tags: [python, 工具]
 - `pip-tools` 的替代（依赖锁定、解析）
 - `poetry` / `rye` / `pyenv` 的部分替代（项目管理、Python 版本管理）
 
-它的核心卖点是**快**——快到你会怀疑「是不是没装上」。
+它的核心卖点是**快**——快到你会怀疑「是不是没装上」。第一次用的时候我反复检查了三次，因为它真的太快了，快到不真实。
 
 :::tip
-uv 的设计哲学是「兼容现有生态」：它依然生成标准的 `pyproject.toml`、`requirements.txt`、`uv.lock`，你随时可以退回用 pip，不会被困住。
+uv 的设计哲学是「兼容现有生态」：它依然生成标准的 `pyproject.toml`、`requirements.txt`、`uv.lock`，你随时可以退回用 pip，不会被困住。这一点比 poetry 好——poetry 的 lock 格式是私有的，迁移成本很高。
 :::
 
-## 二、为什么选择 uv
+## 为什么选择 uv
 
 我之前用 poetry，后来转 rye，最后定在 uv。理由有三个：
 
@@ -32,7 +34,9 @@ uv 的设计哲学是「兼容现有生态」：它依然生成标准的 `pyproj
 2. **一个工具搞定一切**：装 Python、建虚拟环境、装包、跑脚本、锁定依赖，全部一个命令搞定，不用 `pyenv` + `venv` + `pip` 三件套。
 3. **全局工具安装**：`uv tool install ruff` 装全局 CLI 工具，类似 `pipx`，比 npm 全局装包还顺手。
 
-## 三、核心命令速查
+说白了，uv 把以前需要 5 个工具才能完成的事情，用 1 个工具全解决了。对于我这种「工具强迫症」患者来说，简直是福音。
+
+## 核心命令速查
 
 ```bash
 # Python 版本管理
@@ -60,10 +64,10 @@ uv run pytest                    # 跑测试
 ```
 
 :::note
-`uv pip install` 和 `uv add` 是两个层次的东西：前者只是「快速版 pip」，不动 `pyproject.toml`；后者会把依赖写进项目配置并更新 `uv.lock`。在项目里优先用 `uv add`。
+`uv pip install` 和 `uv add` 是两个层次的东西：前者只是「快速版 pip」，不动 `pyproject.toml`；后者会把依赖写进项目配置并更新 `uv.lock`。在项目里优先用 `uv add`。我一开始搞混了这两个，结果依赖没写进 pyproject.toml，换了机器就装不上了。
 :::
 
-## 四、与 pip / venv / poetry 的对比
+## 与 pip / venv / poetry 的对比
 
 | 能力 | pip + venv | poetry | uv |
 |------|-----------|--------|-----|
@@ -78,7 +82,7 @@ uv run pytest                    # 跑测试
 poetry 的 lock 文件解析在某些场景下会比较慢，且对私有源支持较弱。如果你的项目依赖很多、CI 跑得很频繁，迁移到 uv 后构建时间通常能减半。
 :::
 
-## 五、实战：用 uv 创建一个完整项目
+## 实战：用 uv 创建一个完整项目
 
 下面用 uv 把本教程里的一个 demo 项目跑起来：
 
@@ -122,10 +126,10 @@ study-demo/
 ```
 
 :::tip
-把 `.venv/` 加进 `.gitignore`，但**一定要把 `uv.lock` 提交到 git**。lockfile 是保证「同事和我装的是同一套版本」的关键，千万别忽略它。
+把 `.venv/` 加进 `.gitignore`，但**一定要把 `uv.lock` 提交到 git**。lockfile 是保证「同事和我装的是同一套版本」的关键，千万别忽略它。我之前就因为没提交 lockfile，导致两个人装的包版本不一致，debug 了一下午。
 :::
 
-## 六、与现有 requirements.txt 项目共存
+## 与现有 requirements.txt 项目共存
 
 uv 不强制你迁移。如果是老项目，可以这样平滑过渡：
 
@@ -137,8 +141,12 @@ uv pip install -r requirements.txt
 # 之后再慢慢迁移到 uv add / pyproject.toml
 ```
 
+不需要一刀切。先享受速度提升，等有空了再慢慢规范化。
+
 ## 小结
 
 uv 不是「又一个包管理器」，而是把 `pyenv + venv + pip + pip-tools + pipx` 这一堆工具用 Rust 重写并整合成一个二进制。装上之后，我再也不用记忆「这个项目用 poetry，那个项目用 pipenv」——统一用 uv 就够了。
+
+如果你现在还在用 pip + venv，花 10 分钟装上 uv 试一下。一旦体验过那个速度，你就回不去了。
 
 下一篇我们正式进入 Python 语法本身，从最基础的变量和类型注解开始。

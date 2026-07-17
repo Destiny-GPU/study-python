@@ -1,25 +1,26 @@
 ---
-sidebar_position: 3
 sidebar_label: '字符串'
-title: 📝 字符串
+title: 字符串
 description: 全面学习 Python 字符串：创建方式、转义字符、原始字符串、f-string 嵌套引号、切片索引、常用方法与不可变性。
+tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 📝 字符串
 
-字符串（`str`）是 Python 中表示文本数据的核心类型。它是一个**不可变**的 Unicode 字符序列，支持丰富的操作：切片、拼接、查找、格式化等。本节将系统讲解字符串的创建、常用方法、切片索引，以及 Python 3.12+ 增强的 f-string 嵌套引号特性。
+字符串是编程中最常用的数据类型之一——几乎所有程序都需要处理文本。Python 的字符串功能相当全面：切片、拼接、查找、格式化，一应俱全。本节涵盖字符串的创建方式、常用方法、切片索引，以及 f-string 格式化。
 
 ## 📌 本节要点
-- 掌握字符串的三种创建方式与转义字符
+
+- 字符串的三种创建方式与转义字符
 - 理解字符串的不可变性及其性能影响
 - 熟练使用索引、切片和常用字符串方法
 - 掌握 f-string 格式化，包括 Python 3.12+ 的嵌套引号特性
 
 ## 字符串创建
 
-Python 支持三种引号方式创建字符串：单引号 `'...'`、双引号 `"..."`、三引号 `'''...'''` 或 `"""..."""`。
+Python 支持三种引号方式创建字符串：单引号 `'...'`、双引号 `"..."`、三引号 `'''...'''` 或 `"""..."""`。选择哪种取决于字符串内容：
 
 ```py title="Python"
 # 单引号
@@ -44,13 +45,13 @@ print(s1, s2, s3, s4)  # 输出: hello world It's a cat He said "hi"
 print(s5)  # 输出: 多行字符串\n第二行\n第三行
 ```
 
-:::tip 核心概念：单双引号无本质区别
+:::tip[核心概念：单双引号无本质区别]
 与某些语言不同，Python 中单引号和双引号字符串**完全等价**，没有任何性能差异。选择哪种纯粹是为了避免转义：当字符串包含单引号时用双引号包裹，反之亦然，这样能让代码更清晰。
 :::
 
 ## 转义字符
 
-使用反斜杠 `\` 可以表示特殊字符：
+在字符串中表示特殊字符（换行、制表符等）需要用到转义字符：
 
 | 转义序列 | 含义       | 示例              |
 | -------- | ---------- | ----------------- |
@@ -64,7 +65,7 @@ print(s5)  # 输出: 多行字符串\n第二行\n第三行
 
 ```py title="Python"
 print("第一行\n第二行")  # 输出: 第一行\n第二行（换行）
-print("a\tb\tc")  # 输出: a	b	c（制表对齐）
+print("a\tb\tc")  # 输出: a  b  c（制表对齐）
 print("C:\\Users\\Tom")  # 输出: C:\Users\Tom（Windows 路径）
 print("It\'s a test")  # 输出: It's a test（转义单引号）
 
@@ -75,7 +76,7 @@ print("\U0001F600")  # 输出: 😀 (笑脸 emoji)
 
 ## 原始字符串
 
-原始字符串（raw string）以 `r` 前缀开头，**不处理转义字符**，常用于正则表达式和 Windows 路径：
+如果不想让 Python 处理转义字符——比如处理 Windows 路径或正则表达式——用 `r` 前缀创建原始字符串：
 
 ```py title="Python"
 # 普通字符串：\n 被解释为换行
@@ -90,13 +91,13 @@ pattern = r"\d+\.\d+"  # 匹配数字
 print(re.findall(pattern, "价格 12.5 元，数量 3"))  # ['12.5', '3']
 ```
 
-:::warning 原始字符串的最后一个字符不能是反斜杠
+:::warning[原始字符串的最后一个字符不能是反斜杠]
 原始字符串中反斜杠仍是"转义字符"的角色，所以 `r"abc\"` 会报错（它把末尾的 `\"` 当作转义的双引号）。如果需要以反斜杠结尾，可以用 `r"abc" "\\"` 拼接，或使用普通字符串。
 :::
 
 ## f-string（格式化字符串）
 
-f-string 是最现代的字符串格式化方式，使用 `f` 前缀和 `{}` 占位符：
+f-string 是 Python 3.6+ 引入的字符串格式化方式，也是现代 Python 的首选。用 `f` 前缀和 `{}` 占位符，格式化变得非常简单：
 
 ```py title="Python"
 name = "Alice"
@@ -154,7 +155,7 @@ print(f"""姓名: {user["name"]}
 城市: {user["city"]}""")
 ```
 
-:::info Python 3.12+ f-string 增强
+:::info[Python 3.12+ f-string 增强]
 Python 3.12 (PEP 701) 重写了 f-string 解析器，支持：
 1. **相同引号嵌套**：f-string 内可使用与外层相同的引号
 2. **多行表达式**：f-string 内可包含换行、注释
@@ -188,7 +189,7 @@ s = "H" + s[1:]
 print(s)  # Hello
 ```
 
-:::warning 性能提示：避免在循环中拼接字符串
+:::warning[性能提示：避免在循环中拼接字符串]
 由于字符串不可变，`s = s + "x"` 每次都会创建新对象，在循环中拼接大量字符串性能很差。推荐使用 `"".join(list)`：
 
 ```py title="Python"
@@ -253,7 +254,7 @@ print(s[10:1:-1]) # morP noht
 print(s[::-2])    # gimroP nhy
 ```
 
-:::tip 切片不会越界
+:::tip[切片不会越界]
 Python 切片非常"宽容"——即使索引超出范围也不会报错，会自动截断到有效范围：
 
 ```py title="Python"
@@ -292,7 +293,7 @@ print(lst)  # [1, 2, 3]  —— 原列表不受影响
 print(copy)  # [1, 2, 3, 4]
 ```
 
-:::warning 不可变 vs 可变
+:::warning[不可变 vs 可变]
 字符串是**不可变**的，`s[:]` 和 `s` 通常返回同一对象；列表是**可变**的，`lst[:]` 创建浅拷贝，修改拷贝不影响原列表。
 :::
 
@@ -332,7 +333,7 @@ print(s.swapcase())     # hELLO wORLD (大小写互换)
 print(s.casefold())     # hello world (更激进的小写转换，适合 Unicode)
 ```
 
-:::tip casefold 与 lower 的区别
+:::tip[casefold 与 lower 的区别]
 `casefold()` 比 `lower()` 更激进，用于无大小写比较（如德语 ß → ss）。在需要做国际化字符串比较时，应使用 `casefold()` 而非 `lower()`：
 
 ```py title="Python"
@@ -422,7 +423,7 @@ print(len(s.split()))
 6  —— 正确！
 ```
 
-:::tip 统计单词数用 `split()`（不带参数）
+:::tip[统计单词数用 `split()`（不带参数）]
 `split()` 不带参数时会按任意空白字符（空格、制表符、换行符等）分割，并自动忽略首尾空白和连续空白，是统计单词数的正确方式。
 :::
 
@@ -453,7 +454,7 @@ url = "https://example.com"
 print(url.removeprefix("https://"))  # example.com
 ```
 
-:::info removeprefix / removesuffix (Python 3.9+)
+:::info[removeprefix / removesuffix (Python 3.9+)]
 这两个方法与 `strip()` 有本质区别：`strip("#")` 会去除**所有** `#` 字符，而 `removeprefix("#")` 只在字符串以 `#` 开头时去除一次。这在处理文件扩展名、URL 前缀时更安全。
 :::
 
@@ -512,8 +513,8 @@ print(len(s.encode()))     # 6 (UTF-8 编码 6 字节)
 print(len(s.encode("gbk")))  # 4 (GBK 编码 4 字节)
 ```
 
-:::warning 编码与解码必须用同一套规则
-`encode()` 和 `decode()` 必须使用相同的编码，否则会出现乱码或 `UnicodeDecodeError`。处理文件、网络数据时，**明确指定编码**（推荐 UTF-8）是好习惯。
+:::warning[编码与解码必须用同一套规则]
+`encode()` 和 `decode()` 可以使用相同的编码，否则会出现乱码或 `UnicodeDecodeError`。处理文件、网络数据时，**明确指定编码**（推荐 UTF-8）是好习惯。
 :::
 
 ## 🎯 动手练习
@@ -525,7 +526,7 @@ print(len(s.encode("gbk")))  # 4 (GBK 编码 4 字节)
 
 <PyodideRunner title="字符串操作练习">
 
-```python
+```py
 # 1. 字符串切片与反转
 s = "Python Programming"
 print(f"原字符串: {s}")
@@ -581,19 +582,7 @@ print(f"长度: {len(lang)}")
 | `f"{x:.2f}"` | 格式化数字 | `f"{3.14:.2f}"` → `"3.14"` |
 | `s.encode()` | 编码为 bytes | `"中".encode()` → `b'\xe4\xb8\xad'` |
 
-## ✅ 本节总结
-
-- 字符串是**不可变**的 Unicode 字符序列，任何"修改"操作都会返回新字符串
-- 单引号和双引号完全等价，选择取决于字符串内容
-- f-string 是现代 Python 字符串格式化的首选（Python 3.6+）
-- Python 3.12+ 支持 f-string 嵌套引号和多行表达式
-- 切片操作 `[start:stop:step]` 遵循"左闭右开"原则，不会越界
-- 大量字符串拼接应使用 `"".join()` 而非 `+` 循环
-- `split()` 不带参数时自动忽略连续空白，是统计单词的正确方式
-- 字符串方法丰富：大小写转换、查找、分割、替换、判断等
-- 处理文件和网络数据时，明确指定编码（推荐 UTF-8）
-
-## 常见误区汇总
+## 常见误区
 
 ### 误区 1：用 `str` 做变量名
 
@@ -634,7 +623,6 @@ a = [int(x) for x in m.split(",")]  # [1, 2, 3]
 
 ```py title="Python"
 import re
-from typing import List
 
 
 def count_words(text: str) -> int:
@@ -674,21 +662,14 @@ print(f"格式化数字: {format_number(1234567.89)}")
 格式化数字: 1,234,567.89
 ```
 
-:::info 📋 小结
+## ✅ 本节总结
 
-- Python 字符串可用单引号、双引号、三引号创建，三引号支持多行。
-- 转义字符 `\n`、`\t`、`\\` 等表示特殊字符；原始字符串 `r"..."` 不处理转义。
-- **f-string** 是现代首选的格式化方式，Python 3.12+ 支持嵌套相同引号、多行表达式与注释。
-- 字符串是**不可变**的，"修改"操作总是返回新字符串；循环拼接大量字符串请用 `"".join()`。
-- 切片 `s[start:stop:step]` 灵活强大，`s[::-1]` 可反转字符串，切片不会因越界报错。
-- `s[:]` 和 `s` 对于不可变类型（字符串）几乎一致，但对于可变类型（列表）`lst[:]` 创建浅拷贝。
-- `split()` 不带参数按任意空白分割，是统计单词数的正确方式；`split(" ")` 会产生空字符串。
-- 常用方法：`split/join`、`replace`、`strip/lstrip/rstrip`、`find/index/count`、`startswith/endswith`、`upper/lower/title` 等。
-- Python 3.9+ 的 `removeprefix/removesuffix` 比传统 `strip()` 更安全。
-- 字符串与字节串通过 `encode()` / `decode()` 互转，处理文件/网络时务必明确指定编码。
-- 避免用 `str` 做变量名，注意字符串与代码的边界。
-:::
-
-:::info 🔗 延伸学习
-想要了解更多 f-string 高级用法（如调试模式 `f"{var=}"`、格式化规范迷你语言等），请参阅 **[输入与输出](/docs/basics/input-output)** 中的 f-string 格式化章节。
-:::
+- 字符串是**不可变**的 Unicode 字符序列，任何"修改"操作都会返回新字符串
+- 单引号和双引号完全等价，选择取决于字符串内容
+- f-string 是现代 Python 字符串格式化的首选（Python 3.6+）
+- Python 3.12+ 支持 f-string 嵌套引号和多行表达式
+- 切片操作 `[start:stop:step]` 遵循"左闭右开"原则，不会越界
+- 大量字符串拼接应使用 `"".join()` 而非 `+` 循环
+- `split()` 不带参数时自动忽略连续空白，是统计单词的正确方式
+- 字符串方法丰富：大小写转换、查找、分割、替换、判断等
+- 处理文件和网络数据时，明确指定编码（推荐 UTF-8）

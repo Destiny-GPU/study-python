@@ -1,0 +1,200 @@
+/**
+ * 响应式样式 - 统一管理所有移动端适配
+ * 从 _components.css、_doc-content.css、_pages.css 中去重合并
+ */
+
+/* === 平板 & 小屏 (≤768px) === */
+@media (max-width: 768px) {
+  /* 基础排版 */
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+
+  /* 文档内容区域 */
+  .theme-doc-markdown {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .theme-doc-markdown h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .theme-doc-markdown h2 {
+    font-size: 1.5rem;
+    margin-top: 2rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .theme-doc-markdown h3 {
+    font-size: 1.25rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .theme-doc-markdown h4 {
+    font-size: 1.125rem;
+    margin-top: 1.5rem;
+  }
+
+  .theme-doc-markdown p {
+    line-height: 1.8;
+    margin-bottom: 1.25rem;
+  }
+
+  .theme-doc-markdown li {
+    line-height: 1.8;
+    margin-bottom: 0.625rem;
+  }
+
+  .theme-doc-markdown blockquote {
+    padding: 1.25rem 1.5rem;
+    margin: 1.75rem 0;
+  }
+
+  /* 代码块 */
+  .theme-doc-markdown pre {
+    font-size: 0.875rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .theme-doc-markdown pre code {
+    font-size: 0.875rem;
+    white-space: pre;
+  }
+
+  div[class*="codeBlockTitle"] {
+    font-size: 0.6875rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .copyButton_c254,
+  button[class*="copyButton"] {
+    padding: 2px 6px !important;
+    font-size: 0.75rem;
+  }
+
+  /* 表格 */
+  .theme-doc-markdown table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .theme-doc-markdown th,
+  .theme-doc-markdown td {
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+  }
+
+  /* 图片 */
+  .theme-doc-markdown img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 提示框 & 卡片 */
+  .alert {
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 1rem;
+  }
+
+  .card {
+    margin-bottom: 1rem;
+  }
+
+  /* 按钮 */
+  .ds-btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9375rem;
+  }
+
+  /* 目录 & 面包屑 */
+  .theme-doc-toc {
+    padding: 1rem;
+  }
+
+  .breadcrumbs__item {
+    font-size: 0.8125rem;
+  }
+
+  /* 页脚 */
+  .footer__links {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .footer {
+    padding: 2.5rem 0 2rem;
+  }
+
+  /* 文档页脚导航 */
+  .theme-doc-footer-next,
+  .theme-doc-markdown .theme-doc-footer-prev {
+    padding: 1rem;
+  }
+
+  .theme-doc-footer-title {
+    font-size: 1rem;
+  }
+
+  /* 搜索框 */
+  .navbar__search-input {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .navbar__search-input:focus {
+    width: 100%;
+    max-width: 240px;
+  }
+}
+
+/* === 手机竖屏 (≤480px) === */
+@media (max-width: 480px) {
+  html {
+    font-size: 15px;
+  }
+
+  .theme-doc-markdown pre {
+    font-size: 0.8125rem;
+    margin: 0 -1rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .theme-doc-markdown pre code {
+    font-size: 0.8em;
+  }
+
+  .theme-doc-markdown h1 {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .theme-doc-markdown h2 {
+    font-size: 1.375rem;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .theme-doc-markdown h3 {
+    font-size: 1.125rem;
+  }
+
+  .footer__links {
+    padding: 0 1rem;
+  }
+}

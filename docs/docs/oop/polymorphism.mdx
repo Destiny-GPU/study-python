@@ -1,8 +1,8 @@
 ---
-sidebar_position: 3
 sidebar_label: '多态'
-title: 🏗️ 多态
+title: 多态
 description: 学习鸭子类型、typing.Protocol 协议、运行时多态、方法重写与运算符重载，理解 Python 灵活的多态机制。
+tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 多态（polymorphism）指**同一接口在不同对象上表现出不同行为**。在 Python 中，多态并非通过严格的类型继承实现，而是更轻量、更灵活的"鸭子类型"——只要对象提供了所需的方法，就可以被当作某类对象使用。这种动态特性是 Python 简洁优雅的关键，让我们能写出"对扩展开放、对修改关闭"的高复用代码。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - 鸭子类型：不关心对象是什么类型，只关心它有什么方法
 - `typing.Protocol` 用类型注解描述鸭子类型，实现结构化子类型
 - 运行时多态：方法调用在运行时根据对象实际类型决定（动态分派）
@@ -22,7 +22,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="多态快速体验">
 
-```python
+```py
 # 鸭子类型：不关心类型，只关心方法
 class Duck:
     def quack(self):
@@ -94,7 +94,7 @@ print(control_output(SimpleController(), state=10.0, target=5.0)) # 输出：-1.
 
 `PIDController`、`LQRController`、`SimpleController` 没有共同父类，但它们都实现了 `compute()`，因此都能传给 `control_output`。这就是鸭子类型——**多态不需要继承**。
 
-:::tip Pythonic 哲学
+:::tip[Pythonic 哲学]
 相比 Java 等强类型语言，Python 的多态更关注**行为契约**而非**类型层级**。请求原谅比许可容易（EAFP：Easier to Ask Forgiveness than Permission），通常直接调用方法，再用 `try/except` 处理异常。
 :::
 
@@ -164,7 +164,7 @@ print(isinstance(PIDController(), Controller))  # 输出：True
 print(isinstance(Drone(), Controller))          # 输出：False
 ```
 
-:::note Protocol vs ABC
+:::note[Protocol vs ABC]
 - **ABC（抽象基类）**：名义子类型，子类必须**显式继承**。
 - **Protocol**：结构子类型，只要**结构匹配**就算符合，无需继承声明。
 
@@ -205,6 +205,16 @@ optimize(pid, perf=0.8)  # 输出：调整后增益: [1.008 0.1008 0.0504]
 ## 运行时多态
 
 Python 是动态语言，方法调用在**运行时**根据对象的实际类型决定调用哪个实现。这种"动态分派"是多态的底层机制：
+
+多态调用的动态分派：
+
+```mermaid
+flowchart TD
+    A["调用 obj.method()"] --> B{"obj 的实际类型?"}
+    B -- "Dog" --> C["Dog.method(): 汪汪"]
+    B -- "Cat" --> D["Cat.method(): 喵喵"]
+    B -- "Bird" --> E["Bird.method(): 叽叽"]
+```
 
 ```py title="Python"
 
@@ -264,8 +274,8 @@ def stabilize_good(ctrl) -> str:
     return ctrl.stabilize()  # 只要对象实现了 stabilize 方法即可
 ```
 
-:::warning 别滥用 isinstance
-如果发现自己写了大量 `isinstance` 分支，可能违背了多态原则。更好的做法是让每个对象自己实现一个统一接口的方法，让多态帮你分派。
+:::warning[别滥用 isinstance]
+如果发现自己写了大量 `isinstance` 分支，可能违背了多态原则。更好的做法是让每个对象自己实现一个统一接口的方法，让多态自动分派。
 :::
 
 ## 方法重写实现多态
@@ -397,7 +407,7 @@ print(max(states))       # 速度最大的状态
 print(sorted(states))   # 按速度排序
 ```
 
-:::info 常用运算符方法
+:::info[常用运算符方法]
 | 运算符 | 方法        | 说明          |
 |--------|-------------|---------------|
 | `+`    | `__add__`   | 加法          |
@@ -413,7 +423,7 @@ print(sorted(states))   # 按速度排序
 | `in`   | `__contains__`| 包含         |
 | `len()`| `__len__`   | 长度          |
 
-完整的魔术方法清单详见[魔术方法](./magic-methods.mdx)一节。
+完整的魔术方法清单详见[魔术方法](./magic-methods)一节。
 :::
 
 ### 反向运算符：`__radd__` 等
@@ -704,7 +714,7 @@ for c in all_ctrls:
 print(f"控制量总和：{total:.4f}")
 ```
 
-:::tip 组合优于继承
+:::tip[组合优于继承]
 注意 `CompositeController` 并没有继承 `Controller`，而是通过实现相同的 `control()` 方法满足 `Controllable` 协议——这是"组合优于继承"原则的体现。这样既能让 `CompositeController` 装下任意 `Controller`，又避免了为它强行捏造一个父类层级。
 :::
 
@@ -737,7 +747,7 @@ print(f"控制量总和：{total:.4f}")
 | 组合优于继承 | 用 has-a 替代 is-a | `CompositeController` 实现 `Controllable` 协议 |
 | EAFP 原则 | 请求原谅比许可容易 | `try: obj.method() except AttributeError: ...` |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们学习了多态机制，核心要点包括：
 
@@ -749,8 +759,4 @@ print(f"控制量总和：{total:.4f}")
 - **多态提升代码可扩展性**：新增类型无需修改调用方代码，对扩展开放、对修改关闭
 - **优先用协议而非 isinstance**：让对象自己实现统一接口，避免硬编码类型判断
 
-掌握多态后，你将能够写出高度灵活、易于扩展的代码。下一节将介绍**魔术方法**——Python 对象协议的核心，让自定义类像内置类型一样自然。
-
-:::info 🔗 延伸学习
-本节介绍了 `typing.Protocol` 的基础用法。如需深入了解 Protocol 的高级特性（如回调协议、可运行时检查的协议、Protocol 继承等），请参阅 **[类型提示与 Protocol](/docs/advanced/type-hints)** 章节。
-:::
+掌握多态后，便能写出高度灵活、易于扩展的代码。下一节将介绍**魔术方法**——Python 对象协议的核心，让自定义类像内置类型一样自然。

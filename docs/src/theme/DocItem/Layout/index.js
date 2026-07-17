@@ -12,6 +12,7 @@ import DocItemContent from '@theme/DocItem/Content';
 import DocBreadcrumbs from '@theme/DocBreadcrumbs';
 import ContentVisibility from '@theme/ContentVisibility';
 import QuoteBlock from '@site/src/components/QuoteBlock';
+import AutoRelatedDocs from '@site/src/components/AutoRelatedDocs';
 import {getQuoteForPage} from '@site/src/data/quotes';
 import {useScrollReveal} from '@site/src/hooks/useScrollReveal';
 import styles from './styles.module.css';
@@ -67,6 +68,7 @@ export default function DocItemLayout({children}) {
               <DocItemContent>{children}</DocItemContent>
             </div>
             <DocItemFooter />
+            <AutoRelatedDocs />
           </article>
           <DocItemPaginator />
         </div>

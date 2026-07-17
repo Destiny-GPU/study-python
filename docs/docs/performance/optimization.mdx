@@ -1,0 +1,585 @@
+---
+sidebar_label: '优化策略'
+title: 优化策略
+description: 掌握向量化思维、内存优化与字符串性能，编写高效的科学计算代码。
+tags: [性能, 优化]
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# ⚡ 优化策略
+
+上一章我们学习了如何**发现**性能瓶颈——用 `cProfile` 找热点、用 `line_profiler` 定位行、用 `memory_profiler` 追踪内存。本章则聚焦于如何**修复**这些瓶颈：向量化思维、内存优化与字符串性能。掌握这些技巧后，你将能编写出比默认实现快 10-100 倍的科学计算代码。
+
+## 📌 本节要点
+
+学完本节后，我们将掌握：
+
+- **向量化思维**：将 Python 循环转换为 NumPy 数组操作，获得数量级加速
+- **NumPy 优化技巧**：view vs copy、内存布局、`np.einsum` 高级运算
+- **内存优化**：`__slots__` 减少实例开销、`array` 模块、`memoryview` 零拷贝切片
+- **字符串优化**：四种拼接方式的性能对比与最佳实践
+- 独立完成科学计算场景的性能优化
+
+---
+
+## 向量化思维
+
+向量化（Vectorization）是用数组整体操作替代 Python 循环的编程范式。NumPy 底层用 C/Fortran 实现，向量化运算比纯 Python 循环快 10-100 倍。
+
+### 基本概念
+
+```py title="Python"
+import numpy as np
+
+# 慢：Python 循环
+def compute_slow(x):
+    result = []
+    for i in range(len(x)):
+        result.append(x[i] ** 2 + 2 * x[i] + 1)
+    return result
+
+# 快：向量化
+def compute_fast(x):
+    return x ** 2 + 2 * x + 1
+```
+
+为什么这么快？Python 循环每次迭代都需要类型检查、引用计数、函数调用开销。向量化将整个操作下沉到 C 层批量执行，消除了所有 Python 层面的开销。
+
+### 性能对比
+
+<PyodideRunner title="向量化 vs 循环性能对比">
+
+```py
+import numpy as np
+import time
+
+n = 100_000
+x = np.random.randn(n)
+
+# Python 循环
+start = time.perf_counter()
+result_loop = np.empty(n)
+for i in range(n):
+    result_loop[i] = x[i] ** 2 + 2 * x[i] + 1
+t_loop = time.perf_counter() - start
+
+# 向量化
+start = time.perf_counter()
+result_vec = x ** 2 + 2 * x + 1
+t_vec = time.perf_counter() - start
+
+print(f"循环方式:  {t_loop:.4f}s")
+print(f"向量化方式: {t_vec:.6f}s")
+print(f"加速比: {t_loop / t_vec:.1f}x")
+```
+
+</PyodideRunner>
+
+### 常见向量化模式
+
+```py title="Python"
+import numpy as np
+
+x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+
+# 模式 1：条件选择
+# 循环写法：if x[i] > 0 else 0
+result = np.where(x > 0, x, 0)
+
+# 模式 2：裁剪
+# 循环写法：max(0, min(x[i], 1))
+clipped = np.clip(x, 0, 1)
+
+# 模式 3：聚合
+# 循环写法：sum / count
+mean_val = np.mean(x)
+std_val = np.std(x)
+
+# 模式 4：排序
+sorted_x = np.sort(x)
+```
+
+### 何时不向量化
+
+并非所有场景都适合向量化：
+
+- **条件分支复杂**：大量 if-else 嵌套时，向量化反而降低可读性
+- **单次调用**：只有几个元素时，向量化的设置开销不划算
+- **调用外部 C 扩展**：已经是 C 实现的循环，向量化收益有限
+
+:::tip[向量化的心智模型]
+把向量化想象成"告诉 NumPy 做什么，而不是怎么做"。你描述目标（对数组每个元素平方加一），而不是描述步骤（循环、索引、赋值）。
+:::
+
+---
+
+## NumPy 优化技巧
+
+### View vs Copy：避免不必要的内存复制
+
+NumPy 切片返回视图（view），修改视图会影响原数组。但某些操作会隐式创建副本：
+
+```py title="Python"
+import numpy as np
+
+a = np.array([1, 2, 3, 4, 5])
+
+# 视图（零拷贝）
+b = a[1:4]        # b 是 a 的视图
+b[0] = 99
+print(a)          # [ 1 99  3  4  5]  a 也被修改了
+
+# 副本（复制数据）
+c = a[1:4].copy() # c 是独立副本
+c[0] = 0
+print(a)          # [ 1 99  3  4  5]  a 不受影响
+
+# 花式索引总是创建副本
+indices = [0, 2, 4]
+d = a[indices]    # d 是副本
+```
+
+:::warning[隐式复制的陷阱]
+以下操作会隐式创建副本，修改副本不会影响原数组：
+
+```py title="Python"
+a = np.array([1, 2, 3, 4, 5])
+
+# 布尔索引创建副本
+mask = a > 2
+b = a[mask]       # b 是副本
+b[0] = 99
+print(a)          # [1 2 3 4 5]  a 不变
+
+# 整数数组索引创建副本
+c = a[[0, 2, 4]]  # c 是副本
+c[0] = 99
+print(a)          # [1 2 3 4 5]  a 不变
+```
+:::
+
+### 内存布局：C-order vs F-order
+
+NumPy 数组在内存中的排列方式影响缓存命中率，进而影响性能：
+
+```py title="Python"
+import numpy as np
+import time
+
+n = 1000
+# C-order（行优先）：默认
+a_c = np.zeros((n, n), order='C')
+# F-order（列优先）
+a_f = np.zeros((n, n), order='F')
+
+# 按行遍历：C-order 更快
+start = time.perf_counter()
+for _ in range(100):
+    for i in range(n):
+        _ = a_c[i, :].sum()
+t_c = time.perf_counter() - start
+
+start = time.perf_counter()
+for _ in range(100):
+    for i in range(n):
+        _ = a_f[i, :].sum()
+t_f = time.perf_counter() - start
+
+print(f"C-order 按行遍历: {t_c:.4f}s")
+print(f"F-order 按行遍历: {t_f:.4f}s")
+```
+
+:::tip[内存布局选择]
+- **C-order**（默认）：适合按行操作（NumPy 默认行为）
+- **F-order**：适合按列操作，或与 Fortran/MATLAB 交互
+- **ascontiguousarray**：确保内存连续，避免隐式重排
+:::
+
+### np.einsum：优雅的张量运算
+
+`np.einsum` 用 Einstein 求和约定表达复杂的数组操作，避免临时数组：
+
+```py title="Python"
+import numpy as np
+
+A = np.random.randn(3, 4)
+B = np.random.randn(4, 5)
+x = np.random.randn(3)
+
+# 矩阵乘法：einsum vs @
+C1 = np.einsum('ij,jk->ik', A, B)
+C2 = A @ B
+print(f"einsum vs @: {np.allclose(C1, C2)}")  # True
+
+# 点积
+dot1 = np.einsum('i,i->', x, x)
+dot2 = np.dot(x, x)
+print(f"点积: {dot1:.4f}, {dot2:.4f}")
+
+# 外积
+outer1 = np.einsum('i,j->ij', x, x[:4])
+outer2 = np.outer(x, x[:4])
+print(f"外积相等: {np.allclose(outer1, outer2)}")
+
+# 对角线元素
+M = np.random.randn(3, 3)
+diag = np.einsum('ii->i', M)
+print(f"对角线: {diag}")
+```
+
+`einsum` 的优势在于：
+- 避免中间临时数组
+- 表达力强，适合复杂张量收缩
+- 底层高度优化
+
+---
+
+## 内存优化
+
+### `__slots__`：减少类实例开销
+
+每个 Python 对象都有一个 `__dict__` 存储属性，这会占用大量内存。使用 `__slots__` 可以消除这个开销：
+
+```py title="Python"
+import sys
+
+class PointWithoutSlots:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+class PointWithSlots:
+    __slots__ = ('x', 'y')
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+# 对比内存占用
+p1 = PointWithoutSlots(1.0, 2.0)
+p2 = PointWithSlots(1.0, 2.0)
+
+print(f"无 __slots__: {sys.getsizeof(p1) + sys.getsizeof(p1.__dict__)} bytes")
+print(f"有 __slots__: {sys.getsizeof(p2)} bytes")
+```
+
+当创建大量实例时（如百万级数据点），`__slots__` 的内存节省非常显著：
+
+```py title="Python"
+import sys
+
+class DataPoint:
+    __slots__ = ('x', 'y', 'z')
+    def __init__(self, x, y, z):
+        self.x, self.y, self.z = x, y, z
+
+points = [DataPoint(i, i*2, i*3) for i in range(100_000)]
+total = sum(sys.getsizeof(p) for p in points)
+print(f"10 万个点总内存: {total / 1024 / 1024:.2f} MB")
+```
+
+:::info[__slots__ 的限制]
+使用 `__slots__` 后：
+- 不能添加未声明的属性
+- 不支持多重继承（除非所有父类都有 `__slots__`）
+- 无法直接使用 `__dict__`
+:::
+
+### `array` 模块：紧凑的类型化数组
+
+`array` 模块提供比列表更紧凑的数组存储，适合存储同类型数据：
+
+```py title="Python"
+import sys
+import array
+
+# 列表存储 Python 对象
+list_data = list(range(100_000))
+print(f"列表内存: {sys.getsizeof(list_data) / 1024:.1f} KB")
+
+# array 存储 C 类型
+array_data = array.array('i', range(100_000))  # 'i' = signed int
+print(f"array 内存: {sys.getsizeof(array_data) / 1024:.1f} KB")
+
+# 内存节省
+savings = (1 - sys.getsizeof(array_data) / sys.getsizeof(list_data)) * 100
+print(f"内存节省: {savings:.1f}%")
+```
+
+常用类型码：
+
+| 类型码 | 类型 | 字节数 |
+|--------|------|--------|
+| `'b'` | signed char | 1 |
+| `'h'` | short | 2 |
+| `'i'` | int | 4 |
+| `'l'` | long | 4/8 |
+| `'f'` | float | 4 |
+| `'d'` | double | 8 |
+
+### `memoryview`：零拷贝切片
+
+`memoryview` 允许在不复制数据的情况下访问不同格式的数据：
+
+```py title="Python"
+import array
+
+# 创建紧凑数组
+data = array.array('d', range(1000))  # double 数组
+
+# 创建 memoryview
+mv = memoryview(data)
+
+# 零拷贝切片
+slice1 = mv[100:200]
+slice2 = mv[300:400]
+
+# 不同格式的视图
+mv_bytes = mv.cast('B')  # 转为 unsigned char
+mv_int = mv.cast('l')    # 转为 long
+
+print(f"原始: {data[0]}")
+print(f"切片: {slice1[0]}")
+print(f"字节视图: {mv_bytes[0]}")
+```
+
+:::tip[memoryview 的应用场景]
+- 处理大型二进制文件时避免复制
+- 在不同数据格式间共享内存
+- 实现高效的缓冲区操作
+:::
+
+---
+
+## 字符串优化
+
+字符串拼接是 Python 中常见的性能陷阱。四种方式的性能差异巨大：
+
+### 性能对比
+
+<PyodideRunner title="字符串拼接性能对比">
+
+```py
+import time
+import io
+
+n = 10_000
+
+# 方式 1：+= 拼接（每次创建新字符串）
+start = time.perf_counter()
+s = ""
+for i in range(n):
+    s += str(i)
+t_concat = time.perf_counter() - start
+
+# 方式 2：join 拼接（预分配内存）
+start = time.perf_counter()
+s = "".join(str(i) for i in range(n))
+t_join = time.perf_counter() - start
+
+# 方式 3：f-string
+start = time.perf_counter()
+s = ""
+for i in range(n):
+    s += f"{i}"
+t_fstring = time.perf_counter() - start
+
+# 方式 4：io.StringIO
+start = time.perf_counter()
+buffer = io.StringIO()
+for i in range(n):
+    buffer.write(str(i))
+s = buffer.getvalue()
+t_stringio = time.perf_counter() - start
+
+print(f"+= 拼接:   {t_concat:.4f}s")
+print(f"join:      {t_join:.6f}s")
+print(f"f-string:  {t_fstring:.4f}s")
+print(f"StringIO:  {t_stringio:.4f}s")
+print(f"\njoin 最快，比 += 快 {t_concat / t_join:.0f} 倍")
+```
+
+</PyodideRunner>
+
+### 原理解析
+
+```py title="Python"
+# += 的问题：每次创建新字符串对象
+s = ""
+for i in range(4):
+    s += str(i)
+    # 底层：s = s.__add__(str(i))
+    # 每次创建新的字符串对象，旧的等待 GC 回收
+
+# join 的优势：预分配内存
+parts = ["0", "1", "2", "3"]
+s = "".join(parts)
+# 底层：先计算总长度，一次性分配内存，逐个复制
+```
+
+### 最佳实践
+
+```py title="Python"
+import io
+
+# 场景 1：少量拼接 → f-string
+name, age = "Alice", 30
+msg = f"Hello, {name}! You are {age}."
+
+# 场景 2：大量拼接 → join
+parts = [f"item_{i}" for i in range(10000)]
+result = "".join(parts)
+
+# 场景 3：流式写入 → io.StringIO
+buffer = io.StringIO()
+for i in range(10000):
+    buffer.write(f"Line {i}\n")
+output = buffer.getvalue()
+
+# 场景 4：格式化输出 → format
+template = "{name} is {age} years old"
+msg = template.format(name="Alice", age=30)
+```
+
+:::warning[避免的模式]
+```py title="Python"
+# 不要在循环中 += 字符串
+result = ""
+for item in large_list:
+    result += str(item)  # O(n²) 时间复杂度！
+
+# 不要用 % 格式化（已过时）
+msg = "Hello, %s! You are %d." % (name, age)
+
+# 推荐使用 f-string 或 .format()
+msg = f"Hello, {name}! You are {age}."
+```
+:::
+
+---
+
+## 实战：科学计算场景优化
+
+<PyodideRunner title="数据处理管道优化">
+
+```py
+import numpy as np
+import time
+
+rng = np.random.default_rng(42)
+n = 50_000
+
+# 模拟传感器数据
+temperatures = rng.normal(25, 5, n)
+pressures = rng.normal(1013, 10, n)
+
+# 慢版本：Python 循环
+def process_slow(temp, pres):
+    results = []
+    for i in range(len(temp)):
+        if temp[i] > 0:
+            adjusted = temp[i] * 1.1 + pres[i] * 0.01
+            results.append(round(adjusted, 2))
+        else:
+            results.append(0)
+    return results
+
+# 快版本：向量化
+def process_fast(temp, pres):
+    adjusted = temp * 1.1 + pres * 0.01
+    return np.where(temp > 0, adjusted, 0).round(2)
+
+# 性能对比
+start = time.perf_counter()
+r1 = process_slow(temperatures, pressures)
+t1 = time.perf_counter() - start
+
+start = time.perf_counter()
+r2 = process_fast(temperatures, pressures)
+t2 = time.perf_counter() - start
+
+print(f"循环版本: {t1:.4f}s")
+print(f"向量化版本: {t2:.6f}s")
+print(f"加速比: {t1 / t2:.1f}x")
+print(f"结果一致: {np.allclose(r1, r2)}")
+```
+
+</PyodideRunner>
+
+---
+
+## 🎯 动手练习
+
+### 练习 1：向量化转换
+
+将以下循环代码转换为向量化版本，并对比性能：
+
+```py
+def distance_matrix(points):
+    """计算点集中每对点之间的欧氏距离。"""
+    n = len(points)
+    dist = np.zeros((n, n))
+    for i in range(n):
+        for j in range(n):
+            dist[i, j] = np.sqrt((points[i][0] - points[j][0])**2 +
+                                  (points[i][1] - points[j][1])**2)
+    return dist
+```
+
+提示：使用广播机制和 `np.linalg.norm`。
+
+### 练习 2：内存优化
+
+创建一个包含 100 万个点的类，分别用普通类和 `__slots__` 实现，对比内存占用：
+
+```py
+class Point:
+    def __init__(self, x, y, z):
+        self.x, self.y, self.z = x, y, z
+
+class OptimizedPoint:
+    # 你的实现
+    pass
+```
+
+### 练习 3：字符串性能分析
+
+编写函数分析日志文件，对比不同字符串处理方式的性能：
+
+```py
+def analyze_logs(log_lines):
+    """统计每种日志级别的出现次数。"""
+    counts = {"INFO": 0, "WARNING": 0, "ERROR": 0}
+    for line in log_lines:
+        level = line.split(" ")[1]  # 假设格式为 "TIMESTAMP LEVEL message"
+        counts[level] += 1
+    return counts
+```
+
+尝试用 `join` 和列表推导优化字符串处理部分。
+
+---
+
+## 📚 延伸阅读
+
+- [NumPy 官方文档 —— 广播机制](https://numpy.org/doc/stable/user/basics.broadcasting.html)
+- [NumPy 官方文档 —— einsum](https://numpy.org/doc/stable/reference/routines.linalg.html#einsum)
+- [Python 官方文档 —— array 模块](https://docs.python.org/3/library/array.html)
+- [Python 官方文档 —— memoryview](https://docs.python.org/3/library/stdtypes.html#memoryview)
+- [Python 官方文档 —— io.StringIO](https://docs.python.org/3/library/io.html#io.StringIO)
+- [High Performance Python (O'Reilly)](https://www.oreilly.com/library/view/high-performance-python/9781492055013/)
+
+---
+
+## ✅ 本节总结
+
+本章介绍了 Python 性能优化的核心策略：
+
+1. **向量化思维**：用 NumPy 数组操作替代 Python 循环，获得 10-100 倍加速
+2. **View vs Copy**：理解切片返回视图，避免隐式复制的性能陷阱
+3. **内存布局**：C-order 和 F-order 的选择影响缓存命中率
+4. **np.einsum**：优雅地表达复杂张量运算，避免临时数组
+5. **`__slots__`**：减少类实例内存开销，适合大量小对象
+6. **`array` 模块**：紧凑的类型化数组，比列表节省内存
+7. **`memoryview`**：零拷贝切片，高效处理大型二进制数据
+8. **字符串优化**：`join` 拼接远快于 `+=`，f-string 适合少量格式化

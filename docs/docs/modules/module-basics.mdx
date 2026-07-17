@@ -1,15 +1,15 @@
 ---
-sidebar_position: 1
 sidebar_label: '模块'
 title: 🧩 模块
 description: 掌握 import 语句、from...import、别名导入、__name__ == '__main__'、__all__、模块搜索路径 sys.path 与 __pycache__，编写可复用的工具模块。
+tags: [模块与包]
 ---
 
 # 🧩 模块
 
 随着代码量增长，把所有逻辑塞进一个 `.py` 文件会变得难以维护。Python 通过**模块（module）**机制，将代码按文件拆分、组织、复用。一个 `.py` 文件就是一个模块，文件名即模块名（去掉 `.py` 后缀）。模块让代码具备了**复用、隔离、命名空间**三大能力——这是从中型项目走向大型项目的第一步。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - 一个 `.py` 文件就是一个模块，文件名即模块名
 - `import module` 引入完整模块，`from module import name` 引入部分名称
 - `__name__ == "__main__"` 让模块既能直接运行，又能被导入而不产生副作用
@@ -17,7 +17,6 @@ description: 掌握 import 语句、from...import、别名导入、__name__ == '
 - `sys.path` 决定模块查找顺序，优先使用包结构和 `pip install -e .` 而非手动修改
 - `__pycache__` 缓存字节码加快启动，可放心删除
 - 模块导入时会执行顶层代码一次，后续导入命中缓存
-:::
 
 ## import 语句
 
@@ -54,7 +53,7 @@ print(sqrt(16))      # 输出：4.0
 print(factorial(5))  # 输出：120
 ```
 
-:::warning 谨慎使用 from ... import *
+:::warning[谨慎使用 from ... import *]
 `from math import *` 会把模块所有公开名称导入当前命名空间，容易**覆盖同名变量**且难以追溯来源，PEP 8 明确不推荐在生产代码中使用。
 
 ```py title="Python"
@@ -80,7 +79,7 @@ from math import factorial as fact
 print(fact(5))  # 输出：120
 ```
 
-:::tip 主流库的别名约定
+:::tip[主流库的别名约定]
 数据科学生态有一套事实上的命名约定，遵守它们能让代码更易读：
 - `import numpy as np`
 - `import pandas as pd`
@@ -127,7 +126,7 @@ print(greeter.greet("Bob"))  # 输出：你好，Bob！
 # 不会触发 input()，因为 __name__ != "__main__"
 ```
 
-:::info 何时使用 __name__ 守卫
+:::info[何时使用 __name__ 守卫]
 - 模块既作为脚本运行，又作为库被导入
 - 包含**示例代码**、**自测代码**、**CLI 入口**
 - 避免导入时产生副作用（如启动服务、写入文件、连接数据库）
@@ -173,7 +172,7 @@ print(reverse_string("abc"))         # 输出：cba
 # print(_internal_helper("X"))  # NameError: 未导出
 ```
 
-:::tip 单下划线约定
+:::tip[单下划线约定]
 即便没有 `__all__`，以单下划线开头的名称（如 `_internal_helper`）也被视为"模块私有"，`from module import *` 不会导入它们。这是约定，不是强制——你仍可以显式 `from string_utils import _internal_helper`。
 :::
 
@@ -316,7 +315,7 @@ sys.path.insert(0, str(Path(__file__).parent / "libs"))
 import my_custom_module  # 现在可以找到 libs/my_custom_module.py
 ```
 
-:::warning 不要滥用 sys.path 修改
+:::warning[不要滥用 sys.path 修改]
 直接修改 `sys.path` 会让项目难以维护和部署。更好的方式：
 - 把代码组织成**包**（下一节会讲）
 - 用 `pip install -e .` 以可编辑模式安装项目
@@ -375,7 +374,7 @@ dis.dis(add)
               RETURN_VALUE
 ```
 
-:::note 关于 __pycache__
+:::note[关于 __pycache__]
 - 可以随时删除 `__pycache__` 目录，Python 会在下次运行时重新生成
 - 在 `.gitignore` 中加入 `__pycache__/` 和 `*.pyc`
 - 发布到生产环境时通常不需要 `.pyc`，部署时会重新生成
@@ -504,7 +503,7 @@ print(slugify("Hello World! 你好"))  # 输出：hello-world-你好
 print(camel_to_snake("getUserById"))  # 输出：get_user_by_id
 ```
 
-:::tip 模块自测三件套
+:::tip[模块自测三件套]
 - 文档字符串中写 `>>>` 测试用例
 - `if __name__ == "__main__"` 块中调用 `doctest.testmod()`
 - 用 `python -m 模块名` 形式运行（推荐，等价于直接运行）
@@ -544,7 +543,7 @@ print(camel_to_snake("getUserById"))  # 输出：get_user_by_id
 | 运行模块 | `python -m module` | 推荐方式 |
 | 模块自测 | `doctest.testmod()` | 文档字符串测试 |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们学习了 Python 模块机制，核心要点包括：
 

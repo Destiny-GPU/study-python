@@ -44,7 +44,9 @@ docs/.docusaurus/
 .compose/
 .trae/
 .mimocode/
+.opencode/
 docs/compose/
+research/
 
 ### OS ###
 .DS_Store

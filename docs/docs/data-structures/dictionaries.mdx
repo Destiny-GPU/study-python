@@ -1,8 +1,8 @@
 ---
-sidebar_position: 3
 sidebar_label: '字典'
-title: 📦 字典（Dict）
+title: 字典（Dict）
 description: 字典是 Python 的可变键值映射，3.7+ 保证插入顺序，支持合并运算符、推导式与 defaultdict/Counter 等强大工具。
+tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,9 +11,18 @@ import { PyodideRunner } from '@site/src/components';
 
 字典（`dict`）是 Python 中最重要的映射类型，存储**键值对**（key-value）。它通过哈希表实现，查找、插入、删除的平均时间复杂度都是 O(1)。字典保证**按插入顺序**遍历，这让它不仅是查询利器，也常被当作有序映射使用。
 
+## 📌 本节要点
+
+- 字典通过键快速查找值，平均时间复杂度 O(1)
+- 字典推导式 `{k: v for ...}` 和 `fromkeys()`/`zip()` 创建字典
+- `dict.get(key, default)` 安全访问，避免 KeyError
+- `defaultdict`、`Counter`、`OrderedDict` 是常用的标准库字典工具
+- 字典合并运算符 `|` 和 `|=`（Python 3.9+）
+- 字典遍历技巧：`items()`、`keys()`、`values()` 及嵌套遍历
+
 <PyodideRunner title="字典操作快速体验">
 
-```python
+```py
 from collections import Counter
 
 # 词频统计
@@ -55,7 +64,7 @@ squares = {x: x * x for x in range(4)}
 print(squares)  # {0: 0, 1: 1, 2: 4, 3: 9}
 ```
 
-:::tip 键的要求
+:::tip[键的要求]
 字典的键必须是**可哈希**（hashable）对象——通常是不可变类型，如 `str`、`int`、`float`、`tuple`（其元素也要可哈希）。列表、字典、集合都不能做键。
 :::
 
@@ -116,7 +125,7 @@ scores["David"] = 88
 print(list(keys))  # ['Alice', 'Bob', 'Carol', 'David']  自动反映新键
 ```
 
-:::info 遍历顺序
+:::info[遍历顺序]
 Python 3.7+ 字典保持插入顺序，因此 `keys()`/`values()`/`items()` 的遍历顺序与插入顺序一致。
 :::
 
@@ -142,7 +151,7 @@ for ch in text:
 print(counts2)
 ```
 
-:::tip 更 Pythonic 的做法
+:::tip[更 Pythonic 的做法]
 对于"按分组累积"这种模式，`collections.defaultdict` 比 `setdefault` 更优雅，详见后文。
 :::
 
@@ -218,7 +227,7 @@ config2.update({"port": 8080, "host": "0.0.0.0"})
 print(config2 == config)  # True
 ```
 
-:::tip 字典合并的优先级
+:::tip[字典合并的优先级]
 `a | b` 中 `b` 的键优先；与 `dict(a, **b)` 行为一致，但 `|` 更通用（支持任意两个映射）。
 :::
 
@@ -239,7 +248,7 @@ d["apple"] = 5
 print(list(d.keys()))  # ['banana', 'cherry', 'apple']
 ```
 
-:::info 何时仍用 OrderedDict
+:::info[何时仍用 OrderedDict]
 普通字典已有序，但 `OrderedDict` 仍有用武之地：①需要 `move_to_end`、`popitem(last=True)` 等顺序操作（如实现 LRU 缓存）；②显式表达"顺序敏感"的语义。一般场景直接用 `dict` 即可。
 :::
 
@@ -266,7 +275,7 @@ for ch in "abracadabra":
 print(dict(counts))  # {'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1}
 ```
 
-:::warning defaultdict 的默认值工厂
+:::warning[defaultdict 的默认值工厂]
 `defaultdict(list)` 的默认值是 `[]`，`defaultdict(int)` 的默认值是 `0`（int() 返回 0）。访问键会**真的创建**该键值对，而 `get` 不会。
 :::
 
@@ -378,7 +387,7 @@ Counter Top 5:
 频次 >= 2 的词: {'python': 5, 'is': 5, 'and': 2}
 ```
 
-:::tip Counter 的优势
+:::tip[Counter 的优势]
 对于"统计频次"这种典型场景，`Counter` 比手写字典循环更简洁、更可读，且自带 `most_common` 等实用方法，应作为首选。
 :::
 
@@ -460,6 +469,8 @@ top_2 = heapq.nlargest(2, metrics.items(), key=lambda x: x[1])
 
 ## 底层机制与内存考量
 
+:::details[🧠 底层机制与内存考量]
+
 ### 紧凑字典（Compact Dict）与有序性
 
 字典采用紧凑布局并保持插入顺序。其底层将哈希表拆分为两个数组：
@@ -514,6 +525,8 @@ d = {1: "int_one", True: "bool_true"}
 ```
 
 **规范**：严禁在同一字典中混用布尔值和整数作为键。
+
+:::
 
 ## 场景决策矩阵
 

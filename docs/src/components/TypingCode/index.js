@@ -1,14 +1,65 @@
 import { useState, useEffect, useRef } from 'react';
 import styles from './styles.module.css';
 
+/**
+ * Pre-tokenized code lines for the typing animation.
+ * Each line is an array of { value, cls? } tokens.
+ * cls values map to CSS module classes for syntax highlighting.
+ */
 const CODE_LINES = [
-  '# 圆周率计算',
-  'from math import atan',
-  'a = atan(1 / 5)',
-  'b = atan(1 / 239)',
-  'pi = 4 * (4 * a - b)',
-  'print(f"π ≈ {pi:.15f}")',
-  '# π ≈ 3.141592653589793',
+  // # 圆周率计算
+  [{ value: '# 圆周率计算', cls: styles.codeComment }],
+  // from math import atan
+  [
+    { value: 'from', cls: styles.codeKeyword },
+    { value: ' math ', cls: styles.codeIdent },
+    { value: 'import', cls: styles.codeKeyword },
+    { value: ' atan', cls: styles.codeIdent },
+  ],
+  // a = atan(1 / 5)
+  [
+    { value: 'a', cls: styles.codeIdent },
+    { value: ' = ', cls: '' },
+    { value: 'atan', cls: styles.codeBuiltin },
+    { value: '(', cls: '' },
+    { value: '1', cls: styles.codeNumber },
+    { value: ' / ', cls: '' },
+    { value: '5', cls: styles.codeNumber },
+    { value: ')', cls: '' },
+  ],
+  // b = atan(1 / 239)
+  [
+    { value: 'b', cls: styles.codeIdent },
+    { value: ' = ', cls: '' },
+    { value: 'atan', cls: styles.codeBuiltin },
+    { value: '(', cls: '' },
+    { value: '1', cls: styles.codeNumber },
+    { value: ' / ', cls: '' },
+    { value: '239', cls: styles.codeNumber },
+    { value: ')', cls: '' },
+  ],
+  // pi = 4 * (4 * a - b)
+  [
+    { value: 'pi', cls: styles.codeIdent },
+    { value: ' = ', cls: '' },
+    { value: '4', cls: styles.codeNumber },
+    { value: ' * (', cls: '' },
+    { value: '4', cls: styles.codeNumber },
+    { value: ' * ', cls: '' },
+    { value: 'a', cls: styles.codeIdent },
+    { value: ' - ', cls: '' },
+    { value: 'b', cls: styles.codeIdent },
+    { value: ')', cls: '' },
+  ],
+  // print(f"π ≈ {pi:.15f}")
+  [
+    { value: 'print', cls: styles.codeBuiltin },
+    { value: '(', cls: '' },
+    { value: 'f"π ≈ {pi:.15f}"', cls: styles.codeString },
+    { value: ')', cls: '' },
+  ],
+  // # π ≈ 3.141592653589793
+  [{ value: '# π ≈ 3.141592653589793', cls: styles.codeComment }],
 ];
 
 const CHARS_PER_TICK = 1;
@@ -19,15 +70,36 @@ export default function TypingCode() {
   const [lineIdx, setLineIdx] = useState(0);
   const [charIdx, setCharIdx] = useState(0);
   const [done, setDone] = useState(false);
+  const containerRef = useRef(null);
+  const visibleRef = useRef(false);
   const rafRef = useRef(null);
   const lastTickRef = useRef(0);
   const pauseUntilRef = useRef(0);
   const loopTimeoutRef = useRef(null);
 
+  // Pause animation when component is not in viewport
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => { visibleRef.current = entry.isIntersecting; },
+      { threshold: 0.1 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (done) return;
 
     const step = (ts) => {
+      // Skip frame updates when not visible (still keep loop alive for resume)
+      if (!visibleRef.current) {
+        lastTickRef.current = ts;
+        rafRef.current = requestAnimationFrame(step);
+        return;
+      }
       if (lineIdx >= CODE_LINES.length) {
         setDone(true);
         return;
@@ -45,8 +117,9 @@ export default function TypingCode() {
       lastTickRef.current = ts;
 
       const line = CODE_LINES[lineIdx];
+      const lineLen = line.reduce((sum, t) => sum + t.value.length, 0);
 
-      if (charIdx >= line.length) {
+      if (charIdx >= lineLen) {
         pauseUntilRef.current = ts + LINE_PAUSE_MS;
         setLineIdx((l) => l + 1);
         setCharIdx(0);
@@ -54,15 +127,16 @@ export default function TypingCode() {
         return;
       }
 
-      setCharIdx((c) => Math.min(c + CHARS_PER_TICK, line.length));
+      setCharIdx((c) => Math.min(c + CHARS_PER_TICK, lineLen));
       rafRef.current = requestAnimationFrame(step);
     };
 
     rafRef.current = requestAnimationFrame(step);
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [lineIdx, charIdx, done]);
 
-  // 动画完成后自动循环播放
   useEffect(() => {
     if (!done) return;
 
@@ -70,17 +144,15 @@ export default function TypingCode() {
       setLineIdx(0);
       setCharIdx(0);
       setDone(false);
-    }, 5000); // 5秒间隔
+    }, 5000);
 
     return () => {
-      if (loopTimeoutRef.current) {
-        clearTimeout(loopTimeoutRef.current);
-      }
+      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
     };
   }, [done]);
 
   return (
-    <div className={styles.codeAnimation}>
+    <div ref={containerRef} className={styles.codeAnimation}>
       <div className={styles.codeWindow}>
         <div className={styles.codeWindowBar}>
           <span className={styles.codeDot} />
@@ -89,13 +161,12 @@ export default function TypingCode() {
         </div>
         <pre className={styles.codeBlock}>
           <code>
-            {CODE_LINES.map((line, i) => {
+            {CODE_LINES.map((tokens, i) => {
               if (i > lineIdx) return null;
-              const visible = i < lineIdx ? line : line.slice(0, charIdx);
               const isActive = i === lineIdx && !done;
               return (
                 <div key={i} className={styles.codeLine}>
-                  <HighlightedLine text={visible} />
+                  <HighlightedLine tokens={tokens} visible={i < lineIdx ? Infinity : charIdx} />
                   {isActive && <span className={styles.cursor}>▌</span>}
                 </div>
               );
@@ -112,67 +183,20 @@ export default function TypingCode() {
   );
 }
 
-function HighlightedLine({ text }) {
-  if (!text) return null;
+function HighlightedLine({ tokens, visible }) {
+  let remaining = visible;
+  const rendered = [];
 
-  if (text.trimStart().startsWith('#')) {
-    return <span className={styles.codeComment}>{text}</span>;
+  for (const { value, cls } of tokens) {
+    if (remaining <= 0) break;
+    const slice = remaining === Infinity ? value : value.slice(0, remaining);
+    rendered.push(
+      <span key={rendered.length} className={cls || ''}>
+        {slice}
+      </span>,
+    );
+    remaining -= value.length;
   }
 
-  const tokens = tokenize(text);
-  return <>{tokens.map((t, i) => <span key={i} className={t.cls || ''}>{t.value}</span>)}</>;
-}
-
-function tokenize(line) {
-  const tokens = [];
-  let rest = line;
-
-  const KW = /^(import|from|as|def|class|return|if|else|elif|for|while|with|try|except|finally|raise|pass|break|continue|and|or|not|in|is|True|False|None|lambda|yield|global|nonlocal|assert|del)\b/;
-  const BUILTIN = /^(print|input|len|range|type|int|float|str|list|dict|set|tuple|open|super|__name__|__init__|format|zip|map|filter|sorted|enumerate|abs|min|max|sum|any|all|isinstance|hasattr|getattr|setattr)\b/;
-  const STRING = /^f?("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/;
-  const DECORATOR = /^@\w+/;
-  const NUMBER = /^\d[\d_]*/;
-  const WORD = /^\w+/;
-
-  while (rest.length > 0) {
-    const ws = rest.match(/^(\s+)/);
-    if (ws) {
-      tokens.push({ value: ws[1] });
-      rest = rest.slice(ws[1].length);
-      continue;
-    }
-
-    if (rest.startsWith('#')) {
-      tokens.push({ value: rest, cls: styles.codeComment });
-      rest = '';
-      continue;
-    }
-
-    const rules = [
-      { re: KW, cls: styles.codeKeyword },
-      { re: BUILTIN, cls: styles.codeBuiltin },
-      { re: STRING, cls: styles.codeString },
-      { re: DECORATOR, cls: styles.codeDecorator },
-      { re: NUMBER, cls: styles.codeNumber },
-      { re: WORD, cls: styles.codeIdent },
-    ];
-
-    let matched = false;
-    for (const { re, cls } of rules) {
-      const m = rest.match(re);
-      if (m) {
-        tokens.push({ value: m[0], cls });
-        rest = rest.slice(m[0].length);
-        matched = true;
-        break;
-      }
-    }
-
-    if (!matched) {
-      tokens.push({ value: rest[0] });
-      rest = rest.slice(1);
-    }
-  }
-
-  return tokens;
+  return <>{rendered}</>;
 }

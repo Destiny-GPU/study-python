@@ -1,0 +1,672 @@
+{
+  "advanced/async-await": {
+    "title": "异步编程",
+    "description": "学习 Python 异步编程，掌握 async/await 语法、asyncio 事件循环、TaskGroup 并发与异步上下文管理器。",
+    "tags": [
+      "进阶特性"
+    ]
+  },
+  "advanced/defensive-programming": {
+    "title": "防御性编程",
+    "description": "学习防御性编程的核心原则、输入验证、异常处理、类型检查、边界条件处理等实战技巧。",
+    "tags": [
+      "进阶特性",
+      "异常处理"
+    ]
+  },
+  "advanced/eval-function": {
+    "title": "eval 函数与字符串解析",
+    "description": "深入理解 eval 函数的原理、使用场景及安全风险，掌握字符串与代码边界的处理方法。",
+    "tags": [
+      "进阶特性"
+    ]
+  },
+  "advanced/hash-mechanism": {
+    "title": "Python 哈希机制详解",
+    "description": "深入理解 Python 的哈希机制，掌握可哈希对象的特性，学习自定义类中正确实现 __hash__ 和 __eq__ 方法。",
+    "tags": [
+      "进阶特性",
+      "数据结构"
+    ]
+  },
+  "advanced/index": {
+    "title": "进阶特性",
+    "description": "类型注解、异步编程、模式匹配等现代 Python 高级特性。",
+    "tags": [
+      "进阶特性"
+    ]
+  },
+  "advanced/pattern-matching": {
+    "title": "模式匹配详解",
+    "description": "深入 match-case 高级用法，掌握序列 *rest、映射 **rest、类模式、捕获模式、守卫、OR 模式与 AST 节点处理。",
+    "tags": [
+      "进阶特性",
+      "控制流"
+    ]
+  },
+  "advanced/pythonic": {
+    "title": "Pythonic 编程哲学",
+    "description": "深入理解 Pythonic 编程风格的核心原则与实践技巧，学习如何写出地道、高效、易读的 Python 代码。",
+    "tags": [
+      "进阶特性",
+      "基础语法"
+    ]
+  },
+  "advanced/type-hints": {
+    "title": "类型注解",
+    "description": "学习 Python 类型注解体系，掌握变量、函数、类的标注方式，Optional/Union/泛型/TypeAlias 以及 Python 3.12 type 语句。",
+    "tags": [
+      "进阶特性",
+      "基础语法"
+    ]
+  },
+  "advanced/typing-module": {
+    "title": "typing 模块",
+    "description": "深入 typing 模块，掌握 Callable、TypeVar、Generic、Protocol、TypedDict、Literal、Final 等高级类型工具。",
+    "tags": [
+      "进阶特性",
+      "面向对象"
+    ]
+  },
+  "advanced/walrus-operator": {
+    "title": "海象运算符",
+    "description": "学习 Python 3.8+ 的海象运算符 :=，掌握赋值表达式在条件、循环、推导式中的应用与可读性权衡。",
+    "tags": [
+      "进阶特性"
+    ]
+  },
+  "basics/booleans": {
+    "title": "布尔值与 None",
+    "description": "掌握 Python 的布尔类型 True/False、真值测试规则、短路求值的逻辑运算符，以及 None 与 is 运算符的用法。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/comments": {
+    "title": "注释与文档字符串",
+    "description": "学习 Python 注释的多种形式、文档字符串（docstring）的规范写法、Sphinx 风格，以及 __doc__ 属性与 help() 函数的使用。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/index": {
+    "title": "基础语法",
+    "description": "掌握 Python 变量、数据类型、运算符、输入输出等基本语法元素。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/input-output": {
+    "title": "输入与输出",
+    "description": "掌握 Python 的 print 函数参数、input 输入、多种格式化输出方式、sys.stdin/stdout/stderr 流，以及 rich 库的终端美化输出。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/numbers": {
+    "title": "数字类型",
+    "description": "深入学习 Python 的 int、float、complex 数字类型，掌握算术运算、进制转换以及 decimal、fractions 等高级数值模块。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/operators": {
+    "title": "运算符",
+    "description": "系统学习 Python 的各类运算符：算术、比较、逻辑、赋值、位运算，以及海象运算符 := 与运算符优先级、链式比较。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/strings": {
+    "title": "字符串",
+    "description": "全面学习 Python 字符串：创建方式、转义字符、原始字符串、f-string 嵌套引号、切片索引、常用方法与不可变性。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "basics/variables": {
+    "title": "变量与数据类型",
+    "description": "学习 Python 变量命名规则、动态类型机制、基本数据类型总览，以及类型注解的基础用法。",
+    "tags": [
+      "基础语法"
+    ]
+  },
+  "control-flow/break-continue": {
+    "title": "break 与 continue",
+    "description": "学习 Python 的 break、continue、pass 语句，理解它们与 else 子句的配合及嵌套循环行为。",
+    "tags": [
+      "控制流"
+    ]
+  },
+  "control-flow/for-loops": {
+    "title": "for 循环",
+    "description": "学习 Python 的 for 循环、range、enumerate、zip 等遍历技巧，以及 for...else 与循环变量作用域。",
+    "tags": [
+      "控制流"
+    ]
+  },
+  "control-flow/if-else": {
+    "title": "条件语句",
+    "description": "学习 Python 中 if/elif/else 条件判断语句、条件表达式、嵌套条件与真值测试。",
+    "tags": [
+      "控制流"
+    ]
+  },
+  "control-flow/index": {
+    "title": "控制流",
+    "description": "通过条件判断和循环控制程序的执行流程。",
+    "tags": [
+      "控制流"
+    ]
+  },
+  "control-flow/match-case": {
+    "title": "结构化模式匹配",
+    "description": "学习 Python 3.10+ 的 match-case 语句，掌握字面量、解构、守卫、as 绑定等模式匹配技巧。",
+    "tags": [
+      "控制流",
+      "进阶特性"
+    ]
+  },
+  "control-flow/while-loops": {
+    "title": "while 循环",
+    "description": "学习 Python 的 while 循环语法、无限循环、while...else、避免死循环以及海象运算符的应用。",
+    "tags": [
+      "控制流"
+    ]
+  },
+  "data-structures/comprehensions": {
+    "title": "推导式（Comprehension）",
+    "description": "推导式是 Python 用一行简洁语法构造列表、字典、集合与生成器的利器，是 Pythonic 风格的核心标志。",
+    "tags": [
+      "数据结构",
+      "函数"
+    ]
+  },
+  "data-structures/dictionaries": {
+    "title": "字典（Dict）",
+    "description": "字典是 Python 的可变键值映射，3.7+ 保证插入顺序，支持合并运算符、推导式与 defaultdict/Counter 等强大工具。",
+    "tags": [
+      "数据结构"
+    ]
+  },
+  "data-structures/index": {
+    "title": "数据结构",
+    "description": "熟练使用列表、元组、字典、集合组织和管理数据。",
+    "tags": [
+      "数据结构"
+    ]
+  },
+  "data-structures/lists": {
+    "title": "列表（List）",
+    "description": "Python 列表是最常用的可变序列，支持任意类型元素的有序存储与灵活的增删改查操作。",
+    "tags": [
+      "数据结构"
+    ]
+  },
+  "data-structures/sets": {
+    "title": "集合（Set）",
+    "description": "集合是 Python 的无序不重复容器，支持高效的成员测试与并交差等集合运算，是去重与关系判断的利器。",
+    "tags": [
+      "数据结构"
+    ]
+  },
+  "data-structures/tuples": {
+    "title": "元组（Tuple）",
+    "description": "元组是 Python 的不可变序列，常用于固定数据聚合、多返回值与字典键，理解不可变性与解包是关键。",
+    "tags": [
+      "数据结构"
+    ]
+  },
+  "error-handling/context-managers": {
+    "title": "上下文管理器",
+    "description": "学习 with 语句、__enter__/__exit__ 协议、contextlib.contextmanager 装饰器、ExitStack、async with 以及 contextlib.suppress/redirect_stdout 等实用工具，通过飞行数据记录实战掌握资源清理",
+    "tags": [
+      "异常处理",
+      "进阶特性"
+    ]
+  },
+  "error-handling/custom-exceptions": {
+    "title": "自定义异常",
+    "description": "学习如何继承 Exception 设计自定义异常类、添加额外属性、构建异常链与异常分组、遵循最佳实践，并通过飞行系统实战掌握业务异常体系设计",
+    "tags": [
+      "异常处理"
+    ]
+  },
+  "error-handling/exceptions": {
+    "title": "异常基础",
+    "description": "理解什么是异常、Python 异常层次结构、常见内置异常、Traceback 阅读方法，以及异常即对象的核心思想",
+    "tags": [
+      "异常处理"
+    ]
+  },
+  "error-handling/index": {
+    "title": "异常处理",
+    "description": "优雅地处理程序运行中的错误与异常，编写健壮可靠的代码。",
+    "tags": [
+      "异常处理"
+    ]
+  },
+  "error-handling/try-except": {
+    "title": "try-except 语句",
+    "description": "掌握 try-except-else-finally 完整结构、多异常捕获、as 绑定、raise 传递、raise from 链式异常以及 Python 3.11+ 的 ExceptionGroup 与 except* 语法",
+    "tags": [
+      "异常处理"
+    ]
+  },
+  "file-handling/csv": {
+    "title": "CSV 处理",
+    "description": "使用标准库 csv 模块读写 CSV 文件，掌握 reader/writer、DictReader/DictWriter、分隔符与引号规则，以及与 pandas 的对比。",
+    "tags": [
+      "文件操作"
+    ]
+  },
+  "file-handling/file-paths": {
+    "title": "路径处理",
+    "description": "使用 pathlib 进行现代路径操作，掌握 Path 对象基础用法。",
+    "tags": [
+      "文件操作"
+    ]
+  },
+  "file-handling/index": {
+    "title": "文件与 IO",
+    "description": "读写文件、处理路径、操作 JSON 与 CSV 等常见数据格式。",
+    "tags": [
+      "文件操作"
+    ]
+  },
+  "file-handling/json": {
+    "title": "JSON 处理",
+    "description": "掌握 Python 中 JSON 的序列化与反序列化，处理中文、缩进、自定义类型与日期，以及与 dataclass 的互转。",
+    "tags": [
+      "文件操作"
+    ]
+  },
+  "file-handling/read-write": {
+    "title": "读写文件",
+    "description": "掌握 Python 中文件读写的基础操作，包括 open 函数、with 上下文管理器、各种读写模式与编码处理。",
+    "tags": [
+      "文件操作"
+    ]
+  },
+  "functions/decorators": {
+    "title": "装饰器",
+    "description": "学习装饰器本质、@ 语法糖、带参数装饰器、functools.wraps、类装饰器、内置装饰器以及 @cache 等常用第三方装饰器",
+    "tags": [
+      "函数",
+      "进阶特性"
+    ]
+  },
+  "functions/defining": {
+    "title": "定义与调用函数",
+    "description": "学习使用 def 定义函数、return 返回值、文档字符串、函数作为一等公民以及类型注解基础",
+    "tags": [
+      "函数"
+    ]
+  },
+  "functions/generators": {
+    "title": "生成器与 yield",
+    "description": "学习迭代器协议、yield 关键字、生成器函数与生成器表达式、惰性求值、yield from 以及生成器管道",
+    "tags": [
+      "函数",
+      "进阶特性"
+    ]
+  },
+  "functions/index": {
+    "title": "函数",
+    "description": "封装可复用代码，掌握参数、作用域、装饰器、生成器等进阶用法。",
+    "tags": [
+      "函数"
+    ]
+  },
+  "functions/lambda": {
+    "title": "Lambda 匿名函数",
+    "description": "学习 lambda 表达式语法、与 def 的区别、作为参数传递、operator 模块及其与列表推导式的对比",
+    "tags": [
+      "函数"
+    ]
+  },
+  "functions/parameters": {
+    "title": "参数详解",
+    "description": "深入理解位置参数、关键字参数、默认值、*args、**kwargs、关键字只参数、位置只参数以及参数解包",
+    "tags": [
+      "函数"
+    ]
+  },
+  "functions/recursion": {
+    "title": "递归",
+    "description": "学习递归思想、基线条件、递归深度限制、典型应用（飞行包线计算/轨迹规划/组件层级遍历/决策树）以及递归与迭代的对比",
+    "tags": [
+      "函数"
+    ]
+  },
+  "functions/scope": {
+    "title": "作用域 LEGB",
+    "description": "理解 Python 的 LEGB 作用域规则、局部/嵌套/全局/内置作用域、global 与 nonlocal 声明以及闭包",
+    "tags": [
+      "函数"
+    ]
+  },
+  "getting-started/first-program": {
+    "title": "第一个 Python 程序",
+    "description": "编写并运行你的第一个 Python 程序，认识 print 函数、注释与 REPL 交互式环境。",
+    "tags": [
+      "入门"
+    ]
+  },
+  "getting-started/ide-setup": {
+    "title": "IDE 配置指南",
+    "description": "配置 VS Code 与 PyCharm 进行 Python 开发，集成 uv 现代环境管理工具。",
+    "tags": [
+      "入门"
+    ]
+  },
+  "getting-started/index": {
+    "title": "入门准备",
+    "description": "搭建 Python 开发环境，编写并运行第一个 Python 程序。",
+    "tags": [
+      "入门"
+    ]
+  },
+  "getting-started/installation": {
+    "title": "安装 Python 环境",
+    "description": "在 Linux、Windows、macOS 上安装 Python 3.12+，并掌握 pyenv 多版本管理与 uv 现代包管理器。",
+    "tags": [
+      "入门"
+    ]
+  },
+  "getting-started/running-code": {
+    "title": "运行 Python 代码的方式",
+    "description": "掌握 Python 脚本、python -c、REPL、python -i、__main__ 入口、uv run 与 Jupyter 等多种运行方式。",
+    "tags": [
+      "入门"
+    ]
+  },
+  "modules/index": {
+    "title": "模块与包",
+    "description": "组织代码为模块与包，使用 pip 管理依赖，借助虚拟环境隔离项目。",
+    "tags": [
+      "模块与包"
+    ]
+  },
+  "modules/module-basics": {
+    "title": "🧩 模块",
+    "description": "掌握 import 语句、from...import、别名导入、__name__ == '__main__'、__all__、模块搜索路径 sys.path 与 __pycache__，编写可复用的工具模块。",
+    "tags": [
+      "模块与包"
+    ]
+  },
+  "modules/packages": {
+    "title": "🧩 包",
+    "description": "理解包与目录结构、__init__.py 作用、相对导入与绝对导入、命名空间包、pyproject.toml 项目结构与 src 布局，组织多模块项目。",
+    "tags": [
+      "模块与包"
+    ]
+  },
+  "modules/pip": {
+    "title": "🧩 pip 包管理",
+    "description": "掌握 pip install、requirements.txt、pip freeze、pyproject.toml 依赖声明、本地/git 安装、pip-tools 与发布简单包的完整流程。",
+    "tags": [
+      "模块与包"
+    ]
+  },
+  "modules/virtual-env": {
+    "title": "🧩 虚拟环境",
+    "description": "理解虚拟环境必要性，使用 venv 创建/激活，掌握 uv、poetry 现代工具与 pyenv 多版本管理，搭建完整 Python 项目工作流。",
+    "tags": [
+      "模块与包"
+    ]
+  },
+  "oop/classes": {
+    "title": "类与对象",
+    "description": "学习 class 定义、__init__、self、实例属性与类属性、实例方法、__str__/__repr__、属性类型注解，构建面向对象程序的基础。",
+    "tags": [
+      "面向对象"
+    ]
+  },
+  "oop/dataclasses": {
+    "title": "数据类",
+    "description": "学习 @dataclass 装饰器、字段默认值、field(default_factory)、frozen、slots、kw_only、__post_init__ 以及与 NamedTuple 的对比。",
+    "tags": [
+      "面向对象",
+      "进阶特性"
+    ]
+  },
+  "oop/encapsulation": {
+    "title": "封装",
+    "description": "学习命名约定、_protected/__private 名称改写、@property 装饰器、只读属性与 __slots__，合理控制对象内部状态的访问。",
+    "tags": [
+      "面向对象"
+    ]
+  },
+  "oop/index": {
+    "title": "面向对象",
+    "description": "掌握类与对象、继承、多态、封装，构建结构化的大型程序。",
+    "tags": [
+      "面向对象"
+    ]
+  },
+  "oop/inheritance": {
+    "title": "继承",
+    "description": "学习单继承、多继承、super()、MRO、方法重写、isinstance/issubclass、object 基类与抽象基类，构建层级化的类型体系。",
+    "tags": [
+      "面向对象"
+    ]
+  },
+  "oop/magic-methods": {
+    "title": "魔术方法",
+    "description": "系统学习 Python 魔术方法（dunder methods）：__init__/__new__、__str__/__repr__、容器协议、迭代、比较、运算符、上下文管理器、__call__ 等。",
+    "tags": [
+      "面向对象"
+    ]
+  },
+  "oop/polymorphism": {
+    "title": "多态",
+    "description": "学习鸭子类型、typing.Protocol 协议、运行时多态、方法重写与运算符重载，理解 Python 灵活的多态机制。",
+    "tags": [
+      "面向对象"
+    ]
+  },
+  "parallel-computing/index": {
+    "title": "并行计算",
+    "description": "多进程、多线程、concurrent.futures — CPU 密集型与 I/O 密集型并行方案。",
+    "tags": [
+      "并行计算"
+    ]
+  },
+  "parallel-computing/multiprocessing": {
+    "title": "多进程与并行",
+    "description": "掌握 multiprocessing 与 concurrent.futures，绕过 GIL 实现 CPU 密集型并行计算。",
+    "tags": [
+      "并行计算",
+      "multiprocessing"
+    ]
+  },
+  "parallel-computing/threading": {
+    "title": "多线程",
+    "description": "掌握 threading 模块、线程同步与线程池，高效处理 I/O 密集型并发任务。",
+    "tags": [
+      "并行计算",
+      "threading"
+    ]
+  },
+  "performance/index": {
+    "title": "性能",
+    "description": "Python 性能分析与优化策略。",
+    "tags": [
+      "性能"
+    ]
+  },
+  "performance/optimization": {
+    "title": "优化策略",
+    "description": "掌握向量化思维、内存优化与字符串性能，编写高效的科学计算代码。",
+    "tags": [
+      "性能",
+      "优化"
+    ]
+  },
+  "performance/profiling": {
+    "title": "性能分析与优化",
+    "description": "掌握 Python 性能分析工具和优化策略，编写高效的代码。",
+    "tags": [
+      "性能"
+    ]
+  },
+  "project-tutorial/complete-project": {
+    "title": "完整项目实战：学生成绩管理系统",
+    "description": "从零到一构建一个完整的 Python CLI 项目，串联变量、函数、OOP、文件处理、测试等所有知识。",
+    "tags": [
+      "项目实战"
+    ]
+  },
+  "project-tutorial/index": {
+    "title": "项目实战",
+    "description": "从零搭建完整的 Python 项目。",
+    "tags": [
+      "项目实战"
+    ]
+  },
+  "project-tutorial/scientific-project": {
+    "title": "科研项目实战：飞行数据分析",
+    "description": "从零搭建完整的科研 Python 项目，涵盖数据处理、信号分析、可视化与测试。",
+    "tags": [
+      "项目实战",
+      "科学计算"
+    ]
+  },
+  "scientific-computing/index": {
+    "title": "第三方库",
+    "description": "NumPy、SciPy、pandas、matplotlib、PyTorch — 科研人员的 Python 工具箱。",
+    "tags": [
+      "第三方库",
+      "NumPy",
+      "SciPy",
+      "pandas",
+      "matplotlib",
+      "PyTorch"
+    ]
+  },
+  "scientific-computing/matplotlib-intro": {
+    "title": "matplotlib 入门",
+    "description": "掌握 pyplot 基础绘图、子图布局、图形美化与科研图表绘制，出版级可视化。",
+    "tags": [
+      "第三方库",
+      "matplotlib"
+    ]
+  },
+  "scientific-computing/numpy-fundamentals": {
+    "title": "NumPy 基础",
+    "description": "掌握 ndarray 创建、索引切片、广播机制、向量化运算与线性代数，用 NumPy 高效处理科学计算数据。",
+    "tags": [
+      "第三方库",
+      "NumPy"
+    ]
+  },
+  "scientific-computing/pandas-intro": {
+    "title": "pandas 入门",
+    "description": "掌握 Series 与 DataFrame、数据读写、选择过滤、分组聚合与合并，高效处理实验数据。",
+    "tags": [
+      "第三方库",
+      "pandas"
+    ]
+  },
+  "scientific-computing/pytorch-intro": {
+    "title": "PyTorch 入门",
+    "description": "掌握 Tensor、自动微分、神经网络构建、数据加载与训练循环，用 PyTorch 实现深度学习模型。",
+    "tags": [
+      "第三方库",
+      "PyTorch"
+    ]
+  },
+  "scientific-computing/scipy-intro": {
+    "title": "SciPy 入门",
+    "description": "掌握 SciPy 的优化、信号处理、ODE 求解与插值，用 Python 解决科学计算问题。",
+    "tags": [
+      "第三方库",
+      "SciPy"
+    ]
+  },
+  "standard-library/collections": {
+    "title": "🧰 collections 容器扩展",
+    "description": "掌握 namedtuple、deque、ChainMap、Counter、OrderedDict、defaultdict 及 UserDict/UserList/UserString，写出更简洁高效的容器代码。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "standard-library/datetime": {
+    "title": "🧰 datetime 时间处理",
+    "description": "掌握 datetime、date、time、timedelta、时区 aware 与 naive、zoneinfo、时间戳、日期运算与 calendar 模块。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "standard-library/functools": {
+    "title": "🧰 functools 函数工具",
+    "description": "掌握 @cache、@lru_cache、@cached_property、partial、reduce、singledispatch、wraps、total_ordering 与 cmp_to_key，写出高效且可复用的函数代码。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "standard-library/index": {
+    "title": "标准库",
+    "description": "熟练使用 os、pathlib、datetime、collections、itertools 等核心标准库模块。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "standard-library/itertools": {
+    "title": "🧰 itertools 迭代工具",
+    "description": "掌握 chain、product、combinations、permutations、accumulate、groupby、islice、starmap、zip_longest 与无限迭代器，写出高效的迭代代码。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "standard-library/os": {
+    "title": "🧰 os 与 sys 模块",
+    "description": "掌握 os 与 sys 模块，进行环境变量、目录、进程、平台判断等系统级操作，并对比 os.path 与 pathlib、os.system 与 subprocess。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "standard-library/pathlib": {
+    "title": "🧰 pathlib 路径库",
+    "description": "掌握 PurePath 与 Path、路径拼接与属性、读写文件、glob/rglob 查找、目录遍历与 Python 3.12 的 walk 方法。",
+    "tags": [
+      "标准库"
+    ]
+  },
+  "testing-debugging/debugging-advanced": {
+    "title": "调试进阶",
+    "description": "掌握 logging 模块、远程调试、异步调试和经典 bug 模式，成为调试高手。",
+    "tags": [
+      "测试调试"
+    ]
+  },
+  "testing-debugging/debugging": {
+    "title": "调试技巧",
+    "description": "代码出 bug 了？别慌。掌握 print 调试、pdb 断点、IDE 调试器三种方法，从简单到高效，快速定位问题。",
+    "tags": [
+      "测试调试"
+    ]
+  },
+  "testing-debugging/index": {
+    "title": "测试与调试",
+    "description": "掌握 Python 测试框架与调试技巧，编写可靠的代码。",
+    "tags": [
+      "测试调试"
+    ]
+  },
+  "testing-debugging/pytest-advanced": {
+    "title": "🧪 pytest 进阶",
+    "description": "掌握 Mock 模拟、conftest 进阶、markers、覆盖率和常用插件，让测试更专业。",
+    "tags": [
+      "测试调试"
+    ]
+  },
+  "testing-debugging/pytest-basics": {
+    "title": "🧪 pytest 测试基础",
+    "description": "用 pytest 快速上手 Python 测试：编写第一个测试、断言、运行测试、参数化、常用 fixture，不搞复杂理论，直接上手。",
+    "tags": [
+      "测试调试"
+    ]
+  }
+}

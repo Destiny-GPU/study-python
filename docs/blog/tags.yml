@@ -2,15 +2,15 @@ python:
   label: Python
   permalink: /notes/tags/python
   description: 关于 Python 语言的笔记
-学习心得:
+learning:
   label: 学习心得
-  permalink: /notes/tags/学习心得
+  permalink: /notes/tags/learning
   description: 学习过程中的思考与总结
-进阶技巧:
+advanced:
   label: 进阶技巧
-  permalink: /notes/tags/进阶技巧
+  permalink: /notes/tags/advanced
   description: Python 进阶用法与技巧
-工具:
+tools:
   label: 工具
-  permalink: /notes/tags/工具
+  permalink: /notes/tags/tools
   description: 开发工具与效率提升

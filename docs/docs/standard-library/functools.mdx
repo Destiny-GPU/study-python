@@ -1,17 +1,38 @@
 ---
-sidebar_position: 6
 sidebar_label: 'functools'
 title: 🧰 functools 函数工具
 description: 掌握 @cache、@lru_cache、@cached_property、partial、reduce、singledispatch、wraps、total_ordering 与 cmp_to_key，写出高效且可复用的函数代码。
+tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
-# 🧰 functools 函数工具
+# 🧮 functools 函数工具
 
 `functools` 是 Python 函数式编程的核心工具箱：缓存计算结果、固定部分参数、按类型分派、保留元信息、补全比较运算……这些工具让函数更高效、更通用、更可组合。本章系统介绍 `functools` 的常用工具，并对比 `@cache` 与 `@lru_cache`。
 
-:::tip 🎯 本节要点
+缓存机制对比：
+
+```mermaid
+graph LR
+    subgraph cache["@cache"]
+        C1["无界缓存"]
+        C2["3.9+ 可用"]
+        C3["参数有限时用"]
+    end
+    subgraph lru["@lru_cache"]
+        L1["LRU 淘汰"]
+        L2["可设 maxsize"]
+        L3["长跑服务时用"]
+    end
+    subgraph prop["@cached_property"]
+        P1["方法级缓存"]
+        P2["计算一次后缓存"]
+        P3["高成本计算时用"]
+    end
+```
+
+## 📌 本节要点
 - **@cache**：无界缓存（Python 3.9+），参数有限时用，简单高效
 - **@lru_cache**：LRU 淘汰缓存，参数空间大或长跑服务时用，限制内存
 - **@cached_property**：方法结果缓存，计算一次后缓存，适合高成本计算
@@ -24,7 +45,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="functools 快速体验">
 
-```python
+```py
 from functools import lru_cache, partial, reduce
 
 # lru_cache 缓存
@@ -115,7 +136,7 @@ print(fibonacci.cache_info())
 # CacheInfo(hits=..., misses=101, maxsize=128, currsize=101)
 ```
 
-:::tip @cache 与 @lru_cache 的选择
+:::tip[@cache 与 @lru_cache 的选择]
 - 参数取值有限且数量少 → `@cache`，简单高效
 - 参数空间大或长跑服务 → `@lru_cache(maxsize=N)`，限制内存
 - `@cache` 等价于 `@lru_cache(maxsize=None)`，但更简洁
@@ -142,7 +163,7 @@ print(add.cache_info())
 # typed=True：算两次不同参数，hits=0
 ```
 
-:::warning 缓存键的可哈希性
+:::warning[缓存键的可哈希性]
 `@cache` / `@lru_cache` 用参数作为字典键，参数必须**可哈希**。`list`、`dict`、`set` 不可哈希：
 
 ```py title="Python"
@@ -195,7 +216,7 @@ print(ds.mean)
 #   3.0
 ```
 
-:::tip @cached_property vs @property
+:::tip[@cached_property vs @property]
 `@property` 每次访问都重新计算；`@cached_property` 第一次计算后存入实例 `__dict__`，后续直接读取。当计算成本高且结果不变时用 `@cached_property`，每次都要重算用 `@property`。
 :::
 
@@ -226,7 +247,7 @@ ds.add(4)
 print(ds.sum)  # 10，重新计算（因为前面删除了缓存）
 ```
 
-:::warning @cached_property 与 __slots__
+:::warning[@cached_property 与 __slots__]
 类使用 `__slots__` 时没有 `__dict__`，`@cached_property` 默认无法工作。Python 3.12 起改进了此问题，但仍需为缓存属性显式声明 `__slots__` 槽位。否则会抛 `AttributeError`。
 :::
 
@@ -296,7 +317,7 @@ handle_func = partial(app.handle)  # 已绑定实例
 print(handle_func("GET /"))  # 处理: GET /
 ```
 
-:::tip partial vs lambda
+:::tip[partial vs lambda]
 `partial(func, arg)` 与 `lambda x: func(arg, x)` 在很多场景等价。`partial` 更直观地表达"固定参数"语义，且保留原函数的 `__name__`、`__doc__` 等元信息（通过 `func`、`args`、`keywords` 属性访问）。需要复杂逻辑时用 lambda，仅需固定参数时用 `partial`。
 :::
 
@@ -329,7 +350,7 @@ merged = reduce(lambda acc, kv: {**acc, kv[0]: kv[1]}, pairs, {})
 print(merged)  # {'a': 1, 'b': 2, 'c': 3}
 ```
 
-:::warning reduce 不总是最佳选择
+:::warning[reduce 不总是最佳选择]
 `reduce(operator.add, nums)` 等价于 `sum(nums)`，但可读性更差。能用内置函数（`sum`、`max`、`min`、`any`、`all`）表达的就别用 `reduce`。`reduce` 真正适合"累积状态需要复杂转换"的场景，比如把列表逐步合成嵌套结构。
 :::
 
@@ -405,8 +426,8 @@ print(to_json([1, "two", 3]))      # [1, "two", 3]
 print(to_json({"a": 1, "b": [2, 3]}))  # {"a": 1, "b": [2, 3]}
 ```
 
-:::tip singledispatch 解决的问题
-没有 `singledispatch`，处理多种类型要么写一长串 `if isinstance(obj, ...)`，要么为每种类型定义独立函数让调用方选择。`singledispatch` 让你按类型分别实现，新类型可在任何地方注册，无需修改原函数——这正是"开闭原则"的体现。
+:::tip[singledispatch 解决的问题]
+没有 `singledispatch`，处理多种类型要么写一长串 `if isinstance(obj, ...)`，要么为每种类型定义独立函数让调用方选择。`singledispatch` 按类型分别实现，新类型可在任何地方注册，无需修改原函数——这正是"开闭原则"的体现。
 :::
 
 ### 注册自定义类型
@@ -490,7 +511,7 @@ print(geo.area(Rectangle(3, 4)))  # 12.0
 print(geo.area(Circle(5)))         # 78.53981633974483
 ```
 
-:::info singledispatchmethod 的价值
+:::info[singledispatchmethod 的价值]
 普通 `singledispatch` 是模块级函数，无法分派到 `self` 之外的方法上。`singledispatchmethod` 让面向对象的多态与函数分派结合——可以在一个类里集中管理多个形状的处理逻辑，又不必为每种形状定义子类。3.11 之前要实现类似功能需要第三方库或手写 `if isinstance` 链。
 :::
 
@@ -577,7 +598,7 @@ help(slow_function)
 #     模拟耗时计算。
 ```
 
-:::tip 装饰器必备 @wraps
+:::tip[装饰器必备 @wraps]
 任何装饰器都应该用 `@wraps(func)` 装饰包装函数。否则 `help()`、调试器、文档生成工具、`inspect.signature` 都会看到错误的函数名与签名，给排错带来困扰。`@wraps` 还会复制 `__wrapped__` 属性，指向原函数，方便 `inspect.unwrap` 还原。
 :::
 
@@ -622,7 +643,7 @@ students.sort()
 print([s.name for s in students])  # ['Alice', 'Charlie', 'Bob']
 ```
 
-:::note total_ordering 的性能
+:::note[total_ordering 的性能]
 `@total_ordering` 补全的方法是通过已定义方法间接计算，性能略低于直接实现所有比较方法。在性能敏感场景（如大量排序）建议直接实现全部六个方法，或用 `@dataclass(order=True)`。
 :::
 
@@ -650,7 +671,7 @@ sorted_words = sorted(words, key=cmp_to_key(compare_length))
 print(sorted_words)  # ['fig', 'kiwi', 'apple', 'banana']
 ```
 
-:::tip 优先用 key 函数
+:::tip[优先用 key 函数]
 现代代码应优先用 `key=len` 而非 `cmp_to_key(compare_length)`：
 
 ```py title="Python"
@@ -877,7 +898,7 @@ fib(10) = 55
 函数名: fib
 ```
 
-:::tip 缓存让递归免于指数爆炸
+:::tip[缓存让递归免于指数爆炸]
 没缓存的 `fib(10)` 需要 177 次调用，`fib(40)` 需要 2.6 亿次——指数级爆炸。加 `@lru_cache` 后 `fib(40)` 只需 41 次调用。这是动态规划"自顶向下 + 记忆化"的标准技巧，`functools` 让它在 Python 中一行装饰器就能实现。
 :::
 
@@ -911,7 +932,7 @@ fib(10) = 55
 - **[PEP 615](https://peps.python.org/pep-0615/)** - `singledispatchmethod` 规范
 - **[Python 装饰器指南](https://docs.python.org/zh-cn/3/glossary.html#term-decorator)** - 装饰器概念与用法
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`@cache`（3.9+）无界缓存**，`@lru_cache(maxsize=N)` 限制大小按 LRU 淘汰；参数必须可哈希
 - **`typed=True` 让 `1` 和 `1.0` 视为不同参数**分别缓存，适合需要区分类型的场景

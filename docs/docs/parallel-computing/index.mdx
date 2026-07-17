@@ -1,0 +1,27 @@
+---
+title: 并行计算
+description: 多进程、多线程、concurrent.futures — CPU 密集型与 I/O 密集型并行方案。
+sidebar_position: 0
+tags: [并行计算]
+---
+
+# ⚡ 并行计算
+
+Python 的 GIL 让多线程无法利用多核 CPU——但多进程和正确的并行策略可以突破这个限制。本章教你根据任务类型选择最佳并行方案。
+
+:::tip[🎯 本章目标]
+学完本章，你将能：
+- 理解 GIL 的本质及其对并行的影响
+- 用 multiprocessing 利用多核 CPU 加速计算
+- 用 threading 处理 I/O 密集任务（如网络请求）
+- 用 concurrent.futures 写出简洁的并行代码
+:::
+
+:::info[📋 前置知识]
+学习本章前，建议先完成：
+- [函数](./functions) — 定义与调用函数
+- [模块与包](./modules) — import 与项目结构
+:::
+
+- [多进程与并行](./parallel-computing/multiprocessing) — multiprocessing、concurrent.futures、GIL 限制与应对
+- [多线程](./parallel-computing/threading) — threading、Lock、Queue、线程池

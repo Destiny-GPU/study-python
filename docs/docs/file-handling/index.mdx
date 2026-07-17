@@ -1,0 +1,29 @@
+---
+title: 文件与 IO
+description: 读写文件、处理路径、操作 JSON 与 CSV 等常见数据格式。
+sidebar_position: 0
+tags: [文件操作]
+---
+
+# 📂 文件与 IO
+
+数据需要持久化存储，程序需要读取配置、保存结果、处理用户数据。文件操作是连接程序与外部世界的桥梁。
+
+:::tip[🎯 本章目标]
+学完本章，你将能：
+- 用 `open()` 和 `pathlib` 读写文本与二进制文件
+- 用 `json` 模块序列化与反序列化数据
+- 用 `csv` 模块处理表格数据
+- 掌握现代路径处理（pathlib）替代传统 os.path
+:::
+
+:::info[📋 前置知识]
+学习本章前，建议先完成：
+- [基础语法](./basics) — 字符串操作
+- [函数](./functions) — 定义与调用函数
+:::
+
+- [读写文件](./file-handling/read-write) — open、with、文本与二进制模式
+- [路径处理](./file-handling/file-paths) — pathlib、Path 对象、glob 查找
+- [JSON 操作](./file-handling/json) — 序列化、反序列化、自定义编码器
+- [CSV 操作](./file-handling/csv) — 读写 CSV、DictReader、DictWriter

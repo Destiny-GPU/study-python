@@ -1,19 +1,27 @@
 ---
-sidebar_position: 4
 sidebar_label: '集合'
-title: 📦 集合（Set）
+title: 集合（Set）
 description: 集合是 Python 的无序不重复容器，支持高效的成员测试与并交差等集合运算，是去重与关系判断的利器。
+tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 📦 集合（Set）
 
-集合（`set`）是 Python 中**无序、不重复**的可变容器。它基于哈希表实现，最大特点是**成员测试 O(1)**与**自动去重**，并提供并、交、差、对称差等数学集合运算。当你需要"判断某元素是否出现过"或"求两个群体的交集"时，集合几乎总是最佳选择。
+集合（`set`）是 Python 中**无序、不重复**的可变容器。它基于哈希表实现，最大特点是**成员测试 O(1)**与**自动去重**，并提供并、交、差、对称差等数学集合运算。当我们可以"判断某元素是否出现过"或"求两个群体的交集"时，集合几乎总是最佳选择。
+
+## 📌 本节要点
+
+- 集合去重：`set(lst)` 自动去除重复元素，保持唯一性
+- 成员测试 O(1)：`x in s` 比列表快得多，适合频繁查找
+- 集合运算：`&` 交集、`|` 并集、`-` 差集、`^` 对称差集
+- 集合推导式 `{x for x in ...}` 和 `frozenset` 不可变集合
+- `setdefault()` 和集合运算在数据清洗、权限管理中的应用
 
 <PyodideRunner title="集合操作快速体验">
 
-```python
+```py
 # 集合运算
 frontend_devs = {"Alice", "Bob", "Carol", "David"}
 backend_devs = {"Bob", "David", "Eve", "Frank"}
@@ -63,11 +71,11 @@ not_set = {}  # 这是空 dict！
 print(type(empty), type(not_set))  # <class 'set'> <class 'dict'>
 ```
 
-:::warning 空集合的陷阱
+:::warning[空集合的陷阱]
 `{}` 创建的是**空字典**，不是空集合。创建空集合必须用 `set()`。这是初学者最常踩的坑之一。
 :::
 
-:::tip 元素必须可哈希
+:::tip[元素必须可哈希]
 集合元素和字典键一样，必须是可哈希对象。数字、字符串、元组（元素也要可哈希）可以；列表、字典、集合本身不能作为集合元素。
 :::
 
@@ -127,7 +135,7 @@ a |= {9, 10}
 print(a)  # {3, 9, 10}
 ```
 
-:::info 运算符 vs 方法的差异
+:::info[运算符 vs 方法的差异]
 运算符要求两边都是集合；方法可以接受任意可迭代对象（如列表）。例如 `a.union([1, 2])` 合法，但 `a | [1, 2]` 会报 `TypeError`。
 :::
 
@@ -181,8 +189,8 @@ nested = {frozenset({1, 2}), frozenset({3, 4})}  # OK
 print(nested)
 ```
 
-:::tip 何时用 frozenset
-当你需要把"一组值"用作字典键、集合元素，或想表达"集合内容不可变"的契约时，用 `frozenset`。它和 `tuple` 之于 `list` 的关系类似。
+:::tip[何时用 frozenset]
+当我们可以把"一组值"用作字典键、集合元素，或想表达"集合内容不可变"的契约时，用 `frozenset`。它和 `tuple` 之于 `list` 的关系类似。
 :::
 
 ## 成员测试性能
@@ -204,7 +212,7 @@ print(f"列表查找: {list_time:.4f}s")  # 较慢
 print(f"集合查找: {set_time:.4f}s")  # 极快，通常快几个数量级
 ```
 
-:::warning 别在循环里用 list 的 in
+:::warning[别在循环里用 list 的 in]
 当代码写成 `if x in some_list:` 且 `some_list` 很大、又被频繁调用时，把它转成 `set` 一次就能带来数量级的提速。这是最常见的 Python 性能优化点之一。
 :::
 
@@ -229,7 +237,7 @@ ordered2 = list(dict.fromkeys(nums))
 print(ordered2)  # [3, 1, 4, 5, 9, 2, 6]
 ```
 
-:::tip 保序去重的技巧
+:::tip[保序去重的技巧]
 `dict.fromkeys(iterable)` 利用字典键的唯一性和 3.7+ 的有序性，一行实现"保序去重"，比手写循环更简洁、更 Pythonic。
 :::
 
@@ -276,7 +284,7 @@ s.clear()       # 清空
 print(s)  # set()
 ```
 
-:::warning discard vs remove
+:::warning[discard vs remove]
 `discard(x)` 删除元素不存在时**不报错**；`remove(x)` 不存在时**抛 `KeyError`**。不确定元素是否存在时用 `discard` 更安全。
 :::
 
@@ -345,7 +353,7 @@ if __name__ == "__main__":
 交集且名字长 5: {'carol'}
 ```
 
-:::tip 集合运算的语义清晰
+:::tip[集合运算的语义清晰]
 用 `&`、`|`、`-` 表达"共有的""全部的""独有的"，比手写循环嵌套既快又易读。注意原始列表中的重复项（如 `alice` 出现两次）被自动去重，无需额外处理。
 :::
 

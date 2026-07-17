@@ -1,17 +1,17 @@
 ---
-sidebar_position: 1
 sidebar_label: '异常基础'
-title: 🛡️ 异常基础
+title: 异常基础
 description: 理解什么是异常、Python 异常层次结构、常见内置异常、Traceback 阅读方法，以及异常即对象的核心思想
+tags: [异常处理]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 🛡️ 异常基础
 
-异常（exception）是程序运行过程中发生的错误信号。当 Python 无法继续执行某段代码时，就会**抛出**（raise）一个异常对象；如果不处理这个异常，程序就会终止并打印错误信息。理解异常的工作机制是编写健壮代码的第一步——它让你能够预见错误、优雅地恢复，并给出有意义的反馈，而不是让程序崩溃。
+异常（exception）是程序运行过程中发生的错误信号。当 Python 无法继续执行某段代码时，就会**抛出**（raise）一个异常对象；如果不处理这个异常，程序就会终止并打印错误信息。理解异常的工作机制是编写健壮代码的第一步——它使得预见错误、优雅恢复、给出有意义的反馈成为可能，而不是让程序崩溃。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - 异常是特殊的对象，描述程序运行中遇到的问题
 - 所有异常派生自 `BaseException`，普通错误继承 `Exception`
 - 异常层次结构允许按"分组"捕获（如 `LookupError` 包含 `KeyError` 和 `IndexError`）
@@ -19,11 +19,10 @@ import { PyodideRunner } from '@site/src/components';
 - 阅读 Traceback：先看最后一行异常类型，再从底部往上追调用栈
 - 异常即对象，可检查属性、附加 note、重新抛出
 - `raise` 主动抛异常时，务必附带清晰的信息
-:::
 
 <PyodideRunner title="异常基础快速体验">
 
-```python
+```py
 # 异常是对象，可以捕获和检查
 try:
     result = 10 / 0
@@ -75,8 +74,8 @@ Traceback (most recent call last):
 ZeroDivisionError: division by zero
 ```
 
-:::info 异常不是"坏东西"
-异常不是设计缺陷，而是 Python 与你交流错误的方式。一个好的程序应当**主动抛出**异常来标识异常情况，并**合理处理**那些预期可能发生的异常。完全消除异常既不可能也不必要。
+:::info[异常不是"坏东西"]
+异常不是设计缺陷，而是 Python 与开发者交流错误的方式。一个好的程序应当**主动抛出**异常来标识异常情况，并**合理处理**那些预期可能发生的异常。完全消除异常既不可能也不必要。
 :::
 
 ### 异常 vs 错误返回码
@@ -115,6 +114,27 @@ except ZeroDivisionError as e:
 ## 异常层次结构
 
 Python 的所有异常都从一个根类 `BaseException` 派生。绝大多数用户遇到的异常都继承自 `Exception`，这是"普通错误"的基类。
+
+Python 异常继承层级：
+
+```mermaid
+graph TD
+    Base["BaseException"] --> SE["SystemExit"]
+    Base --> KI["KeyboardInterrupt"]
+    Base --> GE["GeneratorExit"]
+    Base --> E["Exception"]
+    E --> VE["ValueError"]
+    E --> TE["TypeError"]
+    E --> AE["AttributeError"]
+    E --> IE["IndexError"]
+    E --> KE["KeyError"]
+    E --> RE["RuntimeError"]
+    E --> OE["OSError"]
+    OE --> FNF["FileNotFoundError"]
+    E --> CE["ArithmeticError"]
+    CE --> ZDE["ZeroDivisionError"]
+    E --> EG["ExceptionGroup"]
+```
 
 ```text title="输出"
 BaseException
@@ -165,13 +185,13 @@ print(isinstance(ZeroDivisionError(), BaseException))    # 输出：True
 print(isinstance(Exception(), BaseException))            # 输出：True
 ```
 
-:::warning BaseException 不要直接捕获
+:::warning[BaseException 不要直接捕获]
 `BaseException` 包含了 `KeyboardInterrupt`（用户按 Ctrl+C）和 `SystemExit`（程序主动退出）等"非错误"信号。直接捕获 `BaseException` 会把这些信号也吞掉，导致无法中断或正常退出程序。日常开发中**只捕获 `Exception` 及其子类**，让 Ctrl+C 等信号能正常穿透。
 :::
 
 ### 异常的派生关系用于分组
 
-异常的层次结构让你既能精确捕获某个具体异常，也能捕获整组异常：
+异常的层次结构使得既能精确捕获某个具体异常，也能捕获整组异常：
 
 ```py title="Python"
 def safe_get(mapping, key, default=None):
@@ -272,8 +292,8 @@ print(name.uppercase())
 #                 Did you mean: 'upper'?
 ```
 
-:::tip 智能建议
-`AttributeError` 和 `NameError` 会自动给出"你是不是想用……"的建议，这对快速定位拼写错误非常友好。例如上面提示 `Did you mean: 'upper'?`。
+:::tip[智能建议]
+`AttributeError` 和 `NameError` 会自动给出"你是不是想用……"的建议（如 `Did you mean: 'upper'?`），这对快速定位拼写错误非常友好。
 :::
 
 ### NameError
@@ -337,10 +357,10 @@ ZeroDivisionError: division by zero      ← 5. 最终异常类型与信息
 阅读顺序建议：
 
 1. **从最后一行看起**：异常类型 + 错误信息，立刻知道发生了什么
-2. **从底部往上读调用栈**：每一段都告诉你"哪个文件、哪一行、哪个函数"出错
+2. **从底部往上读调用栈**：每一段都标明"哪个文件、哪一行、哪个函数"出错
 3. **关注最顶部的调用**：那是离错误源头最近的位置
 
-:::tip Python 3.11+ 更清晰的错误信息
+:::tip[Python 3.11+ 更清晰的错误信息]
 Python 3.11 起大幅改进了错误信息：会用 `^` 符号精确高亮出错的表达式片段，而不是整行。例如：
 
 ```text title="输出"
@@ -350,7 +370,7 @@ Python 3.11 起大幅改进了错误信息：会用 `^` 符号精确高亮出错
 TypeError: 'int' object is not subscriptable
 ```
 
-这让你一眼就能定位到是 `x['a']` 这部分出了问题。
+这样就能一眼定位到是 `x['a']` 这部分出了问题。
 :::
 
 ### 一个完整的示例
@@ -383,11 +403,11 @@ Traceback (most recent call last):
 FileNotFoundError: [Errno 2] No such file or directory: 'missing.conf'
 ```
 
-从下往上读：最后一行告诉你"找不到文件"；再往上找到出错代码位置在 `load_config` 第 2 行的 `open(path)`；再往上看，调用来源是 `main` 函数第 6 行。
+从下往上读：最后一行提示"找不到文件"；再往上找到出错代码位置在 `load_config` 第 2 行的 `open(path)`；再往上看，调用来源是 `main` 函数第 6 行。
 
 ## 异常即对象
 
-异常在 Python 中就是普通的类实例对象。这意味着你可以：
+异常在 Python 中就是普通的类实例对象。这意味着我们可以：
 
 - **检查异常的属性**：错误信息、错误码等
 - **捕获后再次抛出**：保留原始上下文
@@ -451,7 +471,7 @@ print(parse_age("abc"))    # 输出：解析失败：invalid literal...（参数
 print(parse_age("200"))    # 输出：解析失败：年龄 200 不在合法范围内 / -1
 ```
 
-:::info 异常对象的 __notes__
+:::info[异常对象的 __notes__]
 Python 3.11+ 给异常增加了 `add_note()` 方法，可以在异常对象上附加额外说明信息，便于调试时记录更多上下文：
 
 ```py title="Python"
@@ -484,7 +504,7 @@ raise ValueError("错误描述")
 raise ValueError  # 等价于 raise ValueError()，但通常应附带说明
 ```
 
-:::warning raise 一定要带信息
+:::warning[raise 一定要带信息]
 不要写裸的 `raise ValueError()`——没有任何描述信息会让排查变得困难。永远提供清晰、可操作的错误信息，说明**发生了什么**以及**期望是什么**。
 :::
 
@@ -511,7 +531,7 @@ except KeyError:
 
 ## 实战：识别常见异常
 
-下面这段代码故意触发了多种常见异常，请尝试阅读 Traceback 并识别每种异常的类型与原因：
+下面这段代码故意触发了多种常见异常，让我们尝试阅读 Traceback 并识别每种异常的类型与原因：
 
 ```py title="Python"
 def buggy_pipeline(data: dict) -> str:
@@ -583,7 +603,7 @@ for i, sample in enumerate(samples, 1):
   → Bob（25 岁），归一化分数：0.90，标签：None
 ```
 
-:::tip 学会"防御性编程"
+:::tip[学会"防御性编程"]
 上面的代码体现了**防御性编程**的思路：在每个可能出错的位置包一层 `try`，让程序即便遇到异常数据也能继续处理后续逻辑，而不是整体崩溃。下一节我们将系统学习 `try-except` 语句的所有用法。
 :::
 
@@ -625,7 +645,7 @@ for i, sample in enumerate(samples, 1):
 | OSError 属性 | `exc.errno` | 系统错误码 |
 | 附加说明 | `exc.add_note("msg")` | 3.11+ 特性 |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们学习了异常的基础知识，核心要点包括：
 
@@ -637,7 +657,3 @@ for i, sample in enumerate(samples, 1):
 - **主动抛异常**：`raise` 务必附带清晰的信息，说明发生了什么以及期望是什么
 
 下一节我们将学习 `try-except` 语句，掌握捕获、传递、链式抛出等进阶用法。
-
-:::info 🔗 延伸学习
-本节介绍了异常的基础概念。如需学习如何创建自定义异常类、设计异常层次结构、实现异常链式抛出等高级技巧，请参阅 **[自定义异常](/docs/error-handling/custom-exceptions)** 章节。
-:::

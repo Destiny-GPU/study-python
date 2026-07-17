@@ -1,0 +1,29 @@
+---
+title: 模块与包
+description: 组织代码为模块与包，使用 pip 管理依赖，借助虚拟环境隔离项目。
+sidebar_position: 0
+tags: [模块与包]
+---
+
+# 🧩 模块与包
+
+当代码量超过几百行，单文件结构就力不从心了。Python 的模块与包机制让你按文件拆分代码、按目录组织依赖，用 `import` 一行语句就能复用任意模块。
+
+:::tip[🎯 本章目标]
+学完本章，你将能：
+- 用 `import` 和 `from...import` 导入模块，理解 `__name__` 机制
+- 用包（package）组织多模块项目，掌握 `__init__.py` 与命名空间包
+- 用 `pip` 和 `uv` 管理第三方依赖
+- 用虚拟环境隔离项目依赖，避免版本冲突
+:::
+
+:::info[📋 前置知识]
+学习本章前，建议先完成：
+- [基础语法](./basics) — 变量、数据类型
+- [函数](./functions) — 定义与调用函数
+:::
+
+- [模块](/docs/modules/module-basics) — import 语句、`__name__`、`__all__`、模块搜索路径
+- [包](/docs/modules/packages) — `__init__.py`、命名空间包、相对导入与绝对导入
+- [pip 包管理](/docs/modules/pip) — 安装、卸载、版本约束、requirements.txt 与 pyproject.toml
+- [虚拟环境](/docs/modules/virtual-env) — venv、uv venv、环境隔离与依赖复现

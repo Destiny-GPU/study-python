@@ -1,17 +1,17 @@
 ---
-sidebar_position: 3
 sidebar_label: '自定义异常'
-title: 🛡️ 自定义异常
+title: 自定义异常
 description: 学习如何继承 Exception 设计自定义异常类、添加额外属性、构建异常链与异常分组、遵循最佳实践，并通过飞行系统实战掌握业务异常体系设计
+tags: [异常处理]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 🛡️ 自定义异常
 
-内置异常（`ValueError`、`TypeError` 等）描述的是 Python 语言层面的错误。但真实业务中有大量领域相关的错误——传感器故障、执行器失效、通信中断——这些用内置异常表达既不直观，也不利于调用方精确捕获。**自定义异常类**让你用代码描述业务错误，让 API 的错误处理变得清晰、可扩展、可维护。
+内置异常（`ValueError`、`TypeError` 等）描述的是 Python 语言层面的错误。但真实业务中有大量领域相关的错误——传感器故障、执行器失效、通信中断——这些用内置异常表达既不直观，也不利于调用方精确捕获。**自定义异常类**可以用代码描述业务错误，让 API 的错误处理变得清晰、可扩展、可维护。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - 自定义异常继承 `Exception`（或更具体的内置异常），不要继承 `BaseException`
 - 异常类命名以 `Error`/`Exception` 结尾，名字反映问题本身
 - 调用 `super().__init__(*args)` 保留标准行为，自定义 `__str__` 改善展示
@@ -24,7 +24,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="自定义异常快速体验">
 
-```python
+```py
 # 定义自定义异常类
 class ValidationError(Exception):
     """数据验证错误"""
@@ -94,11 +94,11 @@ except FlightSystemError as e:       # 父类捕获也能命中子类
 # 输出：捕获到飞行系统错误：IMU-001 传感器读数异常
 ```
 
-:::tip 为什么继承 Exception 而不是 BaseException
+:::tip[为什么继承 Exception 而不是 BaseException]
 继承 `Exception`（而不是 `BaseException`）的原因：
 - `Exception` 是"普通错误"的基类，符合业务错误的语义
-- `except Exception` 能兜住你的自定义异常，但**不会**捕获 `KeyboardInterrupt`、`SystemExit` 等系统信号——这是你想要的行为
-- 继承 `BaseException` 会让你的异常逃过 `except Exception` 兜底，造成意外崩溃
+- `except Exception` 能兜住自定义异常，但**不会**捕获 `KeyboardInterrupt`、`SystemExit` 等系统信号——这正是期望的行为
+- 继承 `BaseException` 会让异常逃过 `except Exception` 兜底，造成意外崩溃
 :::
 
 ### 异常命名约定
@@ -207,7 +207,7 @@ except NavigationError as e:
 
 ## 添加额外属性
 
-自定义异常的真正价值在于携带**结构化的错误上下文**。除了字符串信息，你可以把任意对象、错误码、组件ID等附加到异常上，让调用方程序化地处理错误。
+自定义异常的真正价值在于携带**结构化的错误上下文**。除了字符串信息，我们可以把任意对象、错误码、组件ID等附加到异常上，让调用方程序化地处理错误。
 
 ### 错误码
 
@@ -364,7 +364,7 @@ def process_flight_command(command):
         return {"status": "system_error", "message": str(e)}
 ```
 
-:::tip 层次设计原则
+:::tip[层次设计原则]
 - 顶层：定义一个统一的业务异常基类（如 `FlightSystemError`），便于"捕获所有业务异常"
 - 中层：按子系统或错误大类分组（`SensorError`、`ActuatorError`、`NavigationError`）
 - 叶子：具体的错误类型（`IMUError`、`MotorError`）
@@ -453,7 +453,7 @@ except HighLevelError as e:
 #       LowLevelError: 硬件通信失败
 ```
 
-:::info __cause__ vs __context__
+:::info[__cause__ vs __context__]
 - `__cause__`：通过 `raise X from Y` 显式设置，表示"Y 是 X 的原因"
 - `__context__`：在 `except` 块内隐式抛出新异常时自动设置，表示"在处理 X 时又发生了 Y"
 
@@ -543,10 +543,10 @@ run_system_check({
 #   - MOTOR-1: 转速为负
 ```
 
-:::tip 对比：抛一个 vs 抛一组
+:::tip[对比：抛一个 vs 抛一组]
 传统做法遇到第一个错误就 `raise`，用户每次只能看到一个错误，需要反复提交。用 `ExceptionGroup` 一次性收集所有错误，用户体验显著提升——尤其在系统检查、批量数据处理场景中。
 
-如果你只关心单个错误，传统 `raise ValueError(...)` 仍然是最简单的方案。`ExceptionGroup` 适合"需要一次看全部"的场景。
+如果只关心单个错误，传统 `raise ValueError(...)` 仍然是最简单的方案。`ExceptionGroup` 适合"需要一次看全部"的场景。
 :::
 
 ## 最佳实践
@@ -672,7 +672,7 @@ except FlightSystemError as e:
 
 ### 7. 用 ExceptionGroup 替代"循环收集 + 末尾抛出"
 
-如果你的代码有这样的模式：
+如果代码中有这样的模式：
 
 ```py title="Python"
 # 旧模式：手动收集再抛
@@ -1004,7 +1004,7 @@ GPS-001 状态变更：ok -> degraded
   组件错误：[IMU-001] IMU 错误：状态变更失败
 ```
 
-:::tip 注意批量处理的细节
+:::tip[注意批量处理的细节]
 上面 `check_component_batch` 的实现有个微妙之处：`IMU-001` 第一次检查成功了，第二次检查失败。所以 `IMU-001` 在 results 中显示的是失败信息（最后一次的结果覆盖了成功值）。在生产代码中，应当区分"成功记录"和"失败记录"两个集合，避免这种歧义。
 
 `ExceptionGroup` 让我们能在一次调用中报告所有失败，而 `except*` 让上层按异常类型分别处理——这是异常处理从"单错误"到"多错误"的重要演进。
@@ -1040,7 +1040,7 @@ GPS-001 状态变更：ok -> degraded
 | 拆解异常组 | `except* Type:` | 3.11+ 语法 |
 | 层次捕获 | `except ParentError:` | 捕获所有子类 |
 
-## 📝 本节总结
+## ✅ 本节总结
 
 本节我们学习了自定义异常的设计，核心要点包括：
 

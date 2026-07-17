@@ -1,15 +1,15 @@
 ---
-sidebar_position: 1
 sidebar_label: '读写文件'
-title: 📂 读写文件
+title: 读写文件
 description: 掌握 Python 中文件读写的基础操作，包括 open 函数、with 上下文管理器、各种读写模式与编码处理。
+tags: [文件操作]
 ---
 
 # 📂 读写文件
 
 文件读写是编程中最常见的操作之一。Python 提供了内置的 `open()` 函数和一套简洁优雅的文件对象 API，配合 `with` 语句可以安全、高效地处理各类文件。本章将从最基础的打开文件讲起，逐步深入到模式、编码、大文件迭代等实用技巧。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **with 语句**：上下文管理器，自动关闭文件，异常安全
 - **encoding='utf-8'**：永远显式指定编码，避免跨平台问题
 - **文件模式**：`r` 读、`w` 覆盖写、`a` 追加、`x` 独占创建、`b` 二进制、`+` 读写
@@ -49,7 +49,7 @@ with open('hello.txt', 'r', encoding='utf-8') as f:
 # 离开 with 块后文件自动关闭
 ```
 
-:::warning 编码一定要显式指定
+:::warning[编码一定要显式指定]
 在 Windows 上，`open()` 的默认编码不是 UTF-8（通常是 GBK），这会导致跨平台读取含中文的文件时出现 `UnicodeDecodeError`。**永远显式传 `encoding='utf-8'`**，除非你有特殊需求。
 :::
 
@@ -76,7 +76,7 @@ with (
         fout.write(line.upper())
 ```
 
-:::tip 多文件 with 语句
+:::tip[多文件 with 语句]
 可以用括号包裹多个 `open()`，一次管理多个文件句柄：
 :::
 
@@ -118,7 +118,7 @@ with open('image.png', 'rb') as fin, open('copy.png', 'wb') as fout:
     fout.write(fin.read())
 ```
 
-:::note 文本模式 vs 二进制模式
+:::note[文本模式 vs 二进制模式]
 - 文本模式（`'r'`、`'w'` 等）：返回 `str`，会做换行符转换（Windows 上 `\r\n` → `\n`），需要指定 `encoding`。
 - 二进制模式（`'rb'`、`'wb'` 等）：返回 `bytes`，不做任何转换，不能指定 `encoding`。
 :::
@@ -150,7 +150,7 @@ with open('article.txt', encoding='utf-8') as f:
     lines = f.readlines()  # ['第一行\n', '第二行\n', ...]
 ```
 
-:::warning readlines 不适合大文件
+:::warning[readlines 不适合大文件]
 `readlines()` 会一次性把所有行加载到内存。对于几个 GB 的日志文件，这会直接撑爆内存。大文件请用下面的「迭代」方式。
 :::
 
@@ -185,7 +185,7 @@ with open('fruits.txt', 'w', encoding='utf-8') as f:
     f.writelines(lines)
 ```
 
-:::warning writelines 不会自动换行
+:::warning[writelines 不会自动换行]
 `writelines()` 不会在元素之间插入换行符，需要自己在每个字符串末尾加上 `\n`。
 :::
 
@@ -214,7 +214,7 @@ with open('data.txt', 'w+', encoding='utf-8') as f:
     print(f.read())   # 'Hello, World'
 ```
 
-:::note 二进制模式下的 seek
+:::note[二进制模式下的 seek]
 在二进制模式下，`seek(offset, whence)` 可以使用参考点：
 - `0`：文件开头（默认）
 - `1`：当前位置
@@ -241,7 +241,7 @@ for block in read_in_chunks('large_video.mp4'):
     process(block)  # 每次处理 8KB
 ```
 
-:::tip 海象运算符 :=
+:::tip[海象运算符 :=]
 `while chunk := f.read(chunk_size)` 使用海象运算符，把赋值和判断合并成一行，非常优雅。
 :::
 
@@ -326,11 +326,13 @@ if __name__ == '__main__':
 /api/login": 访问 1 次，总流量 567 字节
 ```
 
-:::info 关于 errors 参数
+:::info[关于 errors 参数]
 `errors='replace'` 会让解码失败的字节被替换为 `�`，避免程序因个别坏字节而崩溃。其他常用值还有 `'ignore'`（忽略坏字节）和 `'strict'`（默认，抛出异常）。
 :::
 
 ## 高级文件操作技巧
+
+:::details[🔧 进阶文件操作技巧]
 
 ### 文件编码检测
 
@@ -460,6 +462,8 @@ print(f"解密: {decrypted}")
 3. `str.translate()` + `str.maketrans()` 实现高效字符替换
 4. 大小写独立处理，保持非字母字符不变
 
+:::
+
 ## 🎯 动手练习
 
 1. **文件复制**：实现一个函数，用分块读取复制任意大小的文件，显示进度
@@ -496,7 +500,7 @@ print(f"解密: {decrypted}")
 - **[编码类型](https://docs.python.org/zh-cn/3/library/codecs.html#standard-encodings)** - 支持的编码列表
 - **[上下文管理器](https://docs.python.org/zh-cn/3/library/stdtypes.html#typecontextmanager)** - with 语句原理
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **使用 `with open(...) as f:` 管理文件资源**，永远显式指定 `encoding='utf-8'`
 - **模式**：`r` 读、`w` 覆盖写、`a` 追加、`x` 独占创建；`b` 二进制、`+` 读写

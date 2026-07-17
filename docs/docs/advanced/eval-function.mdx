@@ -1,8 +1,8 @@
 ---
-sidebar_position: 6
 sidebar_label: 'eval 函数'
-title: 🚀 eval 函数与字符串解析
+title: eval 函数与字符串解析
 description: 深入理解 eval 函数的原理、使用场景及安全风险，掌握字符串与代码边界的处理方法。
+tags: [进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 `eval` 函数是 Python 中一个强大但危险的工具。它能将字符串作为 Python 代码执行，这既是它的"魔法"所在，也是潜在的安全隐患。本章深入探讨 `eval` 的原理、使用场景和安全替代方案。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **eval 二次解析**：把字符串作为 Python 表达式解析并执行
 - **引号决定语义**：引号内是字符串，引号外是代码
 - **禁止 eval 用户输入**：存在代码注入风险
@@ -21,7 +21,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="eval 函数快速体验">
 
-```python
+```py
 import ast
 
 # eval 执行表达式
@@ -145,7 +145,7 @@ Python 解析为列表字面量：
 # eval 会执行系统命令！
 ```
 
-:::danger 安全警告
+:::danger[安全警告]{.safety-warning}
 **禁止用 eval 处理用户输入**！恶意用户可以通过构造特殊字符串来执行任意代码，包括删除文件、获取系统信息等危险操作。
 :::
 
@@ -188,7 +188,7 @@ print(obj)  # {'name': 'Alice', 'age': 25}
 # ast.literal_eval("print('hello')")  # ValueError
 ```
 
-:::tip ast.literal_eval vs eval
+:::tip[ast.literal_eval vs eval]
 `ast.literal_eval` 比 `eval` 安全，因为它只解析字面量，不执行函数调用或表达式求值。但它仍然能解析嵌套的字面量结构，是处理配置数据等场景的好选择。
 :::
 
@@ -245,7 +245,7 @@ print(config["debug"])  # True
 
 ### 场景 3：代码生成与测试（谨慎使用）
 
-:::warning `exec()` 的风险
+:::warning[`exec()` 的风险]
 `exec()` 比 `eval()` 更危险，因为它可以执行任意语句（包括赋值、导入、循环等）。在生产代码中应尽量避免使用。
 :::
 
@@ -370,7 +370,7 @@ except ValueError as e:
 - **[ast.literal_eval](https://docs.python.org/zh-cn/3/library/ast.html#ast.literal_eval)** - 安全解析
 - **[json 模块](https://docs.python.org/zh-cn/3/library/json.html)** - JSON 处理
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`eval` 会把字符串二次解析为 Python 代码**，这是它的"魔法"也是危险所在
 - **引号决定了语义**：引号内的内容是字符串，引号外的内容是代码

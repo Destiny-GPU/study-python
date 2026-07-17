@@ -1,20 +1,27 @@
 ---
-sidebar_position: 9
 sidebar_label: '防御性编程'
-title: 🚀 防御性编程
+title: 防御性编程
 description: 学习防御性编程的核心原则、输入验证、异常处理、类型检查、边界条件处理等实战技巧。
+tags: [进阶特性, 异常处理]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
-import DocCardList from '@theme/DocCardList';
-import {useCurrentSidebarCategory} from '@docusaurus/theme-common';
-
 # 🚀 防御性编程
+
+防御性编程是一种编程范式，核心思想是"不信任任何输入"——在代码的关键位置主动检查前提条件、处理异常情况、验证数据合法性，从而提高程序的健壮性和可维护性。
+
+## 📌 本节要点
+
+- 输入验证：在函数入口检查参数类型和范围，尽早发现错误
+- 异常处理：用 try/except 捕获预期异常，用 raise 主动抛出有意义的错误
+- 类型检查：利用 isinstance() 和类型注解确保数据类型正确
+- 边界条件：处理空序列、None 值、零值等边界情况
+- 防御性设计原则：快速失败（fail-fast）、最小权限、纵深防御
 
 <PyodideRunner title="防御性编程快速体验">
 
-```python
+```py
 # 输入验证
 def divide(a, b):
     """安全的除法运算"""
@@ -61,7 +68,7 @@ print(process_items())  # 不会共享同一个列表
 
 ## 导读
 
-本教程将深入探讨防御性编程（Defensive Programming）这一预防性编程方法论。通过学习，你将掌握以下核心技能：
+本教程将深入探讨防御性编程（Defensive Programming）这一预防性编程方法论。通过学习，我们将掌握以下核心技能：
 
 **学习目标**：
 - 理解防御性编程的三大核心原则：永不信任输入、快速失败、优雅降级
@@ -523,7 +530,7 @@ def generate_token(nbytes: int = 32) -> str:
 
 > **"永远假设事情会出错，并为每种出错情况做好准备。"**
 
-通过系统性地应用本文介绍的技术，你可以：
+通过系统性地应用本文介绍的技术，我们可以：
 
 - 🛡️ **减少运行时错误** — 在错误传播到用户之前捕获它
 - 🐛 **加速调试** — 更早发现问题，更精确定位
@@ -544,4 +551,3 @@ def generate_token(nbytes: int = 32) -> str:
 
 ---
 
-<DocCardList items={useCurrentSidebarCategory().items}/>

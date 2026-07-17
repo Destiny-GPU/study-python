@@ -1,15 +1,15 @@
 ---
-sidebar_position: 2
 sidebar_label: '包'
 title: 🧩 包
 description: 理解包与目录结构、__init__.py 作用、相对导入与绝对导入、命名空间包、pyproject.toml 项目结构与 src 布局，组织多模块项目。
+tags: [模块与包]
 ---
 
-# 🧩 包
+# 📁 包
 
 模块解决了"代码复用"的问题，但当项目膨胀到几十上百个模块时，平铺在一个目录里同样混乱。**包（package）** 把模块按目录层级组织起来——一个包含 `__init__.py` 的目录就是一个**普通包**。包让代码具备了**层级命名空间**，类似 Java 的 `com.company.project`、Node 的 `@scope/pkg`，是构建大型 Python 项目的骨架。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **包结构**：含 `__init__.py` 的目录即为普通包，提供层级命名空间
 - **`__init__.py`**：控制公开 API、执行包级初始化、设置 `__version__`
 - **导入方式**：绝对导入（PEP 8 推荐）vs 相对导入（包内紧耦合模块）
@@ -103,7 +103,7 @@ DEFAULT_TIMEOUT = 30
 logger.info("utils 包已加载")
 ```
 
-:::warning __init__.py 中不要写重型逻辑
+:::warning[__init__.py 中不要写重型逻辑]
 `__init__.py` 中的代码在每次导入包时都会执行（首次后缓存）。**避免**在其中：
 - 连接数据库
 - 启动网络服务
@@ -148,8 +148,8 @@ def read_and_process(path: str) -> list[int]:
 | `from .. import foo` | 父包中的 `foo` | `utils/io/readers.py` 中导入 `utils/strings` |
 | `from ... import foo` | 祖父包中的 `foo` | `utils/io/readers.py` 中导入 `myproject` 顶层 |
 
-:::tip 相对导入只能用在包内
-相对导入**仅**适用于包内部的模块。如果你直接运行 `python utils/io/readers.py`，Python 会把它当作顶层脚本，相对导入会失败：
+:::tip[相对导入只能用在包内]
+相对导入**仅**适用于包内部的模块。如果直接运行 `python utils/io/readers.py`，Python 会把它当作顶层脚本，相对导入会失败：
 
 ```text title="输出"
 ImportError: attempted relative import with no known parent package
@@ -175,7 +175,7 @@ def read_and_process(path: str) -> list[int]:
 
 ### 相对导入 vs 绝对导入
 
-:::info 何时用哪个？
+:::info[何时用哪个？]
 - **绝对导入**：PEP 8 推荐的默认方式。清晰、可读、IDE 跳转友好。重构移动包时路径要全部更新。
 - **相对导入**：适合包**内部**深度耦合的模块互引。包整体移动时无需修改，但可读性略差。
 
@@ -220,7 +220,7 @@ __path__ = __import__("pkgutil").extend_path(__path__, __name__)
 
 或更现代的 PEP 420 风格——直接**不写** `__init__.py`。
 
-:::warning 命名空间包的陷阱
+:::warning[命名空间包的陷阱]
 - 命名空间包中**没有** `__init__.py`，因此无法在包级别放初始化代码
 - 容易与其他包命名冲突，建议用组织前缀（如 `mycompany_`）
 - 适合大型框架拆分多个子包（如 `google.cloud.*`、`azure.*`），不适合普通项目
@@ -338,7 +338,7 @@ packages = ["src/my_project"]
 
 ### 为什么用 src 布局？
 
-:::info src 布局三大优势
+:::info[src 布局三大优势]
 1. **强制安装后测试**：直接运行 `python tests/test_xxx.py` 时找不到 `src/my_project`，必须 `pip install -e .` 安装后才能跑测试。这能发现"打包配置错误"这类隐藏问题。
 2. **避免误导入**：测试时不会意外从项目根目录导入，而是从 site-packages 导入，保证测试的是"真正安装的版本"。
 3. **更干净的项目根**：源码、测试、构建产物分目录管理，目录结构更清晰。
@@ -607,7 +607,7 @@ pip install -e .
 loganalyzer app.log --level ERROR --json
 ```
 
-:::tip -e 可编辑安装
+:::tip[-e 可编辑安装]
 `pip install -e .` 把项目以"可编辑模式"安装到当前环境，源码改动**立即生效**无需重新安装。这是开发期间最常用的工作流。打包发布到 PyPI 时则用 `pip install .` 或 `python -m build`。
 :::
 
@@ -644,7 +644,7 @@ loganalyzer app.log --level ERROR --json
 - **[Python 官方文档 - 包](https://docs.python.org/zh-cn/3/tutorial/modules.html#packages)** - 包的官方教程
 - **[Python 官方文档 - pyproject.toml](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/)** - 现代项目配置指南
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **包是含 `__init__.py` 的目录**，提供层级化命名空间，让大型项目结构清晰
 - **`__init__.py` 控制公开 API**，通过 `__all__` 限制 `import *` 行为，设置 `__version__` 版本号

@@ -1,8 +1,8 @@
 ---
-sidebar_position: 1
 sidebar_label: '类型注解'
-title: 🚀 类型注解
+title: 类型注解
 description: 学习 Python 类型注解体系，掌握变量、函数、类的标注方式，Optional/Union/泛型/TypeAlias 以及 Python 3.12 type 语句。
+tags: [进阶特性, 基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,13 +11,13 @@ import { PyodideRunner } from '@site/src/components';
 
 Python 是一门**动态类型**语言，变量的类型在运行时确定，可以随时改变。但动态类型也带来了代价：大型项目难以维护、IDE 自动补全不够智能、重构时容易出错。类型注解（PEP 484）建立了一套"渐进式类型系统"——**注解是可选的、不强制运行时检查，但能被静态类型检查器（如 mypy、pyright）和 IDE 利用**，让 Python 也能享受静态类型的红利。
 
-:::info 类型注解不会影响运行
+:::info[类型注解不会影响运行]
 类型注解默认**不强制运行时检查**。`x: int = "hello"` 不会报错，运行时注解只作为元信息存储在 `__annotations__` 中。注解的价值在于开发期，由 mypy/pyright 等工具在静态分析阶段发现问题。
 :::
 
 <PyodideRunner title="类型注解快速体验">
 
-```python
+```py
 # 基本类型注解
 name: str = "张三"
 age: int = 25
@@ -59,7 +59,7 @@ print(f"点积: {dot_product([1, 2, 3], [4, 5, 6])}")
 
 ## 📌 本节要点
 
-学完本节后，你将掌握：
+学完本节后，我们将掌握：
 
 - 变量与函数的类型注解基础语法
 - Python 3.9+ 内置容器泛型：`list[str]`、`dict[str, int]`
@@ -88,8 +88,8 @@ target_heading = 90.0
 print(altitude, velocity, sensor_id, is_active, target_heading)
 ```
 
-:::tip 注解不会阻止重新赋值
-即使注解为 `float`，运行时仍可赋值为字符串。这是动态类型的本质，类型检查器会在静态阶段提醒你，但运行时不报错：
+:::tip[注解不会阻止重新赋值]
+即使注解为 `float`，运行时仍可赋值为字符串。这是动态类型的本质，类型检查器会在静态阶段提醒，但运行时不报错：
 
 ```py title="Python"
 x: int = 1
@@ -121,7 +121,7 @@ time_series: tuple[float, ...] = (0.0, 0.1, 0.2, 0.3, 0.4)
 print(sensor_readings, motor_commands, waypoint, motor_ids)
 ```
 
-:::tip 推荐语法
+:::tip[推荐语法]
 Python 3.10+（PEP 604）引入了 `X | Y` 联合类型语法，3.9+（PEP 585）支持小写内置类型泛型。本教程统一使用新语法：
 
 ```py title="Python"
@@ -135,7 +135,7 @@ items: list[str] = []
 
 函数注解标注参数和返回值的类型：
 
-```py title="Python"
+```py {1,13} title="Python"
 def compute_heading(target_lat: float, target_lon: float, current_lat: float, current_lon: float) -> float:
     """计算到目标点的航向角（度）。"""
     import math
@@ -219,7 +219,7 @@ print(scale_value(5))     # 输出: 10
 print(scale_value(3.14))  # 输出: 6.28
 ```
 
-:::tip 类型注解语法速查
+:::tip[类型注解语法速查]
 | 语法 | 含义 | 示例 |
 |------|------|------|
 | `X \| Y` | 联合类型 | `int \| str` |
@@ -315,7 +315,7 @@ print(state)        # FlightState(timestamp=0.0, altitude=500.0, velocity=[10.0,
 print(state.speed)  # 10.198039027185569
 ```
 
-:::warning 可变默认值的陷阱
+:::warning[可变默认值的陷阱]
 类属性注解中，**不要**直接用可变对象作为默认值（如 `velocity: list[float] = []`）。所有实例会共享同一个列表，导致意外行为。应使用 `field(default_factory=list)` 每次创建新列表。
 :::
 
@@ -346,7 +346,7 @@ data: FlightData = {"attitude": [0.1, 0.2, 0.3], "armed": True}
 print(data)
 ```
 
-:::note Python 3.10+ 的 type 别名
+:::note[Python 3.10+ 的 type 别名]
 Python 3.10+ 可以直接用 `X = SomeType` 的形式，不需要显式写 `TypeAlias`，但显式写法更清晰，能避免歧义：
 
 ```py title="Python"
@@ -391,7 +391,7 @@ r: Result[int, str] = (42, "")
 print(p, r)
 ```
 
-:::tip type 语句的优势
+:::tip[type 语句的优势]
 相比 `TypeAlias`，Python 3.12 的 `type` 语句有三大优势：
 1. **支持泛型参数**：`type Pair[T] = tuple[T, T]`，无需 `TypeVar`
 2. **递归别名无需引号**：`type JSON = ... | list[JSON]` 直接自引用
@@ -419,7 +419,7 @@ print(process_sensor(9.806))     # 传感器读数：9.806
 print(process_sensor("active"))  # 传感器状态：ACTIVE
 ```
 
-:::warning isinstance 与联合类型
+:::warning[isinstance 与联合类型]
 `isinstance` 支持直接使用 `X | Y` 形式的联合类型作为第二参数：
 
 ```py title="Python"
@@ -463,8 +463,8 @@ process_readings([9.81, 9.79, 9.82])  # 平均值: 9.807
 process_readings([1, 2, "error"])      # 包含非数值数据
 ```
 
-:::note TypeGuard 的局限
-`TypeGuard` 只影响静态类型检查器的推断，运行时不做任何事。函数体里的判断逻辑需要你自己保证正确性——如果 `is_valid_readings` 实现有 bug，类型检查器仍会"相信"它的返回值。
+:::note[TypeGuard 的局限]
+`TypeGuard` 只影响静态类型检查器的推断，运行时不做任何事。函数体里的判断逻辑需要自己保证正确性——如果 `is_valid_readings` 实现有 bug，类型检查器仍会"相信"它的返回值。
 
 Python 3.13 引入了 `TypeIs`（PEP 742），比 `TypeGuard` 更严格、更智能的类型收窄，推荐在新代码中使用。
 :::
@@ -502,7 +502,7 @@ print(SignalConfig.__annotations__)
 x: int = 10
 ```
 
-:::info 运行时访问注解的库
+:::info[运行时访问注解的库]
 需要运行时类型检查的场景，推荐使用专门的库而非手写 `isinstance` 检查：
 - **pydantic**：基于类型注解做数据校验和序列化，最流行
 - **typeguard**：运行时类型检查库
@@ -601,7 +601,7 @@ print(f"可靠: {result.is_reliable}")
 可靠: True
 ```
 
-:::tip from \_\_future\_\_ import annotations
+:::tip[from \_\_future\_\_ import annotations]
 文件首行的 `from __future__ import annotations`（PEP 563）让所有注解变成字符串形式存储，不在定义时求值。好处是：
 - 可以使用尚未定义的类型（前向引用）
 - 性能更好（注解不立即求值）
@@ -614,7 +614,7 @@ print(f"可靠: {result.is_reliable}")
 
 尝试完成以下练习，巩固本节知识：
 
-1. **类型注解实践**：为你之前编写的传感器处理函数添加完整的类型注解，包括参数和返回值
+1. **类型注解实践**：为之前编写的传感器处理函数添加完整的类型注解，包括参数和返回值
 2. **TypeAlias 重构**：使用 Python 3.12 的 `type` 语句重构一个项目中的复杂类型注解（如将 `dict[str, list[float]]` 别名为 `SensorChannelData`）
 3. **TypeGuard 实现**：编写一个 `is_valid_imu_data(values: list[float]) -> TypeGuard[list[float]]` 函数，验证 IMU 数据是否在合理范围内
 4. **泛型函数**：编写一个泛型函数 `swap[T, U](pair: tuple[T, U]) -> tuple[U, T]`，交换元组元素

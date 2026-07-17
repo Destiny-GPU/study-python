@@ -1,8 +1,8 @@
 ---
-sidebar_position: 7
 sidebar_label: '生成器与 yield'
-title: ⚙️ 生成器与 yield
+title: 生成器与 yield
 description: 学习迭代器协议、yield 关键字、生成器函数与生成器表达式、惰性求值、yield from 以及生成器管道
+tags: [函数, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,9 +11,18 @@ import { PyodideRunner } from '@site/src/components';
 
 生成器（generator）是 Python 中一种特殊的迭代器，它使用 `yield` 关键字在函数执行过程中**暂停**并返回一个值，下次被调用时从暂停处继续。生成器最大的优势是**惰性求值**——只在需要时计算下一个值，从而节省内存。它特别适合处理流式信号数据、实时传感器采样和连续信号处理流水线。
 
+## 📌 本节要点
+
+- `yield` 关键字让函数变成生成器，每次调用返回一个值并暂停
+- 生成器表达式 `(x for x in ...)` 是创建生成器的简洁语法
+- 惰性求值：生成器按需计算，内存占用远低于列表
+- `yield from` 委托子生成器，简化嵌套迭代
+- 生成器管道：多个生成器串联实现数据流式处理
+- send() 和 close() 实现生成器的双向通信与生命周期管理
+
 <PyodideRunner title="生成器快速体验">
 
-```python
+```py
 from itertools import islice
 
 # 生成器函数：斐波那契数列
@@ -101,7 +110,7 @@ print(next(it))  # 输出：{'timestamp': 0.01, 'ax': 0.2, 'ay': -0.1, 'gz': 0.8
 # print(next(it))  # StopIteration
 ```
 
-:::info 可迭代对象 vs 迭代器
+:::info[可迭代对象 vs 迭代器]
 - **可迭代对象（Iterable）**：实现了 `__iter__` 方法，能返回一个迭代器。如 list、tuple、str
 - **迭代器（Iterator）**：实现了 `__iter__` 和 `__next__`，能逐个产生值
 - 迭代器是"一次性"的，遍历完就空了；可迭代对象每次调用 `iter()` 都能得到新的迭代器
@@ -118,7 +127,24 @@ print(next(it))  # 输出：{'ax': 0.2}
 
 包含 `yield` 的函数叫**生成器函数**。调用它不会立即执行函数体，而是返回一个生成器对象。每次 `next()` 时执行到 `yield` 暂停并返回值，下次 `next()` 从暂停处继续。
 
-```py title="Python"
+生成器的 yield 暂停/恢复机制：
+
+```mermaid
+sequenceDiagram
+    participant Caller as 调用者
+    participant Gen as 生成器函数
+
+    Caller->>Gen: next(gen)
+    Gen->>Gen: 执行到 yield
+    Gen-->>Caller: 返回 yield 值，暂停
+    Caller->>Gen: next(gen)
+    Gen->>Gen: 从 yield 后继续执行
+    Gen-->>Caller: 返回下一个 yield 值
+    Caller->>Gen: next(gen)
+    Gen-->>Caller: StopIteration (函数结束)
+```
+
+```py {4,12} title="Python"
 def stream_imu_data():
     """从 IMU 传感器逐帧读取数据"""
     print("传感器初始化")
@@ -171,7 +197,7 @@ print(gen.send(0.05))   # 输出：检测到偏置: 0.05 / {'phase': 'calibrated
 print(gen.send(1.02))   # 输出：校准完成，缩放因子: 1.02
 ```
 
-:::tip send() 方法
+:::tip[send() 方法]
 `gen.send(value)` 能将值传回生成器内部，作为 `yield` 表达式的返回值。注意**第一次**必须用 `next()` 或 `gen.send(None)` 启动生成器，因为第一个 yield 还没"接收"任何值。
 :::
 
@@ -221,7 +247,7 @@ total_power = sum(mag ** 2 for mag in magnitudes)  # 注意：函数调用时括
 print(f"总功率: {total_power:.4f}")  # 输出：总功率: 0.7825
 ```
 
-:::info 何时用函数，何时用表达式
+:::info[何时用函数，何时用表达式]
 - **生成器表达式**：单行就能写完的简单转换/过滤
 - **生成器函数**：需要多个 yield、循环嵌套、复杂逻辑或接收外部参数
 
@@ -260,7 +286,7 @@ big_gen = (np.sin(2 * np.pi * i / 1000) for i in range(1_000_000))
 print(f"生成器占用：{sys.getsizeof(big_gen)} bytes")  # 大约 200 bytes
 ```
 
-:::warning 生成器是一次性的
+:::warning[生成器是一次性的]
 生成器迭代完就"空"了，不能重用：
 ```py title="Python"
 import numpy as np
@@ -383,7 +409,7 @@ print(list(merge_signals(ch1, ch2, ch3)))
 # 输出：[0.1, 0.3, 0.5, 0.2, 0.4, 0.6, 0.0, 0.0, 1.0]
 ```
 
-:::tip yield from 与递归
+:::tip[yield from 与递归]
 `yield from` 与递归结合是处理嵌套结构的利器。递归调用返回生成器时，用 `yield from` 把它的所有值"展开"传给外层，避免在调用者处再嵌套一层。
 :::
 
@@ -431,8 +457,8 @@ print(list(pipeline))
 # 输出：经过三步处理的信号值列表（每次运行因噪声略有不同）
 ```
 
-:::info 管道的内存优势
-管道在每一步都只处理一个元素，**整条管道同一时刻只占一个元素的内存**。处理上亿条传感器采样数据时，这点至关重要——你不需要为每一步都分配完整列表。
+:::info[管道的内存优势]
+管道在每一步都只处理一个元素，**整条管道同一时刻只占一个元素的内存**。处理上亿条传感器采样数据时，这点至关重要——不需要为每一步都分配完整列表。
 :::
 
 ## yield 双向通信
@@ -687,7 +713,7 @@ for freqs, mags in significant_bins(fft_bins(signal, 256, sample_rate)):
         print(f"  {f:.0f}Hz → 幅值={m:.2f}")
 ```
 
-:::tip 生成器与协程
+:::tip[生成器与协程]
 `yield` 还可以用于**协程**——一种能暂停/恢复、可双向传递数据的并发单元。Python 早期的协程基于 `yield` + `send()`，现代异步编程（`async`/`await`）虽然语法不同，但本质思想相同。生成器是理解 Python 异步编程的基础。
 :::
 

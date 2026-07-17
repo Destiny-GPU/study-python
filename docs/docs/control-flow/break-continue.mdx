@@ -1,19 +1,27 @@
 ---
-sidebar_position: 4
 sidebar_label: 'break 与 continue'
-title: 🔀 break 与 continue
+title: break 与 continue
 description: 学习 Python 的 break、continue、pass 语句，理解它们与 else 子句的配合及嵌套循环行为。
+tags: [控制流]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 🔀 break 与 continue
 
-`break`、`continue`、`pass` 是控制循环执行流程的三种重要语句。`break` 跳出循环，`continue` 跳过本次，`pass` 则是"什么都不做"的占位符。理解它们的精确语义，能让你写出更灵活的循环逻辑。
+`break`、`continue`、`pass` 是控制循环执行流程的三种重要语句。`break` 跳出循环，`continue` 跳过本次，`pass` 则是"什么都不做"的占位符。理解它们的精确语义，有助于写出更灵活的循环逻辑。
+
+## 📌 本节要点
+
+- `break` 立即终止当前循环，`continue` 跳过本次迭代进入下一次
+- `for...else` / `while...else`：循环正常结束时执行 else 块，break 跳过
+- `pass` 是空语句，用于语法占位（如空函数、空类定义）
+- 嵌套循环中 break 只影响最内层循环
+- 善用 else 子句替代标志变量，代码更简洁
 
 <PyodideRunner title="break 与 continue 快速体验">
 
-```python
+```py
 # 查找 1-50 中的素数（使用 break 优化）
 def is_prime(n):
     if n < 2:
@@ -70,7 +78,7 @@ while True:
 # 输出：0 1 2 3 4
 ```
 
-:::tip break 的典型用途
+:::tip[break 的典型用途]
 - 找到目标后立即停止搜索
 - 在 `while True:` 无限循环中作为退出条件
 - 检测到错误状态时中止处理
@@ -105,7 +113,7 @@ WORLD
 PYTHON
 ```
 
-:::warning 慎用 continue
+:::warning[慎用 continue]
 `continue` 用得太多会让代码"跳跃"严重，难以跟踪执行流。许多 `continue` 可以通过 `if-else` 或反转条件来消除：
 
 ```py title="Python"
@@ -159,7 +167,7 @@ def search_alt(items: list[int], target: int) -> None:
         print(f"列表中没有 {target}。")
 ```
 
-:::note 两种写法对比
+:::note[两种写法对比]
 `for...else` 更紧凑，但需要读者熟悉这一不常见语法；标志变量写法更显式，适合团队协作。在关键逻辑中，显式往往胜过巧妙。
 :::
 
@@ -189,7 +197,7 @@ i=2, j=0
 
 可以看到，`j` 始终只到 0 就被 `break` 跳出，但外层 `i` 仍正常遍历完。
 
-:::warning 想一次跳出多层循环？
+:::warning[想一次跳出多层循环？]
 Python 没有"带标签的 break"（不像 Java 的 `break label;`）。要跳出多层循环，常用技巧有：
 
 ```py title="Python"
@@ -238,7 +246,7 @@ else:
     print("零")
 ```
 
-:::tip 何时用 pass
+:::tip[何时用 pass]
 - 占位：定义函数/类/分支时还没想好实现
 - 在 `try-except` 中忽略异常：`except ValueError: pass`
 - 作为代码骨架的临时填充
@@ -329,7 +337,7 @@ print(f"1 到 50 内的素数：{find_primes(1, 50)}")
 1 到 50 内的素数：[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]
 ```
 
-:::info 优化到 sqrt(n) 的原因
+:::info[优化到 sqrt(n) 的原因]
 判断素数时，如果 `n` 有因子 `d`，那么 `d` 和 `n/d` 中必有一个 ≤ √n。因此只需检查 `2` 到 `√n` 范围内的整数，能将时间复杂度从 O(n) 降到 O(√n)。这是常见的算法优化思路。
 :::
 

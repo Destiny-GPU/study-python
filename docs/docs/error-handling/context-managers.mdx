@@ -1,28 +1,27 @@
 ---
-sidebar_position: 4
 sidebar_label: '上下文管理器'
-title: 🛡️ 上下文管理器
+title: 上下文管理器
 description: 学习 with 语句、__enter__/__exit__ 协议、contextlib.contextmanager 装饰器、ExitStack、async with 以及 contextlib.suppress/redirect_stdout 等实用工具，通过飞行数据记录实战掌握资源清理
+tags: [异常处理, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 🛡️ 上下文管理器
 
-上下文管理器（context manager）是 Python 中管理"资源获取—资源释放"配对的机制。无论代码块是正常结束还是因异常退出，它都能保证清理代码被执行——避免传感器连接泄漏、校准文件未关闭、数据缓冲区未刷新等常见问题。`with` 语句是它的语法入口，而 `contextlib` 标准库提供了大量工具，让你能写出更优雅、更健壮的资源管理代码。
+上下文管理器（context manager）是 Python 中管理"资源获取—资源释放"配对的机制。无论代码块是正常结束还是因异常退出，它都能保证清理代码被执行——避免传感器连接泄漏、校准文件未关闭、数据缓冲区未刷新等常见问题。`with` 语句是它的语法入口，而 `contextlib` 标准库提供了大量工具，便于写出更优雅、更健壮的资源管理代码。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - `with` 语句保证资源在退出时被释放，无论是否发生异常
 - 类形式的上下文管理器实现 `__enter__` 和 `__exit__`，`__exit__` 返回 `True` 可抑制异常
 - `@contextlib.contextmanager` 用生成器函数简化实现：`yield` 前是"进入"，`yield` 后是"退出"
 - `ExitStack` 用于动态管理数量不定的上下文管理器，按 LIFO 顺序退出
 - `async with` 用于异步代码，对应 `__aenter__`/`__aexit__`
 - `contextlib` 实用工具：`suppress`、`redirect_stdout`、`closing`、`chdir`（3.11+）
-:::
 
 <PyodideRunner title="上下文管理器快速体验">
 
-```python
+```py
 # 类形式的上下文管理器
 class Timer:
     def __enter__(self):
@@ -104,7 +103,7 @@ with open("raw_telemetry.txt", encoding="utf-8") as fin, \
 # 两个文件都会被正确关闭
 ```
 
-:::tip Python 3.10+ 更优雅的多行写法
+:::tip[Python 3.10+ 更优雅的多行写法]
 Python 3.10 起允许用括号包裹多个上下文管理器，无需用反斜杠续行：
 
 ```py title="Python"
@@ -193,7 +192,7 @@ print("with 块外继续执行")   # 这里会执行，因为异常被吞了
 # with 块外继续执行
 ```
 
-:::warning 谨慎吞异常
+:::warning[谨慎吞异常]
 返回 `True` 吞异常是**危险操作**——它会掩盖所有异常（包括 `KeyboardInterrupt` 之外的）。除非有明确理由（如重试逻辑、静默忽略已知错误），否则 `__exit__` 应返回 `False`，让异常照常传播。如果只想忽略特定异常，用 `contextlib.suppress`（后面会讲）更安全。
 :::
 
@@ -302,7 +301,7 @@ with SensorCalibration("IMU-01") as cal:
 
 ## contextlib.contextmanager
 
-写一个完整的类来实现 `__enter__`/`__exit__` 有时显得冗长。`contextlib.contextmanager` 装饰器允许你用**生成器函数**更简洁地实现上下文管理器：
+写一个完整的类来实现 `__enter__`/`__exit__` 有时显得冗长。`contextlib.contextmanager` 装饰器允许用**生成器函数**更简洁地实现上下文管理器：
 
 - `yield` 之前的代码相当于 `__enter__`
 - `yield` 出的值相当于 `__enter__` 的返回值
@@ -391,8 +390,8 @@ print("with 块外继续执行")   # 异常被吞了，继续执行
 # with 块外继续执行
 ```
 
-:::tip contextmanager 的核心机制
-`@contextmanager` 把生成器函数包装成上下文管理器。当 `with` 进入时，它执行到 `yield` 并返回 yield 的值；当 `with` 块抛出异常时，异常会通过 `generator.throw()` 抛回生成器内部——所以你需要在 `yield` 外层包 `try-except-finally` 来捕获它。如果不捕获，异常会从生成器中再次抛出，传播到 `with` 块外。
+:::tip[contextmanager 的核心机制]
+`@contextmanager` 把生成器函数包装成上下文管理器。当 `with` 进入时，它执行到 `yield` 并返回 yield 的值；当 `with` 块抛出异常时，异常会通过 `generator.throw()` 抛回生成器内部——所以我们可以在 `yield` 外层包 `try-except-finally` 来捕获它。如果不捕获，异常会从生成器中再次抛出，传播到 `with` 块外。
 :::
 
 ### contextmanager vs 类实现
@@ -476,7 +475,7 @@ with ExitStack() as stack:
 # 清理传感器 IMU
 ```
 
-:::tip ExitStack 是资源管理的瑞士军刀
+:::tip[ExitStack 是资源管理的瑞士军刀]
 - `enter_context(cm)`：把一个上下文管理器压入栈
 - `callback(fn, *args, **kwargs)`：注册一个清理回调
 - `push(cm)` 或 `push(exit_fn)`：手动压入上下文管理器或退出函数
@@ -598,7 +597,7 @@ asyncio.run(main())
 # 异步缓冲区 ASYNC-BUF-01 已刷新
 ```
 
-:::info 同步 with vs 异步 async with
+:::info[同步 with vs 异步 async with]
 - 同步 `with`：调用 `__enter__`/`__exit__`（普通方法）
 - 异步 `async with`：调用 `__aenter__`/`__aexit__`（协程方法）
 
@@ -631,7 +630,7 @@ with suppress(FileNotFoundError, PermissionError):
     os.remove("另一个校准文件.txt")
 ```
 
-:::tip suppress 比 except pass 更明确
+:::tip[suppress 比 except pass 更明确]
 `with suppress(FileNotFoundError):` 比 `try: ... except FileNotFoundError: pass` 更能表达"故意忽略此异常"的意图，代码更紧凑，也更不容易写错（不会漏掉异常类型而吞掉其他错误）。
 :::
 
@@ -739,7 +738,7 @@ with closing(SensorConnection("IMU-02")) as conn:
 # 断开传感器 IMU-02
 ```
 
-:::info closing 的现代替代品
+:::info[closing 的现代替代品]
 Python 标准库的绝大多数资源对象（文件、`urllib.request.urlopen` 返回的对象、`socket` 等）都已经实现了完整的上下文管理器协议，可以直接用 `with`，不需要 `closing`。`closing` 主要用于第三方库或老代码中只有 `close()` 方法的对象。
 :::
 
@@ -760,7 +759,7 @@ with chdir("/tmp"):
 print(f"恢复后工作目录：{os.getcwd()}")
 ```
 
-:::tip Python 3.11+ 新增
+:::tip[Python 3.11+ 新增]
 `contextlib.chdir` 是 Python 3.11 才加入的。在更早版本中，需要手动保存并恢复 `os.getcwd()`：
 
 ```py title="Python"
@@ -1020,7 +1019,7 @@ demo()
 传感器池状态：{'pool_size': 3, 'in_use': 0, 'total': 3}
 ```
 
-:::tip 嵌套上下文管理器的执行顺序
+:::tip[嵌套上下文管理器的执行顺序]
 上面 `with pool.acquire() as buf: with data_collection_session(buf, test_id): ...` 涉及两个嵌套的上下文管理器。执行顺序是：
 1. 进入外层：`pool.acquire()` 的 `__enter__`（缓冲区出池）
 2. 进入内层：`data_collection_session()` 的 `__enter__`（开始采集）
@@ -1032,6 +1031,8 @@ demo()
 :::
 
 ## 高级实战：异步飞行数据记录器
+
+:::details[🔧 异步飞行数据记录器实战]
 
 下面实现一个生产级的异步飞行数据记录器，将异常处理、上下文管理与异步并发完美融合：
 
@@ -1113,6 +1114,8 @@ asyncio.run(main())
 3. `except` 中丢弃后必须 `raise`，会话管理器不应吞掉异常
 4. 所有 I/O 操作都用 `await`，事件循环不会被卡住
 
+:::
+
 ## 进阶技巧：contextlib 工具链速查
 
 | 工具 | 核心作用 | 典型场景 |
@@ -1122,7 +1125,7 @@ asyncio.run(main())
 | `nullcontext()` | 什么都不做的空上下文 | 条件分支中保持 `with` 语句结构统一 |
 | `redirect_stdout()` | 临时重定向标准输出 | 捕获第三方库的 `print` 输出 |
 
-:::info 📋 小结
+:::info[📋 小结]{.summary}
 
 - `with` 语句保证资源在退出时被释放，无论是否发生异常
 - 类形式的上下文管理器实现 `__enter__` 和 `__exit__`，前者返回值通过 `as` 绑定，后者返回 `True` 可抑制异常
@@ -1136,5 +1139,5 @@ asyncio.run(main())
   - `chdir(path)`（3.11+）：临时切换工作目录
 - 实战：飞行数据缓冲区管理展示分层资源管理——`SensorPool.acquire()` 管理缓冲区、`data_collection_session()` 管理采集状态、嵌套使用各司其职
 
-至此，异常处理章节告一段落。从识别异常、try-except 处理、自定义异常到上下文管理，你已掌握编写健壮 Python 代码所需的核心技能。
+至此，异常处理章节告一段落。从识别异常、try-except 处理、自定义异常到上下文管理，已涵盖编写健壮 Python 代码所需的核心技能。
 :::

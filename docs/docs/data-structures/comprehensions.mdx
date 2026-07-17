@@ -1,11 +1,13 @@
 ---
-sidebar_position: 5
 sidebar_label: '推导式'
-title: 📦 推导式（Comprehension）
+title: 推导式（Comprehension）
 description: 推导式是 Python 用一行简洁语法构造列表、字典、集合与生成器的利器，是 Pythonic 风格的核心标志。
+tags: [数据结构, 函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # 📦 推导式（Comprehension）
 
@@ -13,9 +15,17 @@ import { PyodideRunner } from '@site/src/components';
 
 Python 提供四种推导式：列表推导式、字典推导式、集合推导式，以及用圆括号表示的生成器表达式。
 
+## 📌 本节要点
+
+- 列表推导式 `[expr for x in iter if cond]` 比 `for + append` 更快更简洁
+- 字典推导式 `{k: v for ...}` 和集合推导式 `{x for ...}` 同理
+- 生成器表达式 `(x for x in ...)` 惰性求值，适合大数据流
+- `if` 在 `for` 后是过滤，`if-else` 在表达式里是选择，注意区别
+- 嵌套推导式超过两层建议改用显式循环，保持可读性
+
 <PyodideRunner title="推导式快速体验">
 
-```python
+```py
 # 列表推导式
 squares = [x ** 2 for x in range(10)]
 print(f"平方数: {squares}")
@@ -43,27 +53,28 @@ print(f"1-100万的平方和: {total}")
 
 列表推导式用方括号 `[]`，语法为 `[表达式 for 变量 in 可迭代对象]`。
 
+<Tabs>
+  <TabItem value="traditional" label="传统写法">
+
 ```py title="Python"
-# 传统写法
 squares = []
 for x in range(6):
     squares.append(x * x)
 print(squares)  # [0, 1, 4, 9, 16, 25]
-
-# 列表推导式
-squares = [x * x for x in range(6)]
-print(squares)  # [0, 1, 4, 9, 16, 25]
-
-# 表达式可以是任意计算
-words = ["hello", "world"]
-lengths = [len(w) for w in words]
-print(lengths)  # [5, 5]
-
-upper = [w.upper() for w in words]
-print(upper)  # ['HELLO', 'WORLD']
 ```
 
-:::tip 性能优势
+  </TabItem>
+  <TabItem value="comprehension" label="列表推导式">
+
+```py title="Python"
+squares = [x * x for x in range(6)]
+print(squares)  # [0, 1, 4, 9, 16, 25]
+```
+
+  </TabItem>
+</Tabs>
+
+:::tip[性能优势]
 列表推导式通常比等价的 `for` 循环 + `append` 更快，因为推导式在 CPython 中通过专用字节码执行，省去了每次 `append` 的属性查找与方法调用开销。
 :::
 
@@ -108,7 +119,7 @@ evens = {x for x in nums if x % 2 == 0}
 print(evens)  # {0, 2, 4, 6, 8}
 ```
 
-:::warning 花括号的二义性
+:::warning[花括号的二义性]
 `{x for x in ...}` 是集合推导式；`{x: y for ...}` 是字典推导式；`{}` 单独出现是空字典。没有"空集合推导式"——空集合只能用 `set()`。
 :::
 
@@ -136,7 +147,7 @@ print(list(gen))  # [0, 1, 4]
 print(list(gen))  # []  已耗尽
 ```
 
-:::tip 节省内存
+:::tip[节省内存]
 处理大文件、大数据时，用生成器表达式可以避免一次性把所有数据装入内存。最常见的用法是配合 `sum`、`max`、`min`、`any`、`all` 等聚合函数。
 :::
 
@@ -150,7 +161,7 @@ has_negative = any(x < 0 for x in [1, 2, -3, 4])  # True
 all_positive = all(x > 0 for x in [1, 2, 3])      # True
 ```
 
-:::info 聚合函数里的括号可省
+:::info[聚合函数里的括号可省]
 当生成器表达式是函数的唯一参数时，外层圆括号可以省略：`sum(x for x in range(10))`。这让代码更简洁。
 :::
 
@@ -183,7 +194,7 @@ print(combos)
 # [('红', 'S'), ('红', 'M'), ('红', 'L'), ('绿', 'S'), ('绿', 'M'), ('绿', 'L')]
 ```
 
-:::warning 阅读顺序
+:::warning[阅读顺序]
 嵌套推导式的 `for` 顺序与等价的嵌套循环顺序一致：从左到右对应从外到内。超过两层嵌套会严重影响可读性，建议改用显式循环。
 :::
 
@@ -212,7 +223,7 @@ passed = {n: s for n, s in scores.items() if s >= 60}
 print(passed)  # {'Alice': 90, 'Carol': 95}
 ```
 
-:::tip 两种 if 的区别
+:::tip[两种 if 的区别]
 - `if` 在 `for` **后面**：是**过滤器**，决定哪些元素被收集。
 - `if-else` 在 `for` **前面**（表达式里）：是**选择器**，决定每个元素收集什么值。
 两者经常被初学者混淆，请务必区分。
@@ -241,7 +252,7 @@ sums = [x + y for x, y in zip(a, b)]
 print(sums)  # [11, 22, 33]
 ```
 
-:::info zip 与 enumerate
+:::info[zip 与 enumerate]
 - `zip(a, b)` 把多个序列按位置配对，长度以最短者为准。
 - `enumerate(seq)` 给元素加序号，是带索引遍历的标准做法。
 :::
@@ -269,7 +280,7 @@ result_comp = [x * x for x in nums if x % 2 == 0]
 print(result_map == result_comp)  # True
 ```
 
-:::tip 何时仍用 map/filter
+:::tip[何时仍用 map/filter]
 当函数已经以具名形式存在（如 `str.upper`、`int`），`map(str.upper, words)` 也清晰。但当逻辑需要 `lambda` 或多层嵌套时，推导式更直观、更 Pythonic。社区共识是：**优先推导式**。
 :::
 
@@ -307,7 +318,7 @@ for sublist in data:
         result.append(transform(x) if condition(x) else default(x))
 ```
 
-:::warning 别为了短而短
+:::warning[别为了短而短]
 "一行代码"不是目的，**清晰**才是。如果一个推导式需要超过两三个 `for`/`if`，或者表达式嵌套很深，拆成循环或函数往往更好。PEP 8 与社区共识都强调：可读性优先。
 :::
 
@@ -328,7 +339,7 @@ total = sum(nums)
 print(total)  # 6
 ```
 
-:::info 海象运算符 :=
+:::info[海象运算符 :=]
 `:=`（海象运算符）可以在表达式内赋值。它有合理用途（如缓存计算结果避免重复调用），但**不要**用来在推导式里搞副作用编程，那会降低可读性。
 :::
 
@@ -432,7 +443,7 @@ if __name__ == "__main__":
 偶数位置: [(0, 1, 2), (1, 0, 4), (1, 2, 6), (2, 1, 8)]
 ```
 
-:::tip zip(*matrix) 的妙用
+:::tip[zip(*matrix) 的妙用]
 `zip(*matrix)` 用星号解包把矩阵的每一行作为参数传给 `zip`，等价于按列重新组合，一行实现转置。这是 Python 中极其优雅的惯用法，配合列表推导式 `[list(row) for row in zip(*matrix)]` 即可完成转置。
 :::
 
@@ -473,7 +484,3 @@ if __name__ == "__main__":
 - `if` 在 `for` 后是**过滤**，`if-else` 在表达式里是**选择**，二者含义不同
 - `zip` 平行遍历、`enumerate` 带索引遍历是推导式中的常用搭档
 - 推导式优先于 `map`/`filter` + `lambda`，但复杂逻辑应优先可读性
-
-:::info 🔗 延伸学习
-推导式与生成器密切相关。如需深入了解生成器函数、`yield` 语法、惰性求值的高级应用（如无限序列、协程等），请参阅 **[生成器与迭代器](/docs/functions/generators)** 章节。
-:::

@@ -2,10 +2,12 @@
 slug: modern-python-features
 title: 现代 Python 你应该知道的 10 个特性
 authors: [destiny]
-tags: [python, 进阶技巧]
+tags: [python, advanced]
 ---
 
-很多人写 Python 还停留在 3.6 时代的写法：`Optional[int]`、`os.path.join`、`if-elif-else` 一长串。其实从 3.10 开始，Python 已经悄悄变成了一门「看起来很像新语言」的语言。下面这 10 个特性，是我在日常代码里几乎天天都会用到的。本教程默认 Python 3.12+，所以放心大胆地用。
+很多人写 Python 还停留在 3.6 时代的写法：`Optional[int]`、`os.path.join`、`if-elif-else` 一长串。其实从 3.10 开始，Python 已经悄悄变成了一门「看起来很像新语言」的语言。
+
+我自己去年从 3.9 升级到 3.12 时，最大的感受是：**不是 Python 变快了，而是写法变优雅了**。很多以前需要三五行才能表达的逻辑，现在一行就搞定。下面这 10 个特性，是我在日常代码里几乎天天都会用到的。本教程默认 Python 3.12+，所以放心大胆地用。
 
 {/* truncate */}
 
@@ -28,8 +30,10 @@ def describe(point: tuple[int, int]) -> str:
 print(describe((3, 0)))  # 在 x 轴上，x=3
 ```
 
+以前写这种分支逻辑，`if-elif` 链能拉到屏幕外面去。现在 `match-case` 不仅更短，而且意图更清晰——你一眼就能看出每种模式长什么样。
+
 :::tip
-`match-case` 还能匹配类实例、字典、序列，配合「守卫表达式」(`case Point(x, y) if x == y`) 非常强大。
+`match-case` 还能匹配类实例、字典、序列，配合「守卫表达式」(`case Point(x, y) if x == y`) 非常强大。我在做状态机解析时用它替代了一大堆 if-elif，代码量直接减半。
 :::
 
 ## 2. 海象运算符 `:=`（3.8，但 3.10 才流行起来）
@@ -43,6 +47,8 @@ if (m := re.search(r"\d+", "订单号: 9527")) is not None:
     print(f"提取到数字：{m.group()}")  # 提取到数字：9527
 ```
 
+第一次看到这个语法时我觉得很丑，用了之后发现——真香。尤其是在 while 循环和列表推导式里，它能让你避免把同一段逻辑写两遍。
+
 ## 3. 类型注解 `X | Y`（3.10）
 
 终于不用再写 `Union[int, str]` 和 `Optional[int]`：
@@ -55,6 +61,8 @@ def find_user(user_id: int) -> dict | None:
 
 # 等价于 Optional[dict] / Union[dict, None]
 ```
+
+类型注解这东西，不用的时候觉得多余，用了之后发现 IDE 的自动补全和错误提示好了不止一个档次。`X | Y` 的写法让类型注解终于不那么「劝退」了。
 
 ## 4. dataclass + slots（3.10）
 
@@ -72,6 +80,8 @@ p = Point(1.0, 2.0)
 # p.z = 3.0  # AttributeError，防止手滑加错字段
 ```
 
+以前写数据类要手写 `__init__`、`__repr__`、`__eq__`，现在 `@dataclass` 一个装饰器全搞定。加上 `slots=True`，既有 Python 的简洁，又有 C 的效率。
+
 ## 5. f-string 嵌套与调试输出（3.12）
 
 3.12 终于支持在 f-string 的 `{}` 里再写 f-string，`=调试语法`也更好用：
@@ -86,6 +96,8 @@ print(f"{f"{user['name']:^{width}}"}")  #    destiny
 # 调试语法 = 直接打印变量名和值
 print(f"{user=}")  # user={'name': 'destiny', 'level': 5}
 ```
+
+调试的时候 `f"{x=}"` 比 `print(f"x = {x}")` 方便太多了——不用手动打变量名，Python 帮你打。
 
 ## 6. TaskGroup：结构化并发（3.11）
 
@@ -108,7 +120,7 @@ asyncio.run(main())
 ```
 
 :::warning
-`TaskGroup` 一旦有任何子任务抛错，会取消其它所有子任务，并抛出 `ExceptionGroup`。这正是我们想要的行为——并发任务要么一起成功，要么一起失败。
+`TaskGroup` 一旦有任何子任务抛错，会取消其它所有子任务，并抛出 `ExceptionGroup`。这正是我们想要的行为——并发任务要么一起成功，要么一起失败。以前用 `gather` 时，一个任务挂了其他任务还在跑，debug 起来很痛苦。
 :::
 
 ## 7. ExceptionGroup / except*（3.11）
@@ -128,6 +140,8 @@ except* ValueError as eg:
         print("处理：", e)
 ```
 
+这个特性配合 `TaskGroup` 使用，终于让 Python 的并发错误处理不再是「一团乱麻」。
+
 ## 8. `type` 语句：定义类型别名（3.12）
 
 `TypeAlias` 的语法糖，还能定义泛型别名：
@@ -142,6 +156,8 @@ def norm(v: Vector) -> float:
 # 泛型别名
 m: Matrix[int] = [[1, 2], [3, 4]]
 ```
+
+以前定义类型别名要用 `Vector = list[float]` 加一行注释 `# type: TypeAlias`，现在直接 `type Vector = list[float]`，又清晰又简洁。
 
 ## 9. `pathlib.Path.walk()`（3.12）
 
@@ -162,6 +178,8 @@ for dirpath, dirnames, filenames in root.walk():
 :::tip
 `Path.walk()` 还支持 `top_down=False`，自底向上遍历——删空目录时非常有用。
 :::
+
+`os.path` 那套 API 是 20 年前设计的，`pathlib` 才是现代 Python 处理文件路径的正确方式。
 
 ## 10. Self 类型 & `override` 装饰器（3.11/3.12）
 
@@ -184,7 +202,7 @@ class Circle(Shape):
         return self
 ```
 
-`@override` 会在父类没有同名方法时静态报错，防止手滑写错方法名。
+`@override` 会在父类没有同名方法时静态报错，防止手滑写错方法名。这个装饰器帮我避免过至少两次线上 bug。
 
 ## 小结
 

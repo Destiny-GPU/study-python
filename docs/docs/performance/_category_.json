@@ -1,0 +1,8 @@
+{
+  "label": "🏎️ 性能分析",
+  "position": 15,
+  "link": {
+    "type": "doc",
+    "id": "performance/index"
+  }
+}

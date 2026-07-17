@@ -1,8 +1,8 @@
 ---
-sidebar_position: 3
 sidebar_label: '异步编程'
-title: 🚀 异步编程
+title: 异步编程
 description: 学习 Python 异步编程，掌握 async/await 语法、asyncio 事件循环、TaskGroup 并发与异步上下文管理器。
+tags: [进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 异步编程（asynchronous programming）是一种**并发**模型，特别适合 I/O 密集型任务——网络请求、数据库查询、文件读写。与多线程相比，异步通过单线程事件循环切换任务，避免了线程切换开销和锁竞争，能用更少的资源处理大量并发连接。Python 的 `asyncio` 库 + `async`/`await` 语法，是编写高性能 I/O 程序的标准方案。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **async def**：定义协程函数，调用返回协程对象，必须用 `await` 或事件循环驱动
 - **asyncio.run()**：程序入口，创建并关闭事件循环
 - **await**：串行等待；**asyncio.create_task()**：让任务并发执行
@@ -21,19 +21,19 @@ import { PyodideRunner } from '@site/src/components';
 - **异步适合 I/O 密集型**，CPU 密集型应使用多进程
 :::
 
-:::info 何时用异步
+:::info[何时用异步]
 异步并非银弹，它适合"I/O 多、CPU 少"的场景：
 - ✅ 网络爬虫、API 客户端、WebSocket 服务
 - ✅ 数据库连接池、消息队列消费者
 - ❌ CPU 密集型计算（用多进程）
 - ❌ 简单脚本（异步增加复杂度，得不偿失）
 
-如果你的程序大部分时间在"等待"——等网络、等磁盘，异步能让它在等待时去做别的事。
+如果程序大部分时间在"等待"——等网络、等磁盘，异步能让它在等待时去做别的事。
 :::
 
 <PyodideRunner title="异步编程快速体验">
 
-```python
+```py
 import asyncio
 
 # 定义协程函数
@@ -84,8 +84,8 @@ print(coro)  # <coroutine object hello at 0x...>
 # await hello()  # 只能在 async 函数里
 ```
 
-:::warning 协程不调用就不会执行
-协程函数调用后返回协程对象，但**不会自动执行**。必须有 `await` 或事件循环驱动它。如果你写了 `async def` 却没 `await`，会看到 "coroutine was never awaited" 警告。
+:::warning[协程不调用就不会执行]
+协程函数调用后返回协程对象，但**不会自动执行**。必须有 `await` 或事件循环驱动它。如果写了 `async def` 却没 `await`，会看到 "coroutine was never awaited" 警告。
 :::
 
 ### await 暂停与恢复
@@ -125,6 +125,29 @@ asyncio.run(main())
 
 `asyncio.run()` 是程序的入口，创建事件循环、运行协程、关闭循环。它是 Python 3.7+ 推荐的启动方式：
 
+asyncio 事件循环的工作原理：
+
+```mermaid
+sequenceDiagram
+    participant Main as 主程序
+    participant Loop as 事件循环
+    participant Task1 as Task A
+    participant Task2 as Task B
+
+    Main->>Loop: asyncio.run(main())
+    Loop->>Task1: create_task(coro_a)
+    Loop->>Task2: create_task(coro_b)
+    Loop->>Task1: 执行到 await
+    Task1-->>Loop: 暂停，让出控制
+    Loop->>Task2: 执行到 await
+    Task2-->>Loop: 暂停，让出控制
+    Loop->>Task1: I/O 完成，恢复执行
+    Task1-->>Loop: 完成
+    Loop->>Task2: I/O 完成，恢复执行
+    Task2-->>Loop: 完成
+    Loop-->>Main: 返回结果
+```
+
 ```py title="Python"
 import asyncio
 
@@ -139,7 +162,7 @@ async def main():
 asyncio.run(main())
 ```
 
-:::note asyncio.run 的规则
+:::note[asyncio.run 的规则]
 - 每个程序只应在**最外层**调用一次 `asyncio.run`
 - 它会创建新的事件循环，结束时自动关闭
 - **不能**在已有事件循环内调用 `asyncio.run`（嵌套会报错）
@@ -232,9 +255,9 @@ asyncio.run(main())
 并发耗时：2.00s
 ```
 
-:::tip create_task vs await
+:::tip[create_task vs await]
 - `await coro()`：等这个协程完成才继续——**串行**
-- `task = create_task(coro()); await task`：任务立即开始跑，你可以稍后再等——**并发**
+- `task = create_task(coro()); await task`：任务立即开始跑，我们可以稍后再等——**并发**
 
 关键区别：`create_task` 让协程"在后台"立即开始执行，主协程不阻塞。
 :::
@@ -345,7 +368,7 @@ async def main():
 asyncio.run(main())
 ```
 
-:::tip TaskGroup vs gather
+:::tip[TaskGroup vs gather]
 `TaskGroup`（Python 3.11+）相比 `gather` 的优势：
 1. **异常组（ExceptionGroup）**：多个任务同时失败时，会抛出 `ExceptionGroup`，包含所有异常，不会丢失
 2. **结构化并发**：`async with` 块结束时，所有任务必定完成或取消，避免任务泄漏
@@ -397,7 +420,7 @@ asyncio.run(main())
 捕获 RuntimeError 组：(RuntimeError('也失败了'),)
 ```
 
-:::info except* 语法
+:::info[except* 语法]
 Python 3.11 引入了 `except*` 语法（PEP 654），用于处理 `ExceptionGroup`。`except* ValueError` 会从异常组中**筛选**出 `ValueError` 类型的异常，其他类型继续向上传播。这让多个不同类型的异常可以被分别处理。
 :::
 
@@ -504,7 +527,7 @@ asyncio.run(main())
 连接已关闭
 ```
 
-:::tip async with vs with
+:::tip[async with vs with]
 - `with`：同步上下文管理器，`__enter__`/`__exit__`
 - `async with`：异步上下文管理器，`__aenter__`/`__aexit__`
 
@@ -585,7 +608,7 @@ asyncio.run(main())
 - **aiohttp**：异步 HTTP 客户端/服务端，老牌且生态成熟
 - **httpx**：支持同步和异步，API 与 `requests` 兼容，更现代
 
-:::note 安装
+:::note[安装]
 这两个库需要单独安装，不在标准库中：
 ```bash title="Shell"
 pip install aiohttp httpx
@@ -633,7 +656,7 @@ async def main():
 # asyncio.run(main())  # 取消注释运行（需要联网）
 ```
 
-:::tip 复用 AsyncClient
+:::tip[复用 AsyncClient]
 `httpx.AsyncClient` 内部维护连接池，复用它能避免每次请求重新建立连接，大幅提升性能。应在 `async with` 中复用同一个 client 实例，而非每次请求都新建。
 :::
 
@@ -742,7 +765,7 @@ asyncio.run(main())
 总耗时：2.00s（最长任务的延迟）
 ```
 
-:::tip 并发的本质
+:::tip[并发的本质]
 注意总耗时约 2 秒——这是最长任务（超时任务被 `asyncio.timeout(2.0)` 限制在 2 秒）的耗时。如果串行执行，总耗时会是 0.5+1.0+1.5+3.0+0.3 = 6.3 秒。并发让"等待"重叠，是异步编程的核心价值。
 
 关键点：
@@ -752,6 +775,8 @@ asyncio.run(main())
 :::
 
 ## 异步编程的常见陷阱
+
+:::details[⚠️ 常见陷阱与避坑指南]
 
 ### 陷阱一：忘记 await
 
@@ -814,6 +839,8 @@ async def increment_counter(counter: list[int], lock: asyncio.Lock):
     async with lock:
         counter[0] += 1
 ```
+
+:::
 
 ## 最佳实践
 
@@ -890,7 +917,7 @@ logging.basicConfig(level=logging.DEBUG)
 - **[aiohttp 文档](https://docs.aiohttp.org/)** - 异步 HTTP 客户端/服务器
 - **[httpx 文档](https://www.python-httpx.org/)** - 支持同步/异步的 HTTP 客户端
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`async def` 定义协程函数**，调用返回协程对象，必须用 `await` 或事件循环驱动
 - **`asyncio.run(main())` 是程序的入口**，创建并关闭事件循环

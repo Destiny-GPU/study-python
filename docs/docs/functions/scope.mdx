@@ -1,19 +1,27 @@
 ---
-sidebar_position: 4
 sidebar_label: '作用域 LEGB'
-title: ⚙️ 作用域 LEGB
+title: 作用域 LEGB
 description: 理解 Python 的 LEGB 作用域规则、局部/嵌套/全局/内置作用域、global 与 nonlocal 声明以及闭包
+tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # ⚙️ 作用域 LEGB
 
-作用域（scope）决定了变量名在何处可见、何时被销毁。Python 采用 **LEGB 规则**查找变量：Local（局部）→ Enclosing（嵌套）→ Global（全局）→ Built-in（内置）。理解作用域是掌握闭包、装饰器等高级特性的基础，也能帮你避开许多"变量未定义"或"意外修改全局变量"的坑。
+作用域（scope）决定了变量名在何处可见、何时被销毁。Python 采用 **LEGB 规则**查找变量：Local（局部）→ Enclosing（嵌套）→ Global（全局）→ Built-in（内置）。理解作用域是掌握闭包、装饰器等高级特性的基础，也能避免许多"变量未定义"或"意外修改全局变量"的坑。
+
+## 📌 本节要点
+
+- LEGB 规则：Local → Enclosing → Global → Built-in，逐层查找变量
+- `global` 声明在函数内修改全局变量，`nonlocal` 修改嵌套函数变量
+- 闭包：嵌套函数捕获外层变量，形成"带环境的函数"
+- 可变默认值陷阱：`def f(x=[])` 的列表在多次调用间共享
+- 作用域与生命周期：局部变量函数结束即销毁，闭包延长变量生命周期
 
 <PyodideRunner title="作用域与闭包快速体验">
 
-```python
+```py
 # 闭包：计数器工厂
 def make_counter(start=0):
     """创建一个计数器闭包"""
@@ -63,6 +71,17 @@ Python 查找一个变量名时，按以下顺序依次查找：
 
 一旦在某层找到该名字，就停止向上查找；如果四层都找不到，抛出 `NameError`。
 
+Python 变量查找遵循 LEGB 规则：
+
+```mermaid
+flowchart TD
+    A["变量查找"] --> B["L - Local 局部作用域"]
+    B -- 未找到 --> C["E - Enclosing 外层函数作用域"]
+    C -- 未找到 --> D["G - Global 模块作用域"]
+    D -- 未找到 --> E["B - Built-in 内置作用域"]
+    E -- 未找到 --> F["NameError: name 'x' is not defined"]
+```
+
 ```py title="Python"
 altitude_unit = "meters"  # G：全局飞行参数
 
@@ -103,7 +122,7 @@ update_altitude()       # 输出：飞行高度：10000m
 # print(current_alt)    # NameError: name 'current_alt' is not defined
 ```
 
-:::warning 函数内的赋值默认创建局部变量
+:::warning[函数内的赋值默认创建局部变量]
 在函数内部对变量赋值（不是 += 之类复合赋值的读取，而是 `=` 赋值），会**默认**创建一个局部变量，即使外层有同名变量：
 ```py title="Python"
 altitude = 10000
@@ -175,7 +194,7 @@ record_flight()
 print(total_flights)  # 输出：3
 ```
 
-:::warning 滥用 global 是反模式
+:::warning[滥用 global 是反模式]
 `global` 让函数产生隐式副作用，难以测试和复用。大多数情况下应该用返回值代替：
 ```py title="Python"
 # 不推荐
@@ -209,7 +228,7 @@ print(flight_config)  # 输出：{'auto_pilot': True}
 print(total_flights)    # 输出：100
 ```
 
-:::info 修改 vs 绑定
+:::info[修改 vs 绑定]
 - 修改**可变对象**的**内容**（如 `lst.append(x)`、`d[k]=v`）：不需要 `global`
 - 重新**绑定**变量名（如 `x = 5`、`lst = [...]`）：需要 `global`
 
@@ -252,7 +271,7 @@ print(climb(300))   # 输出：800
 print(climb(-200))  # 输出：600
 ```
 
-:::warning nonlocal 不能跨到全局
+:::warning[nonlocal 不能跨到全局]
 `nonlocal` 只能查找**最近一层的外层函数**作用域，不能跳到模块级全局。如果外层没有该变量，会报错：
 ```py title="Python"
 altitude = 10000
@@ -326,6 +345,8 @@ print(avg(11000))  # 输出：10500.0
 
 ### 闭包陷阱：循环中的延迟绑定
 
+:::details[🔍 延迟绑定陷阱详解]
+
 ```py title="Python"
 # 经典陷阱：所有返回的函数都引用同一个 i
 funcs = []
@@ -354,7 +375,7 @@ funcs = [make_func(i) for i in range(3)]
 print([f() for f in funcs])  # 输出：[0, 1, 2]
 ```
 
-:::tip 闭包的本质
+:::tip[闭包的本质]
 闭包 = 函数 + 引用的环境变量。每次调用外层函数，都会创建一组新的环境变量，因此每次都是独立的"实例"：
 ```py title="Python"
 tracker1 = altitude_tracker()
@@ -363,6 +384,8 @@ tracker1(500)  # 500
 tracker1(300)  # 800
 tracker2(200)  # 200  ← tracker2 是独立状态
 ```
+:::
+
 :::
 
 ## 变量查找顺序详解
@@ -526,7 +549,7 @@ print(f"高度历史：{alt3.history()}")
 print(f"统计信息：{alt3.stats()}")
 ```
 
-:::tip 闭包 vs 类
+:::tip[闭包 vs 类]
 上面的高度追踪器也可以用类实现：
 ```py title="Python"
 class AltitudeTracker:

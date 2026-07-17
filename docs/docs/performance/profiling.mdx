@@ -1,0 +1,536 @@
+---
+sidebar_label: '性能分析与优化'
+title: 性能分析与优化
+description: 掌握 Python 性能分析工具和优化策略，编写高效的代码。
+tags: [性能]
+---
+
+import { PyodideRunner } from '@site/src/components';
+
+# ⚡ 性能分析与优化
+
+"过早优化是万恶之源。" —— Donald Knuth。但这并不意味着不需要优化，而是应该**先分析、再优化**。本章系统介绍 Python 性能分析工具链和优化策略，帮助用数据驱动的方式写出更高效的代码。
+
+## 📌 本节要点
+
+学完本节后，我们将掌握：
+
+- 使用 `time` / `timeit` 进行精确计时和微基准测试
+- 使用 `cProfile` 进行函数级性能分析
+- 使用 `line_profiler` 定位行级性能瓶颈
+- 使用 `memory_profiler` 和 `tracemalloc` 分析内存使用
+- 掌握常用优化策略：数据结构选择、缓存、生成器、字符串拼接
+- 独立完成数据处理管道的性能优化
+
+---
+
+## time / timeit 基础
+
+### time.time() 和 time.perf_counter()
+
+`time.time()` 返回 Unix 时间戳，适合粗粒度计时；`time.perf_counter()` 提供最高精度，适合短时间间隔测量。
+
+```py title="Python"
+import time
+
+# time.time() —— 粗粒度计时
+start = time.time()
+total = sum(range(1_000_000))
+elapsed = time.time() - start
+print(f"sum(range(1M)) 耗时: {elapsed:.6f}s")
+
+# time.perf_counter() —— 高精度计时（推荐）
+start = time.perf_counter()
+total = sum(range(1_000_000))
+elapsed = time.perf_counter() - start
+print(f"perf_counter: {elapsed:.6f}s")
+```
+
+:::tip[推荐使用 perf_counter()]
+`perf_counter()` 的分辨率通常比 `time.time()` 高一个数量级，是 Python 官方推荐的计时方式。
+:::
+
+### timeit —— 微基准测试
+
+`timeit` 会自动禁用垃圾回收、多次运行取平均值，是测量小代码片段的首选工具。
+
+```py title="Python"
+import timeit
+
+# 命令行方式
+# python -m timeit "sum(range(1000))"
+
+# Python API 方式
+result = timeit.timeit("sum(range(1000))", number=10000)
+print(f"10000 次 sum(range(1000)) 耗时: {result:.4f}s")
+
+# timeit.repeat() 多次运行，返回每次耗时列表
+times = timeit.repeat("sum(range(1000))", repeat=5, number=10000)
+print(f"5 轮运行耗时: {[f'{t:.4f}s' for t in times]}")
+print(f"最快: {min(times):.4f}s")
+print(f"平均: {sum(times)/len(times):.4f}s")
+```
+
+:::warning[注意事项]
+- **避免测量导入时间**：`timeit` 默认将代码作为字符串执行，不要把 `import` 放在被测代码中，应通过 `-s` 或 `setup` 参数传入
+- **GC 影响**：`timeit` 自动禁用垃圾回收，保证测量结果稳定
+- **循环次数**：`number` 应足够大（通常 1000+），让总耗时超过 0.2s 以减少误差
+:::
+
+### PyodideRunner 交互示例
+
+<PyodideRunner title="对比 list comprehension vs for loop 性能">
+
+```py
+import timeit
+
+# 构建列表的两种方式
+listcomp_time = timeit.timeit(
+    "[i ** 2 for i in range(1000)]",
+    number=10000
+)
+
+forloop_setup = """
+def build_list():
+    result = []
+    for i in range(1000):
+        result.append(i ** 2)
+    return result
+"""
+forloop_time = timeit.timeit("build_list()", setup=forloop_setup, number=10000)
+
+print(f"List Comprehension: {listcomp_time:.4f}s")
+print(f"For Loop + append:  {forloop_time:.4f}s")
+print(f"Comprehension 快 {(forloop_time / listcomp_time - 1) * 100:.1f}%")
+```
+
+</PyodideRunner>
+
+---
+
+## cProfile 函数级分析
+
+`cProfile` 是 Python 内置的确定性分析器，按函数调用统计耗时，适合定位整体热点。
+
+```py title="Python"
+import cProfile
+import pstats
+from io import StringIO
+
+def data_pipeline(data):
+    cleaned = [x.strip() for x in data if x.strip()]
+    uppercased = [x.upper() for x in cleaned]
+    sorted_data = sorted(uppercased)
+    return sorted_data
+
+mock_data = [f"  item_{i}  " for i in range(10000)]
+
+# 方式一：cProfile.run() 直接输出
+# cProfile.run("data_pipeline(mock_data)")
+
+# 方式二：runctx() 传入上下文变量
+cProfile.runctx("data_pipeline(mock_data)", globals(), {"mock_data": mock_data})
+
+# 方式三：pstats 解析结果，按 tottime 排序
+stream = StringIO()
+cProfile.runctx("data_pipeline(mock_data)", globals(), {"mock_data": mock_data}, stream=stream)
+stream.seek(0)
+stats = pstats.Stats(stream)
+stats.sort_stats("tottime").print_stats(10)
+```
+
+:::tip[关键指标解读]
+- **ncalls**：函数被调用次数
+- **tottime**：函数自身执行耗时（不含子函数调用）—— 定位热点的关键指标
+- **cumtime**：函数及所有子调用的累计耗时
+- **filename:lineno(function)**：函数所在位置，帮助定位代码
+:::
+
+---
+
+## line_profiler 行级分析
+
+`line_profiler` 能逐行分析耗时，精准定位具体哪一行是瓶颈。
+
+```bash title="Shell"
+uv add --dev line-profiler
+```
+
+创建分析目标脚本 `demo_profile.py`，用 `@profile` 裸装饰器标记目标函数（由 kernprof 自动注入，不需要 import）：
+
+```py title="Python"
+@profile
+def find_primes(n):
+    """找出不超过 n 的所有素数。"""
+    primes = []
+    for num in range(2, n):
+        is_prime = True
+        for i in range(2, int(num**0.5) + 1):
+            if num % i == 0:
+                is_prime = False
+                break
+        if is_prime:
+            primes.append(num)
+    return primes
+
+if __name__ == "__main__":
+    result = find_primes(5000)
+    print(f"Found {len(result)} primes")
+```
+
+运行分析：
+
+```bash title="Shell"
+kernprof -l -v demo_profile.py
+```
+
+输出中每行显示 Hits（执行次数）、Time（耗时）和 % Time（占比），可以直接看出**第 6 行外层循环占 48%，第 8 行内层循环占 18%**，是优化的切入点。
+
+---
+
+## memory_profiler 内存分析
+
+```bash title="Shell"
+uv add --dev memory-profiler
+```
+
+用 `@profile` 裸装饰器标记函数（由 memory_profiler 自动注入），然后运行：
+
+```bash title="Shell"
+python -m memory_profiler script.py
+```
+
+输出示例：
+
+```
+Line #    Mem usage    Increment   Line Contents
+================================================
+     4                         def build_large_list():
+     5    35.2 MiB     0.0 MiB       data = [i ** 2 for i in range(100000)]
+     6    42.8 MiB     7.6 MiB       filtered = [x for x in data if x % 2 == 0]
+     7    38.9 MiB    -3.9 MiB       del data
+     8    38.9 MiB     0.0 MiB       return filtered
+```
+
+Increment 列显示每一行的内存变化，方便定位内存分配热点。
+
+### tracemalloc —— 内存快照对比
+
+`tracemalloc` 是内置模块，通过快照对比找出内存分配增量最大的代码位置：
+
+```py title="Python"
+import tracemalloc
+
+tracemalloc.start()
+snapshot1 = tracemalloc.take_snapshot()
+
+# 分配大量内存
+big_list = [x ** 2 for x in range(500000)]
+text_data = "\n".join(f"Line {i}" for i in range(10000))
+
+snapshot2 = tracemalloc.take_snapshot()
+top_stats = snapshot2.compare_to(snapshot1, "lineno")
+
+print("内存分配增量 Top 5：")
+for stat in top_stats[:5]:
+    print(stat)
+```
+
+:::note[内存分析实战技巧]
+- **列表 vs 生成器**：列表一次性占用全部内存，生成器按需生成，内存占用恒定
+- **del 只是解引用**：`del` 变量后内存不一定立即释放，依赖 GC 回收
+- **字符串拼接**：循环中反复 `+=` 拼接字符串会产生大量临时对象，优先用 `str.join()`
+:::
+
+---
+
+## 优化策略
+
+### 数据结构选择
+
+选择正确的数据结构是最重要的优化手段之一：
+
+| 操作 | list | set | dict |
+|------|------|-----|------|
+| 添加元素 | append: O(1) | add: O(1) | dict[k] = v: O(1) |
+| 查找元素 | in: O(n) | in: O(1) | get: O(1) |
+| 删除元素 | del/pop: O(n) | discard: O(1) | del: O(1) |
+| 遍历 | O(n) | O(n) | O(n) |
+
+关键原则：**频繁查找时，将 list 转为 set/dict**。
+
+```py title="Python"
+import timeit
+
+# 构建测试数据
+data = list(range(10000))
+target = 9999
+
+list_time = timeit.timeit(
+    "target in data",
+    setup="data = list(range(10000)); target = 9999",
+    number=1000
+)
+
+set_time = timeit.timeit(
+    "target in data",
+    setup="data = set(range(10000)); target = 9999",
+    number=1000
+)
+
+print(f"list 查找 1000 次: {list_time:.4f}s")
+print(f"set  查找 1000 次: {set_time:.4f}s")
+print(f"set 快 {(list_time / set_time):.0f} 倍")
+```
+
+### functools.lru_cache —— 缓存优化
+
+对于有重复计算的递归或纯函数，`@lru_cache` 能大幅提速：
+
+```py title="Python"
+from functools import lru_cache
+import time
+
+# 未优化版本
+def fib_slow(n):
+    if n < 2:
+        return n
+    return fib_slow(n - 1) + fib_slow(n - 2)
+
+# 优化版本：加缓存
+@lru_cache(maxsize=128)
+def fib_fast(n):
+    if n < 2:
+        return n
+    return fib_fast(n - 1) + fib_fast(n - 2)
+
+# 对比
+n = 35
+
+start = time.perf_counter()
+result_slow = fib_slow(n)
+t_slow = time.perf_counter() - start
+
+start = time.perf_counter()
+result_fast = fib_fast(n)
+t_fast = time.perf_counter() - start
+
+print(f"fib({n}) = {result_slow}")
+print(f"未缓存: {t_slow:.4f}s")
+print(f"已缓存: {t_fast:.8f}s")
+print(f"加速比: {t_slow / t_fast:.0f} 倍")
+```
+
+### 生成器 vs 列表 —— 内存优化
+
+生成器采用惰性求值，内存占用恒定，而列表需要一次性加载全部数据：
+
+```py title="Python"
+import sys
+import time
+
+# 列表方式：一次性创建所有值
+start = time.perf_counter()
+list_result = [x ** 2 for x in range(1_000_000)]
+list_time = time.perf_counter() - start
+list_mem = sys.getsizeof(list_result)
+
+# 生成器方式：按需生成
+start = time.perf_counter()
+gen_result = (x ** 2 for x in range(1_000_000))
+gen_time = time.perf_counter() - start
+gen_mem = sys.getsizeof(gen_result)
+
+print(f"列表：耗时 {list_time:.4f}s，内存 {list_mem:,} bytes")
+print(f"生成器：耗时 {gen_time:.6f}s，内存 {gen_mem} bytes")
+print(f"\n生成器内存节省 {(1 - gen_mem / list_mem) * 100:.1f}%")
+```
+
+### 字符串拼接 —— join vs +=
+
+```py title="Python"
+import time
+
+# 方式一：+= 拼接（每次创建新字符串对象）
+start = time.perf_counter()
+s = ""
+for i in range(10000):
+    s += str(i)
+t_concat = time.perf_counter() - start
+
+# 方式二：join 拼接（预分配内存）
+start = time.perf_counter()
+s = "".join(str(i) for i in range(10000))
+t_join = time.perf_counter() - start
+
+print(f"+= 拼接: {t_concat:.4f}s")
+print(f"join:    {t_join:.6f}s")
+print(f"join 快 {t_concat / t_join:.1f} 倍")
+```
+
+### 算法复杂度基础
+
+理解 Big-O 表示法，有助于判断代码能否应对数据规模增长：
+
+| 复杂度 | 名称 | 示例 | 10 万元素耗时量级 |
+|--------|------|------|-------------------|
+| O(1) | 常数 | dict 查找 | 纳秒级 |
+| O(log n) | 对数 | 二分查找 | 微秒级 |
+| O(n) | 线性 | 遍历列表 | 毫秒级 |
+| O(n log n) | 线性对数 | 排序算法 | 秒级 |
+| O(n²) | 平方 | 嵌套循环 | 分钟级 |
+| O(2^n) | 指数 | 暴力穷举 | 不可接受 |
+
+---
+
+## 实战：优化数据处理管道
+
+一个典型的"慢"管道包含嵌套循环查找、重复字符串拼接。下面通过分析和优化将其提速。
+
+**分析过程**：用 cProfile 发现去重环节（嵌套循环 O(n²)）是热点，用 line_profiler 确认第 9 行内层循环占比最高。
+
+<PyodideRunner title="慢版本 vs 快版本对比">
+
+```py
+import time
+import random
+
+random.seed(42)
+records = [
+    {"id": i % 8000, "status": random.choice(["active", "inactive"]),
+     "category": random.choice(["A", "B", "C"]), "amount": random.random() * 100}
+    for i in range(5000)
+]
+
+# 慢版本：嵌套循环去重 O(n²) + 循环拼接字符串
+def slow_pipeline(records):
+    valid = [r for r in records if r["status"] == "active"]
+    unique = []
+    for r in valid:
+        if not any(u["id"] == r["id"] for u in unique):
+            unique.append(r)
+    results = []
+    for r in unique:
+        key = ""
+        for part in [r["category"], "_", str(r["id"])]:
+            key += part
+        results.append({"key": key, "value": r["amount"] * 1.1})
+    return results
+
+# 快版本：set 查找 O(1) + f-string
+def fast_pipeline(records):
+    seen = set()
+    unique = []
+    for r in records:
+        if r["status"] == "active" and r["id"] not in seen:
+            seen.add(r["id"])
+            unique.append(r)
+    results = [{"key": f"{r['category']}_{r['id']}", "value": r["amount"] * 1.1}
+               for r in unique]
+    return results
+
+start = time.perf_counter()
+r1 = slow_pipeline(records)
+t1 = time.perf_counter() - start
+
+start = time.perf_counter()
+r2 = fast_pipeline(records)
+t2 = time.perf_counter() - start
+
+print(f"慢版本: {t1:.4f}s ({len(r1)} 条)")
+print(f"快版本: {t2:.4f}s ({len(r2)} 条)")
+print(f"加速比: {t1 / t2:.1f}x")
+```
+
+</PyodideRunner>
+
+**优化要点**：
+1. 用 `set` 替代嵌套循环去重：O(n²) → O(n)
+2. 用 f-string 替代循环字符串拼接
+3. 合并过滤和去重为单次遍历
+
+---
+
+## 🎯 动手练习
+
+### 练习 1：基准测试不同排序方式
+
+用 `timeit` 对比 `sorted()`、`.sort()` 和手写冒泡排序的性能差异。
+
+### 练习 2：用 cProfile 分析代码
+
+选择一个自己写的函数，用 `cProfile` 分析其热点，找出耗时最多的 3 个子函数。
+
+### 练习 3：内存优化挑战
+
+编写一个处理 100 万条记录的函数，要求：
+1. 先用列表存储所有结果，记录内存峰值
+2. 改用生成器重写，对比内存差异
+3. 用 `tracemalloc` 验证优化效果
+
+---
+
+## 📚 延伸阅读
+
+- [Python 官方文档 —— timeit 模块](https://docs.python.org/3/library/timeit.html)
+- [Python 官方文档 —— cProfile 模块](https://docs.python.org/3/library/profile.html)
+- [Python 官方文档 —— tracemalloc 模块](https://docs.python.org/3/library/tracemalloc.html)
+- [line_profiler GitHub](https://github.com/pyutils/line_profiler)
+- [memory_profiler GitHub](https://github.com/pythonprofilers/memory_profiler)
+
+---
+
+## 📊 速查表
+
+### 性能分析工具选择指南
+
+| 场景 | 推荐工具 | 原因 |
+|------|----------|------|
+| 快速计时 | `time.perf_counter()` | 最高精度，开销最小 |
+| 代码片段基准测试 | `timeit` | 自动控制 GC 和运行次数 |
+| 函数热点定位 | `cProfile` | 函数级粒度，内置无需安装 |
+| 行级瓶颈定位 | `line_profiler` | 精确到每一行的耗时 |
+| 内存泄漏排查 | `memory_profiler` | 逐行显示内存增量 |
+| 内存分配追踪 | `tracemalloc` | 内置模块，快照对比 |
+
+### 时间复杂度速查
+
+| 复杂度 | 能否处理 10 万元素 | 能否处理 1000 万元素 |
+|--------|-------------------|---------------------|
+| O(1) | 毫无压力 | 毫无压力 |
+| O(log n) | 毫无压力 | 毫无压力 |
+| O(n) | 毫无压力 | 毫秒级 |
+| O(n log n) | 毫秒级 | 秒级 |
+| O(n²) | 秒级 | **不可接受** |
+| O(2^n) | **不可接受** | **不可接受** |
+
+### 常用优化技巧
+
+| 问题 | 慢方案 | 快方案 | 加速原因 |
+|------|--------|--------|----------|
+| 频繁查找 | `x in list` | `x in set` | O(n) → O(1) |
+| 重复计算 | 直接递归 | `@lru_cache` | 记忆化避免重复子问题 |
+| 大数据集 | 一次性构建列表 | 生成器 | 惰性求值节省内存 |
+| 字符串拼接 | `s += chunk` | `"".join(parts)` | 预分配 vs 重复创建 |
+| 嵌套循环 | `for + for` | 用 set/dict 做映射 | 降维减少比较次数 |
+
+---
+
+## ✅ 本节总结
+
+本章介绍了 Python 性能分析的完整工具链：
+
+1. **计时**：`time.perf_counter()` 精确计时，`timeit` 做微基准测试
+2. **函数级分析**：`cProfile` + `pstats` 定位函数热点
+3. **行级分析**：`line_profiler` 精确到每一行的耗时
+4. **内存分析**：`memory_profiler` 逐行追踪，`tracemalloc` 快照对比
+5. **优化策略**：选对数据结构、善用缓存、生成器替代列表、join 替代拼接
+6. **实战流程**：先分析、再优化 —— cProfile 找热点 → line_profiler 定位行 → 针对性优化 → 验证效果
+
+:::info[📋 小结]{.summary}
+- 用 `time.perf_counter()` 计时，用 `timeit` 做基准测试
+- `cProfile` 定位函数热点，`line_profiler` 精确到行
+- `memory_profiler` 和 `tracemalloc` 帮助理解内存行为
+- 优化的核心原则：**先分析，再优化，用数据说话**
+- 常见优化：set 替代 list 查找、`@lru_cache` 缓存、生成器替代列表、join 替代 += 拼接
+:::

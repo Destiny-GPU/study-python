@@ -1,8 +1,8 @@
 ---
-sidebar_position: 1
 sidebar_label: '条件语句'
-title: 🔀 条件语句
+title: 条件语句
 description: 学习 Python 中 if/elif/else 条件判断语句、条件表达式、嵌套条件与真值测试。
+tags: [控制流]
 ---
 import { PyodideRunner } from '@site/src/components';
 
@@ -10,9 +10,17 @@ import { PyodideRunner } from '@site/src/components';
 
 条件语句是控制程序执行流程的基础。Python 使用 `if`、`elif`、`else` 三个关键字来实现分支判断，配合缩进来划分代码块。掌握条件语句是写出有"判断力"的程序的第一步。
 
+## 📌 本节要点
+
+- `if`/`elif`/`else` 实现多分支判断，缩进决定代码块范围
+- 条件表达式（三元运算符）：`x if condition else y`
+- 真值测试：Python 中 `0`、`""`、`[]`、`None`、`False` 均为假值
+- `match`/`case`（Python 3.10+）实现结构化模式匹配
+- 避免过度嵌套：提前返回（early return）让代码更清晰
+
 <PyodideRunner title="条件语句快速体验">
 
-```python
+```py
 # 成绩等级判定
 score = 85
 
@@ -36,6 +44,20 @@ print(f"成绩 {score} -> 等级 {grade}：{comment}")
 ```
 
 </PyodideRunner>
+
+条件判断的执行流程：
+
+```mermaid
+flowchart TD
+    A["条件判断"] --> B{"condition1?"}
+    B -- True --> C["执行 block1"]
+    B -- False --> D{"condition2?"}
+    D -- True --> E["执行 block2"]
+    D -- False --> F["执行 else block"]
+    C --> G["继续执行后续代码"]
+    E --> G
+    F --> G
+```
 
 ## if 语句基本语法
 
@@ -86,7 +108,7 @@ else:
 print(f"成绩等级：{grade}")  # 成绩等级：B
 ```
 
-:::note 分支顺序很重要
+:::note[分支顺序很重要]
 `elif` 是从上到下顺序判断的。如果把宽松的条件放在前面，后面的严格条件将永远无法命中。例如先判断 `score >= 60` 再判断 `score >= 90`，那么 90 分也会被归入 60 分那一档。
 :::
 
@@ -118,7 +140,7 @@ result = "优秀" if score >= 85 else ("良好" if score >= 70 else "一般")
 print(result)  # 良好
 ```
 
-:::tip 何时使用三元运算符
+:::tip[何时使用三元运算符]
 当赋值逻辑简单、仅两到三个分支时使用三元运算符能让代码更简洁。如果分支超过三层或涉及复杂表达式，建议改用 `if-elif-else` 语句。
 :::
 
@@ -139,7 +161,7 @@ else:
     print("未成年，不能驾驶。")
 ```
 
-:::warning 避免过深嵌套
+:::warning[避免过深嵌套]
 嵌套层数过多会降低代码可读性。一般建议嵌套不超过 3 层。可以通过提前 `return`、合并条件等方式扁平化逻辑。例如上面代码可改写为：
 
 ```py title="Python"
@@ -180,7 +202,7 @@ if items:
     print(f"列表非空，共 {len(items)} 个元素。")
 ```
 
-:::tip 优雅地判断空容器
+:::tip[优雅地判断空容器]
 在 Python 中，判断列表/字符串/字典是否为空，推荐直接用 `if container:`，而不是 `if len(container) > 0:`。这种写法更 Pythonic，符合 PEP 8 建议。
 :::
 
@@ -270,7 +292,7 @@ for s in (95, 82, 73, 60, 45, 120, -5):
   -5 -> 成绩无效，应在 0~100 之间。
 ```
 
-:::info 类型注解提示
+:::info[类型注解提示]
 上面代码使用了 `score: float` 和 `-> str` 类型注解。类型注解不会影响运行，但能让 IDE 提供更好的提示，也方便阅读。
 :::
 

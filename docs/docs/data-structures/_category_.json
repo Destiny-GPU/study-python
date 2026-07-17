@@ -2,7 +2,7 @@
   "label": "📦 数据结构",
   "position": 5,
   "link": {
-    "type": "generated-index",
-    "description": "熟练使用列表、元组、字典、集合组织和管理数据。"
+    "type": "doc",
+    "id": "data-structures/index"
   }
 }

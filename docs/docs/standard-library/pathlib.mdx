@@ -1,17 +1,17 @@
 ---
-sidebar_position: 5
 sidebar_label: 'pathlib'
 title: 🧰 pathlib 路径库
 description: 掌握 PurePath 与 Path、路径拼接与属性、读写文件、glob/rglob 查找、目录遍历与 Python 3.12 的 walk 方法。
+tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
-# 🧰 pathlib 路径库
+# 🔗 pathlib 路径库
 
 `pathlib` 是 Python 处理文件路径的现代工具。它把路径封装成对象，用 `/` 运算符拼接，用属性访问组件，用方法完成读写、查找、创建、删除等操作——告别 `os.path.join` 的字符串拼接时代。本章全面讲解 `pathlib`，并重点介绍 `Path.walk()` 等新特性。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **PurePath vs Path**：纯路径（字符串操作）与具体路径（文件系统交互）的区别
 - **`/` 运算符**：路径拼接，比 `os.path.join` 更直观
 - **属性访问**：`name`、`stem`、`suffix`、`parent`、`parents`、`parts`
@@ -23,13 +23,13 @@ import { PyodideRunner } from '@site/src/components';
 - **relative_to(walk_up=True)**：3.12+ 支持向上回溯的相对路径计算
 :::
 
-:::info 与 file-handling 章节的关系
+:::info[与 file-handling 章节的关系]
 入门教程中"路径处理"一章介绍了 `pathlib` 的基础用法。本章从标准库参考视角做更系统的讲解，重点补充 `PurePath` 体系、3.12 新方法、更复杂的遍历与实战。两章内容互补，可对照阅读。
 :::
 
 <PyodideRunner title="pathlib 快速体验">
 
-```python
+```py
 from pathlib import PurePosixPath, PureWindowsPath
 
 # PurePath：纯路径操作，不访问磁盘
@@ -84,7 +84,7 @@ real = Path("/home/user/docs/readme.txt")
 # real.read_text() # 真正读取文件
 ```
 
-:::tip 跨平台路径分析
+:::tip[跨平台路径分析]
 处理外部传来的路径（如配置文件、用户输入）但当前不访问文件系统时，用 `PurePath` 更明确——它表达"我只关心路径字符串的解析"。需要在不同平台上分析异种路径时，用 `PurePosixPath` 或 `PureWindowsPath` 显式指定风格。
 :::
 
@@ -104,7 +104,7 @@ print(issubclass(PosixPath, PurePosixPath))  # True
 print(issubclass(WindowsPath, PureWindowsPath))  # True
 ```
 
-:::warning 不能在 Windows 上实例化 PosixPath
+:::warning[不能在 Windows 上实例化 PosixPath]
 `PosixPath` 和 `WindowsPath` 是与系统绑定的具体类。在 Windows 上调用 `PosixPath(...)` 会抛 ` NotImplementedError`。需要跨平台分析路径字符串时，用 `PurePosixPath` / `PureWindowsPath`。
 :::
 
@@ -152,7 +152,7 @@ combined = sub / file
 print(combined)  # subdir/file.txt
 ```
 
-:::tip / 运算符的优先级
+:::tip[/ 运算符的优先级]
 `/` 是二元运算符，优先级高于函数调用。可以放心写 `Path("/a") / "b" / "c"`，结果是 `/a/b/c`。但注意 `Path("/a/b/c")` 与 `Path("/a") / "b" / "c"` 等价，多段路径直接传给构造函数更简洁。
 :::
 
@@ -202,7 +202,7 @@ print(p.with_stem("intro"))         # /home/user/docs/intro.txt
 print(p.with_parent("/tmp"))         # /tmp/readme.txt
 ```
 
-:::info Python 3.12 新增方法
+:::info[Python 3.12 新增方法]
 `with_stem` 和 `with_parent` 是 3.12 才加入的。在此之前，"保留扩展名换文件名"要写 `p.with_name(f"new_name{p.suffix}")`，"换父目录"要写 `Path("/tmp") / p.name`。新方法让这类常见操作更直观。
 :::
 
@@ -231,7 +231,7 @@ print(data)  # b'\x89PNG\r\n\x1a\n'
 p.write_text("line1\nline2", encoding="utf-8", newline="")
 ```
 
-:::warning 一次性操作的内存代价
+:::warning[一次性操作的内存代价]
 `read_text` / `read_bytes` / `write_text` / `write_bytes` 把整个文件读入或写入内存，**只适合中小文件**。处理 GB 级日志或大文件应使用 `open()` 迭代或分块读写：
 
 ```py title="Python"
@@ -300,7 +300,7 @@ for pat in patterns:
     all_files.extend(Path(".").rglob(pat))
 ```
 
-:::tip 通配符规则
+:::tip[通配符规则]
 - `*`：匹配任意字符（不跨目录分隔符）
 - `?`：匹配单个字符
 - `[abc]`：匹配字符集中任意一个
@@ -319,7 +319,7 @@ for f in Path(".").rglob("*.PY", case_sensitive=False):
     print(f)
 ```
 
-:::warning glob 结果未排序
+:::warning[glob 结果未排序]
 `Path.glob()` / `rglob()` 返回生成器，**顺序由文件系统决定，不保证稳定**。需要排序时显式调用：
 
 ```py title="Python"
@@ -378,7 +378,7 @@ print(p.owner())   # root（Unix）
 # print(p.group())  # root
 ```
 
-:::note Windows 上的 owner
+:::note[Windows 上的 owner]
 `Path.owner()` 在 Unix 上返回用户名，在 Windows 上需要 `win32security` 模块支持。跨平台脚本建议先判断 `os.name`。
 :::
 
@@ -401,7 +401,7 @@ Path("data/cache/logs").mkdir(parents=True, exist_ok=True)
 Path("secret").mkdir(mode=0o700)
 ```
 
-:::warning 默认参数会报错
+:::warning[默认参数会报错]
 `mkdir()` 默认 `parents=False, exist_ok=False`。父目录不存在或目标已存在都会抛异常。**实际开发中通常都加 `parents=True, exist_ok=True`**，避免琐碎的异常处理。
 :::
 
@@ -440,7 +440,7 @@ Path("temp.txt").replace("final.txt")
 Path("file.txt").rename(Path("backup") / "file.txt")
 ```
 
-:::tip rename vs replace
+:::tip[rename vs replace]
 `rename` 在目标已存在时行为依赖系统——Linux 上覆盖，Windows 上抛异常。`replace` 始终覆盖，行为跨平台一致。需要原子性、跨平台的替换优先用 `replace`。
 :::
 
@@ -491,7 +491,7 @@ for top, dirs, files in Path(".").walk():
             print(top / f)
 ```
 
-:::tip 剪枝的秘密
+:::tip[剪枝的秘密]
 `Path.walk` 在每层把 `dirs` 列表传给回调代码，**就地修改 `dirs` 会影响后续遍历**。`dirs[:] = [...]` 是就地替换列表内容的惯用法。这是处理"忽略某些目录"最高效的方式——比遍历完再过滤省大量 I/O。
 :::
 
@@ -545,7 +545,7 @@ rel_up = other.relative_to(base, walk_up=True)
 print(rel_up)  # ../other/file.txt
 ```
 
-:::info 3.12 的 walk_up
+:::info[3.12 的 walk_up]
 此前 `relative_to` 严格要求 `other` 是 `base` 的后代，否则抛 `ValueError`。3.12 的 `walk_up=True` 允许跨越父目录返回 `../` 形式的相对路径，更贴近 `os.path.relpath`。
 :::
 
@@ -718,7 +718,7 @@ Python 文件：0 个，共 0 行
       ...
 ```
 
-:::tip Path.walk 的剪枝威力
+:::tip[Path.walk 的剪枝威力]
 上面的统计工具用 `dirs[:] = [...]` 一次剪掉 `.git`、`node_modules`、`.venv` 等目录，避免进入它们做无用的 `stat` 调用。在大项目上，这种剪枝能让扫描时间从分钟级降到秒级。
 :::
 
@@ -768,7 +768,7 @@ Python 文件：0 个，共 0 行
 - **[PEP 632](https://peps.python.org/pep-0632/)** - `os.path` 弃用建议（部分场景）
 - **[os.path vs pathlib](https://docs.python.org/zh-cn/3/library/os.html#os.path)** - 何时仍需要 os.path
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`PurePath` 是纯路径类（不访问磁盘）**，`Path` 是具体路径类（可读写文件）；`PurePosixPath` / `PureWindowsPath` 显式指定风格
 - **`Path.home()` / `Path.cwd()` 是常用构造**，`/` 运算符让拼接直观可读

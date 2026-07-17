@@ -1,17 +1,17 @@
 ---
-sidebar_position: 4
 sidebar_label: 'itertools'
 title: 🧰 itertools 迭代工具
 description: 掌握 chain、product、combinations、permutations、accumulate、groupby、islice、starmap、zip_longest 与无限迭代器，写出高效的迭代代码。
+tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
-# 🧰 itertools 迭代工具
+# 🔄 itertools 迭代工具
 
-`itertools` 是 Python 中最具"函数式编程"气质的标准库。它提供一组"内存友好"的迭代器构造工具：所有函数都返回生成器，按需产出元素，可以处理超大或无限序列。掌握 `itertools` 能让你用极少的代码表达复杂的迭代逻辑，替代大量嵌套循环和临时列表。
+`itertools` 是 Python 中最具"函数式编程"气质的标准库。它提供一组"内存友好"的迭代器构造工具：所有函数都返回生成器，按需产出元素，可以处理超大或无限序列。掌握 `itertools` 能用极少的代码表达复杂的迭代逻辑，替代大量嵌套循环和临时列表。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **chain**：串联多个迭代器，`chain.from_iterable` 扁平化嵌套，比 `sum(lists, [])` 高效
 - **product**：笛卡尔积，`repeat=n` 表示 n 个相同序列的积
 - **combinations/permutations**：组合（无序）与排列（有序），`combinations_with_replacement` 可重复
@@ -25,7 +25,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="itertools 快速体验">
 
-```python
+```py
 from itertools import chain, product, combinations, islice, count
 
 # chain 串联迭代器
@@ -90,7 +90,7 @@ print(flat)  # [1, 2, 3, 4, 5, 6, 7, 8, 9]
 # 等价于 chain(*nested)，但接受单个可迭代对象作为输入
 ```
 
-:::tip chain vs sum(lists, [])
+:::tip[chain vs sum(lists, [])]
 新手常用 `sum(list_of_lists, [])` 扁平化，但这是 O(n²) 操作——每次 `+` 都创建新列表。`chain.from_iterable` 是 O(n)，应作为首选。仅一级嵌套时用 `chain.from_iterable`；多级不规则嵌套需要递归或第三方 `more-itertools.flatten`。
 :::
 
@@ -131,7 +131,7 @@ sums_to_10 = [combo for combo in dice if sum(combo) == 10]
 print(f"和为 10 的组合数：{len(sums_to_10)}")
 ```
 
-:::info product 与 repeat 的关系
+:::info[product 与 repeat 的关系]
 `product(A, repeat=n)` 等价于 `product(A, A, ..., A)`（n 个 A）。这是密码爆破、组合优化的常用模式：枚举所有长度为 n 的可能序列。
 :::
 
@@ -169,7 +169,7 @@ for combo in combinations_with_replacement("ABC", 2):
 print()
 ```
 
-:::tip 组合数学公式
+:::tip[组合数学公式]
 - `combinations(n 个元素, k)`：C(n, k) = n! / (k!(n-k)!)
 - `permutations(n 个元素, k)`：P(n, k) = n! / (n-k)!
 - `combinations_with_replacement(n 个元素, k)`：C(n+k-1, k)
@@ -201,7 +201,7 @@ print(list(accumulate([3, 1, 4, 1, 5, 9, 2, 6], max)))
 print(list(accumulate("abc", initial="")))  # ['', 'a', 'ab', 'abc']
 ```
 
-:::note initial 参数
+:::note[initial 参数]
 Python 3.8+ 支持 `initial` 参数，在结果开头插入一个初始值。`accumulate([1, 2, 3], initial=0)` 得到 `[0, 1, 3, 6]`——这相当于在序列前补一个起始元素，常用于"前缀和从 0 开始"的场景。
 :::
 
@@ -233,7 +233,7 @@ for category, items in groupby(data, key=lambda x: x[0]):
 # veg ['carrot', 'potato']
 ```
 
-:::warning groupby 不全局排序
+:::warning[groupby 不全局排序]
 `groupby` 只对**相邻**元素分组。如果数据未按 key 排序，相同 key 的元素会被分散到多组。需要全局分组时，**先用 `sorted(data, key=...)` 排序**，或干脆用 `defaultdict(list)` 收集。
 :::
 
@@ -276,7 +276,7 @@ print(list(islice(count(10), 5)))  # [10, 11, 12, 13, 14]
 print(list(islice(range(20), 0, 20, 3)))  # [0, 3, 6, 9, 12, 15, 18]
 ```
 
-:::tip 处理大文件头几行
+:::tip[处理大文件头几行]
 `islice` 是处理"只需要前 N 个"的标准工具。比如读取超大日志文件的前 10 行：
 
 ```py title="Python"
@@ -358,7 +358,7 @@ greeting = repeat("hello")
 print(list(islice(greeting, 2)))  # ['hello', 'hello']
 ```
 
-:::warning 无限迭代器必须配 islice
+:::warning[无限迭代器必须配 islice]
 `count()`、`cycle()`、无参数 `repeat()` 是真正的无限生成器。直接 `list(count())` 会卡死或 OOM。必须配合 `islice`、`break`、`zip`（以有限序列为准截断）使用。
 :::
 
@@ -420,7 +420,7 @@ print(list(b))  # [0, 1, 2, 3, 4]
 # 原 it 已耗尽，tee 后不应再用
 ```
 
-:::warning tee 的代价
+:::warning[tee 的代价]
 `tee` 在内部用队列缓存"超前消费"的元素。如果一个副本迭代得很远，另一个迟迟不前，会消耗大量内存。需要多次完整遍历就直接 `list()`，不要用 `tee`。
 :::
 
@@ -568,7 +568,7 @@ if __name__ == "__main__":
   5. eggplant
 ```
 
-:::tip Python 3.12 的 batched
+:::tip[Python 3.12 的 batched]
 `itertools.batched` 是 Python 3.12 新增的官方分批工具：
 
 ```py title="Python"
@@ -623,7 +623,7 @@ for batch in batched(range(10), 3):
 - **[more-itertools](https://more-itertools.readthedocs.io/)** - 第三方扩展库，提供更多迭代工具
 - **[函数式编程指南](https://docs.python.org/zh-cn/3/howto/functional.html)** - Python 函数式编程概念
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **`chain` 串联多个迭代器**，`chain.from_iterable` 扁平化嵌套，比 `sum(lists, [])` 的 O(n²) 高效得多
 - **`product` 笛卡尔积**，`repeat=n` 表示 n 个相同序列的积；`permutations` 排列，`combinations` 组合，`combinations_with_replacement` 可重复组合

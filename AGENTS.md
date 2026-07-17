@@ -12,7 +12,7 @@ Python learning project ("study-python") with two halves:
 - Package manager: **uv** (not pip). Uses Tsinghua mirror by default.
 - Build backend: hatchling
 - Source layout: `src/study_python/` (declared via `tool.hatch.build.targets.wheel`)
-- Dependencies: matplotlib, tqdm (runtime); pytest, ruff (dev)
+- Dependencies: matplotlib, scipy, tqdm, torch, torchvision (runtime); pytest, ruff (dev)
 
 ```bash
 # Install dependencies

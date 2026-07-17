@@ -1,8 +1,8 @@
 ---
-sidebar_position: 2
 sidebar_label: '元组'
-title: 📦 元组（Tuple）
+title: 元组（Tuple）
 description: 元组是 Python 的不可变序列，常用于固定数据聚合、多返回值与字典键，理解不可变性与解包是关键。
+tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,9 +11,18 @@ import { PyodideRunner } from '@site/src/components';
 
 元组（`tuple`）是 Python 中**有序、不可变**的序列。它和列表很像，但一旦创建就不能修改——这种"只读"特性让它在表达固定数据（如坐标、配置项、记录）时更安全、更高效。元组也是函数多返回值的底层载体。
 
+## 📌 本节要点
+
+- 元组是不可变序列，创建后不能增删改元素
+- 解包赋值：`x, y = point` 一次取出多个值
+- 命名元组 `NamedTuple` 为元组字段赋予名称，兼具可读性和性能
+- 元组可以作为字典键和集合元素（列表不行）
+- 单元素元组需要尾逗号：`(1,)` 而非 `(1)`
+- 元组拆包 `*` 运算符：`first, *rest = seq`
+
 <PyodideRunner title="元组操作快速体验">
 
-```python
+```py
 from typing import NamedTuple
 
 # 命名元组
@@ -65,7 +74,7 @@ empty: tuple = ()
 also_empty = tuple()
 ```
 
-:::tip 圆括号可省略
+:::tip[圆括号可省略]
 `x, y = 3, 4` 中右侧的 `3, 4` 其实就是一个元组。圆括号常用于提升可读性或在函数调用中消歧义，但语法上经常可省。
 :::
 
@@ -83,7 +92,7 @@ point = point + (5,)   # 拼接生成新元组
 print(point)  # (3, 4, 5)
 ```
 
-:::warning 不可变是"浅层"的
+:::warning[不可变是"浅层"的]
 元组本身的元素引用不能改，但如果元素本身是可变对象，仍可修改该对象内部。
 :::
 
@@ -95,6 +104,8 @@ print(data)  # (1, [2, 3, 99], 4)
 ```
 
 ## 单元素元组陷阱
+
+:::details[⚠️ 单元素元组陷阱]
 
 这是元组最容易踩的坑：单元素元组必须带尾随逗号。
 
@@ -112,8 +123,10 @@ also_single = 42,
 print(type(also_single))  # <class 'tuple'>
 ```
 
-:::warning 为什么尾随逗号
+:::warning[为什么尾随逗号]
 Python 语法中 `(42)` 只是普通表达式（如计算 `(2 + 3) * 4`），括号仅用于分组。要表示元组必须靠逗号 `(42,)`。空元组 `( )` 是唯一例外，不需要逗号。
+:::
+
 :::
 
 ## 解包
@@ -143,7 +156,7 @@ first, *middle, last = (1, 2, 3, 4, 5)
 print(first, middle, last)  # 1 [2, 3, 4] 5
 ```
 
-:::tip 函数返回值解包
+:::tip[函数返回值解包]
 多返回值本质就是返回一个元组，再被解包。
 :::
 
@@ -155,7 +168,7 @@ low, high = min_max([3, 1, 4, 1, 5, 9, 2, 6])
 print(low, high)  # 1 9
 ```
 
-:::info Python 3.12 更新
+:::info[Python 3.12 更新]
 Python 3.12 引入了更灵活的解包语法预览，未来版本将进一步放宽对 `*` 解包在表达式中的限制。当前 3.12+ 已稳定支持上述所有用法。
 :::
 
@@ -212,7 +225,7 @@ p_moved = p._replace(x=5.0)
 print(p_moved)  # Point(x=5.0, y=4.0, label='A')
 ```
 
-:::tip 选择哪一个
+:::tip[选择哪一个]
 新代码优先用 `typing.NamedTuple`，它带类型注解、与 IDE/类型检查器配合更好。`collections.namedtuple` 适合需要动态生成字段名的场景。
 :::
 
@@ -236,7 +249,7 @@ print(sys.getsizeof(lst))  # 列表占用更大
 print(sys.getsizeof(tup))  # 元组占用更小
 ```
 
-:::info 不可变的好处
+:::info[不可变的好处]
 不可变性带来三点收益：①防止误改数据；②可作为字典键与集合元素（可哈希）；③解释器可以做更多优化，访问更快。
 :::
 
@@ -262,7 +275,7 @@ data = {}
 data[(1, 2)] = "x"     # OK
 ```
 
-:::warning 注意嵌套可变对象
+:::warning[注意嵌套可变对象]
 如果元组里包含列表，整个元组就不可哈希，不能作为字典键。
 :::
 
@@ -324,7 +337,7 @@ if __name__ == "__main__":
     main()
 ```
 
-:::tip 不可变 + 方法
+:::tip[不可变 + 方法]
 这个例子体现了"函数式风格"：所有变换都返回新对象，原对象永不被修改，便于追踪与并发。这是元组/NamedTuple 的精髓用法。
 :::
 

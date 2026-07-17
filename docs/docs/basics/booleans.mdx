@@ -1,15 +1,15 @@
 ---
-sidebar_position: 4
 sidebar_label: '布尔与 None'
-title: 📝 布尔值与 None
+title: 布尔值与 None
 description: 掌握 Python 的布尔类型 True/False、真值测试规则、短路求值的逻辑运算符，以及 None 与 is 运算符的用法。
+tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
 
 # 📝 布尔值与 None
 
-布尔类型（`bool`）和 `None` 是 Python 中两个非常基础但又常被误解的概念。布尔值用于表示"真"与"假"，是条件判断与逻辑运算的核心；`None` 是一个特殊的"空值"单例，表示"什么都没有"。本节将系统讲解它们的用法、真值测试规则、短路求值，以及 `==` 与 `is` 的关键区别。
+布尔类型（`bool`）和 `None` 是 Python 中两个非常基础但又常被误解的概念。布尔值用于表示"真"与"假"，是条件判断与逻辑运算的核心；`None` 是一个特殊的"空值"单例，表示"什么都没有"。本节我们将一起探索它们的用法、真值测试规则、短路求值，以及 `==` 与 `is` 的关键区别。
 
 ## 📌 本节要点
 - 掌握 bool 类型与真值测试规则（Falsy vs Truthy）
@@ -44,7 +44,7 @@ flags = [True, False, True, True, False]
 print(sum(flags))  # 3 (因为有 3 个 True，每个等价于 1)
 ```
 
-:::tip 利用 bool 是 int 的子类
+:::tip[利用 bool 是 int 的子类]
 由于 `bool` 是 `int` 子类，可以用 `sum()` 快速统计列表中满足条件的元素个数：
 
 ```py title="Python"
@@ -103,7 +103,7 @@ print(bool([[]]))       # True (含空列表的列表)
 print(bool((None,)))    # True (含 None 的元组)
 ```
 
-:::warning 注意"看起来像假"但实际为真的值
+:::warning[注意"看起来像假"但实际为真的值]
 以下值都是 Truthy，常被误判：
 - `"False"`、`"0"`、`"None"`（非空字符串都是 True）
 - `[0]`、`[[]]`、`[None]`（含元素的容器都是 True）
@@ -228,7 +228,7 @@ if data and "key" in data:  # 先确认 data 非空
     print(data["key"])
 ```
 
-:::warning 短路返回的不一定是布尔值
+:::warning[短路返回的不一定是布尔值]
 `and` 和 `or` 返回的是**操作数本身**，而不是布尔值。这一点与 C/Java 不同：
 
 ```py title="Python"
@@ -259,7 +259,7 @@ print(not True and False)  # False (等价于 (not True) and False)
 print(not (True and False))  # True
 ```
 
-:::tip 避免对比较使用 not
+:::tip[避免对比较使用 not]
 写 `not (a == b)` 不如直接写 `a != b` 清晰。`not` 主要用于对真值判断取反：
 
 ```py title="Python"
@@ -296,7 +296,7 @@ print(result)   # None
 print(result is None)  # True
 ```
 
-:::info None 在 Python 中的角色
+:::info[None 在 Python 中的角色]
 `None` 类似于其他语言的 `null` / `nil`，但更严格：Python 中**只有一个** `None` 对象（单例），所有 `None` 都是同一个对象。它表示"什么都没有"或"未设置"，与 `0`、`False`、空字符串等不同——这些是具体的值，而 `None` 表示值的缺失。
 :::
 
@@ -323,7 +323,7 @@ else:
     print(f"找到用户: {result}")
 ```
 
-:::tip 判断 None 一律用 is
+:::tip[判断 None 一律用 is]
 判断一个值是否为 `None`，**永远使用 `is None` 或 `is not None`**，不要用 `== None`。原因：
 1. `is` 比对象身份，速度更快
 2. `==` 可能被运算符重载，行为不可预测
@@ -368,7 +368,7 @@ b = None
 print(a is b)  # True (只有一个 None 对象)
 ```
 
-:::warning 不要用 is 比较数字、字符串等值类型
+:::warning[不要用 is 比较数字、字符串等值类型]
 由于小整数缓存和字符串驻留（interning）的存在，`is` 在某些情况下"看起来"工作正常，但这种行为依赖于实现细节，可能在其他 Python 实现（如 PyPy）或不同环境下失效。
 
 **正确做法**：
@@ -478,7 +478,7 @@ for user in test_cases:
 
 <PyodideRunner title="布尔值与短路求值">
 
-```python
+```py
 # 1. 真值测试：哪些值是 Falsy?
 test_values = [0, 0.0, "", [], {}, set(), None, "False", "0", [0], -1]
 print("=== Falsy vs Truthy ===")

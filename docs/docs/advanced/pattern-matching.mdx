@@ -1,8 +1,8 @@
 ---
-sidebar_position: 4
 sidebar_label: '模式匹配详解'
-title: 🚀 模式匹配详解
+title: 模式匹配详解
 description: 深入 match-case 高级用法，掌握序列 *rest、映射 **rest、类模式、捕获模式、守卫、OR 模式与 AST 节点处理。
+tags: [进阶特性, 控制流]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,7 +11,7 @@ import { PyodideRunner } from '@site/src/components';
 
 <PyodideRunner title="模式匹配快速体验">
 
-```python
+```py
 # 序列模式
 def describe_point(point):
     match point:
@@ -62,9 +62,9 @@ print(classify_number(10))
 
 </PyodideRunner>
 
-[结构化模式匹配](../control-flow/match-case.mdx)介绍了 `match-case` 的基础语法。本节深入模式匹配的进阶用法——`*rest` 与 `**rest` 收集模式、嵌套解构、OR 模式组合、`as` 捕获、Python 3.12 增强，以及实战中的 AST 节点处理。掌握这些技巧后，你能用声明式风格优雅地处理复杂结构化数据，替代大量手写 `if-else` 与索引访问。
+[结构化模式匹配](../control-flow/match-case)介绍了 `match-case` 的基础语法。本节深入模式匹配的进阶用法——`*rest` 与 `**rest` 收集模式、嵌套解构、OR 模式组合、`as` 捕获、Python 3.12 增强，以及实战中的 AST 节点处理。掌握这些技巧后，你能用声明式风格优雅地处理复杂结构化数据，替代大量手写 `if-else` 与索引访问。
 
-:::tip 🎯 本节要点
+## 📌 本节要点
 - **序列模式**：`*rest` 收集剩余元素，可放任意位置
 - **映射模式**：`**rest` 收集剩余键值对，子集匹配
 - **类模式**：配合 `__match_args__` 支持位置解构，关键字形式更通用
@@ -75,7 +75,7 @@ print(classify_number(10))
 - **嵌套组合**：处理 AST、JSON 等复杂结构化数据
 :::
 
-:::info PEP 634 与 PEP 642
+:::info[PEP 634 与 PEP 642]
 `match-case` 由 Python 3.10 引入（PEP 634）。后续版本持续增强：
 - Python 3.11：模式可作为 `match` 的目标
 - Python 3.12：模式匹配的运行时优化与语法微调
@@ -154,7 +154,7 @@ print(parse_command(["bin", "app", "run"]))      # 运行 bin/app
 print(parse_command(["start", "mid", "end"]))   # 两端：start 和 end
 ```
 
-:::tip *rest 的语义
+:::tip[*rest 的语义]
 `*rest` 类似函数参数的 `*args`，会"贪婪"地收集匹配剩余元素。一个 `case` 中只能有**一个** `*rest`，但可以和其他固定元素混用：
 
 ```py title="Python"
@@ -212,7 +212,7 @@ print(parse_config({"env": "test", "log": "file", "workers": 4}))
 # 环境 test，额外键：['log', 'workers']
 ```
 
-:::note 映射模式是子集匹配
+:::note[映射模式是子集匹配]
 映射模式只需指定的键存在，**额外的键被忽略**。这非常适合处理"必须包含某些键"但可能有可选键的配置。`**rest` 把多余的键值对收集起来，便于进一步处理。
 :::
 
@@ -294,7 +294,7 @@ print(classify_point(Point(3, 3)))    # 在对角线上：(3, 3)
 print(classify_point(Point(3, 4)))    # 普通点：(3, 4)
 ```
 
-:::info __match_args__ 与位置模式
+:::info[__match_args__ 与位置模式]
 类模式的位置形式（如 `Point(0, y)`）依赖 `__match_args__` 类属性——它声明位置解构的属性顺序。`@dataclass` 自动生成 `__match_args__ = (字段1, 字段2, ...)`，所以 dataclass 默认支持位置模式。
 
 普通类需要手动声明：
@@ -393,7 +393,7 @@ print(check_size(150))  # 超出上限
 print(check_size(50))   # 在范围内
 ```
 
-:::warning 大写开头的陷阱
+:::warning[大写开头的陷阱]
 模式匹配中，**大写开头**的名称会被当作**值模式**（匹配常量），**小写开头**会被当作**捕获模式**（变量绑定，匹配任意值）。这是初学者最常踩的坑：
 
 ```py title="Python"
@@ -481,7 +481,7 @@ def find_root(node: dict) -> str | None:
 print(find_root({"type": "root", "value": "main", "children": [...]}))  # main
 ```
 
-:::tip _ 是软关键字
+:::tip[_ 是软关键字]
 `_` 在 `match` 语句中是通配符，不创建变量。但在 `match` 之外，`_` 仍是普通变量名（如循环中 `for _ in range(5)`）。这种"上下文相关关键字"叫软关键字。
 :::
 
@@ -511,7 +511,7 @@ print(categorize(7))    # 小奇数 7
 print(categorize(15))   # 大奇数
 ```
 
-:::warning 守卫失败 ≠ 匹配失败
+:::warning[守卫失败 ≠ 匹配失败]
 当模式匹配成功但守卫为 `False` 时，**不会执行该分支**，而是**继续尝试下一个 `case`**。这与 `if-elif` 的"匹配即停"不同：
 
 ```py title="Python"
@@ -564,7 +564,7 @@ print(handle_command(["search", "Bob"]))      # 查找 Bob
 print(handle_command(["set", "color", "red"]))  # 设置 color=red
 ```
 
-:::note OR 模式的变量一致性
+:::note[OR 模式的变量一致性]
 OR 模式的所有分支必须绑定**相同名称**的变量（或都不绑定）。下面这样是错误的：
 
 ```py title="Python"
@@ -652,7 +652,7 @@ print(check_config(Config(host="localhost", debug=True)))  # 调试模式 localh
 print(check_config(Config(host="example.com")))            # 生产模式 example.com:8080
 ```
 
-:::info match 表达式目标
+:::info[match 表达式目标]
 Python 3.10+ 中，`match` 后可以跟任意表达式，包括函数调用、属性访问、复杂表达式。这让模式匹配非常灵活：
 
 ```py title="Python"
@@ -788,7 +788,7 @@ for doc in result.docstrings:
   - 函数 add: 简单计算器。
 ```
 
-:::tip 模式匹配处理 AST 的优势
+:::tip[模式匹配处理 AST 的优势]
 AST 节点是 `ast.AST` 的子类，属性固定，天然适合类模式。对比用 `if isinstance(node, ast.FunctionDef):` + 手动 `node.name`、`node.body` 访问，模式匹配的写法：
 - **更声明式**：一眼看出关心的属性
 - **更安全**：解构时立即验证结构
@@ -912,7 +912,7 @@ for cfg in configs:
 调试：False
 ```
 
-:::tip 何时用模式匹配解析配置
+:::tip[何时用模式匹配解析配置]
 处理"多种可能结构"的配置时，模式匹配比 `if-else` + `dict.get()` 更清晰——每个 `case` 描述一种完整的结构形状，缺失的键会自动走下一个分支。配合 `**rest` 还能优雅地处理"已知键 + 未知键"。
 :::
 
@@ -947,7 +947,7 @@ for cfg in configs:
 - **[PEP 636](https://peps.python.org/pep-0636/)** - 教程
 - **[ast 模块](https://docs.python.org/zh-cn/3/library/ast.html)** - 抽象语法树
 
-## 📝 本节总结
+## ✅ 本节总结
 
 - **序列模式用 `*rest` 收集剩余元素**，可放任意位置，处理"开头/结尾/中间"模式
 - **映射模式用 `**rest` 收集剩余键值对**，是子集匹配，适合配置解析

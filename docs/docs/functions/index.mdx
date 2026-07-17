@@ -1,0 +1,32 @@
+---
+title: 函数
+description: 封装可复用代码，掌握参数、作用域、装饰器、生成器等进阶用法。
+sidebar_position: 0
+tags: [函数]
+---
+
+# ⚙️ 函数
+
+函数是代码复用的基石。把重复的逻辑封装成函数，调用一次就能用无数次——这是从"写脚本"到"写程序"的关键一步。
+
+:::tip[🎯 本章目标]
+学完本章，你将能：
+- 定义和调用函数，理解参数传递机制
+- 用装饰器在不修改原函数的情况下扩展功能
+- 用生成器处理大规模数据流（如实时传感器数据）
+- 理解作用域链（LEGB），避免常见的变量陷阱
+:::
+
+:::info[📋 前置知识]
+学习本章前，建议先完成：
+- [基础语法](./basics) — 变量、数据类型
+- [控制流](./control-flow) — if-else、for 循环
+:::
+
+- [定义与调用函数](./functions/defining) — def 语法、return 返回值与函数作为一等公民
+- [参数详解](./functions/parameters) — 位置参数、关键字参数、*args、**kwargs 与参数解包
+- [作用域 LEGB](./functions/scope) — 局部/嵌套/全局/内置作用域、global 与 nonlocal 声明
+- [Lambda 匿名函数](./functions/lambda) — lambda 语法、与 def 的区别及 operator 模块
+- [装饰器](./functions/decorators) — @ 语法糖、带参数装饰器、类装饰器与 functools.wraps
+- [递归](./functions/recursion) — 递归思想、基线条件、深度限制与典型应用场景
+- [生成器与 yield](./functions/generators) — 迭代器协议、yield 语法、惰性求值与生成器管道

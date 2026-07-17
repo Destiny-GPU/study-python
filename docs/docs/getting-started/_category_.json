@@ -2,7 +2,7 @@
   "label": "🛠️ 入门准备",
   "position": 2,
   "link": {
-    "type": "generated-index",
-    "description": "搭建 Python 开发环境，编写并运行你的第一个 Python 程序。"
+    "type": "doc",
+    "id": "getting-started/index"
   }
 }

@@ -1,8 +1,8 @@
 ---
-sidebar_position: 3
 sidebar_label: 'while 循环'
-title: 🔀 while 循环
+title: while 循环
 description: 学习 Python 的 while 循环语法、无限循环、while...else、避免死循环以及海象运算符的应用。
+tags: [控制流]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,9 +11,17 @@ import { PyodideRunner } from '@site/src/components';
 
 `while` 循环在条件为真时反复执行一段代码。与 `for` 适合"遍历已知集合"不同，`while` 更适合 **循环次数未知、依赖条件变化** 的场景，比如读取输入、轮询状态、迭代收敛等。
 
+## 📌 本节要点
+
+- `while condition:` 在条件为真时持续执行，注意避免死循环
+- `while...else`：循环正常结束时执行 else 块
+- 无限循环 `while True:` 配合 `break` 退出，适合交互式场景
+- 海象运算符 `:=` 在 while 条件中赋值并判断，减少重复
+- 迭代收敛：用容差（tolerance）控制循环终止条件
+
 <PyodideRunner title="while 循环快速体验">
 
-```python
+```py
 # 牛顿法求平方根
 def sqrt_newton(x, tolerance=1e-10):
     """使用牛顿法计算 x 的平方根"""
@@ -53,7 +61,17 @@ while count < 5:
 第 5 次循环
 ```
 
-:::warning 不要忘记更新条件变量
+while 循环的执行流程：
+
+```mermaid
+flowchart TD
+    A["while condition:"] --> B{"condition 为 True?"}
+    B -- True --> C["执行循环体"]
+    C --> B
+    B -- False --> D["退出循环"]
+```
+
+:::warning[不要忘记更新条件变量]
 `while` 循环必须确保条件最终会变为 `False`，否则会无限循环。如果忘记写 `count += 1`，上面的代码会一直打印"第 1 次循环"。
 :::
 
@@ -72,7 +90,7 @@ while True:
 
 这种写法常用于交互式程序、游戏主循环、服务器请求处理等场景。
 
-:::tip 何时用 while True
+:::tip[何时用 while True]
 当循环条件复杂、需要在循环体中部判断退出时，`while True:` + `break` 比把所有条件塞进 `while` 后面更清晰。例如读取输入直到满足某条件：
 ```py title="Python"
 while True:
@@ -117,7 +135,7 @@ find_first_even([1, 3, 5, 6])  # 返回 6
 find_first_even([1, 3, 5])     # 打印"未找到偶数。"并返回 None
 ```
 
-:::note while...else 的争议
+:::note[while...else 的争议]
 `while...else` 的语义"非 break 退出时执行 else"对初学者不太直观。Python 之禅也强调"可读性很重要"。在大型项目中，更推荐用标志变量或函数提前返回来替代，避免使用 `while...else`。
 :::
 
@@ -147,7 +165,7 @@ while total != target:
         break
 ```
 
-:::warning 浮点数比较陷阱
+:::warning[浮点数比较陷阱]
 不要用 `==` 比较浮点数。`0.1 + 0.1 + 0.1` 在 Python 中等于 `0.30000000000000004`，不严格等于 `0.3`。应使用容差比较或整数计数：
 
 ```py title="Python"
@@ -223,7 +241,7 @@ read_lines(["a", "b", "c", "d", "e"], chunk_size=2)
 
 当切片为空时，`chunk` 为空列表（falsy），循环自动终止。
 
-:::tip 海象运算符的适用场景
+:::tip[海象运算符的适用场景]
 海象运算符特别适合以下场景：
 - `while` 中读取输入并判断
 - 列表推导式中需复用计算结果
@@ -288,11 +306,11 @@ if __name__ == "__main__":
 恭喜！你用 3 次猜中了数字 63。
 ```
 
-:::info 二分查找策略
+:::info[二分查找策略]
 在 1~100 之间，用二分查找（每次猜中间值）最多需要 ⌈log₂100⌉ = 7 次。所以本游戏给 7 次机会，掌握二分策略的玩家总能赢。
 :::
 
-:::tip 使用 try-except 处理输入
+:::tip[使用 try-except 处理输入]
 用户输入是不可控的，应该用 `try-except` 捕获 `ValueError`，避免程序因非法输入崩溃。这里用了 `continue` 跳过本次循环且不消耗机会。
 :::
 

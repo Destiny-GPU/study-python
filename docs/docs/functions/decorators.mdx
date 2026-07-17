@@ -1,8 +1,8 @@
 ---
-sidebar_position: 6
 sidebar_label: '装饰器'
-title: ⚙️ 装饰器
+title: 装饰器
 description: 学习装饰器本质、@ 语法糖、带参数装饰器、functools.wraps、类装饰器、内置装饰器以及 @cache 等常用第三方装饰器
+tags: [函数, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
@@ -11,9 +11,19 @@ import { PyodideRunner } from '@site/src/components';
 
 装饰器（decorator）是 Python 中一种优雅的语法机制，它能在不修改函数源代码的前提下，给函数增加额外的功能。装饰器本质上是一个接收函数作为参数并返回新函数的高阶函数。它是闭包最经典的应用之一，广泛用于信号处理中的日志记录、性能监控、参数校验、结果缓存等场景。
 
+## 📌 本节要点
+
+- 装饰器是高阶函数：接收函数，返回新函数
+- `@decorator` 语法糖等价于 `func = decorator(func)`
+- `functools.wraps` 保留被装饰函数的元信息（名称、文档字符串）
+- 带参数的装饰器：三层嵌套（参数 → 装饰器 → 包装函数）
+- 类装饰器：实现 `__call__` 方法的类可作为装饰器
+- 内置装饰器：`@property`、`@staticmethod`、`@classmethod`
+- `@functools.lru_cache` / `@cache` 实现函数结果缓存
+
 <PyodideRunner title="装饰器快速体验">
 
-```python
+```py
 from functools import wraps
 import time
 
@@ -112,11 +122,27 @@ def compute_fft(signal):
 # 手动装饰等价于：compute_fft = log_signal(compute_fft)
 ```
 
+装饰器的执行流程：
+
+```mermaid
+sequenceDiagram
+    participant Caller as 调用者
+    participant Decorator as 装饰器
+    participant Original as 原函数
+
+    Caller->>Decorator: decorated_func(args)
+    Decorator->>Decorator: 前置处理 (before)
+    Decorator->>Original: original_func(args)
+    Original-->>Decorator: 返回结果
+    Decorator->>Decorator: 后置处理 (after)
+    Decorator-->>Caller: 返回最终结果
+```
+
 ## @ 语法糖
 
 `@decorator` 是装饰器的语法糖，等价于 `func = decorator(func)`：
 
-```py title="Python"
+```py {1,5,9,12} title="Python"
 def log_signal(func):
     def wrapper(*args, **kwargs):
         print(f"[信号处理] 开始执行 {func.__name__}")
@@ -170,7 +196,7 @@ print(design_butterworth(4, 100, 1000))
 # (array([0.00080649, 0.00322597, 0.00483895, 0.00322597, 0.00080649]), array([ 1.        , -3.18063855,  3.86119435, -2.11215536,  0.43826514]))
 ```
 
-:::tip 通用 wrapper 模板
+:::tip[通用 wrapper 模板]
 通用的装饰器 wrapper 模板：
 ```py title="Python"
 def decorator(func):
@@ -271,7 +297,7 @@ print(compute_psd.__doc__)   # 输出：计算功率谱密度  ← 正确
 print(compute_psd.__wrapped__)  # Python 3.2+ 可访问原函数
 ```
 
-:::warning 永远使用 @wraps
+:::warning[永远使用 @wraps]
 编写装饰器时**永远**记得在 wrapper 上加 `@wraps(func)`，否则：
 - 调试时堆栈跟踪中显示的是 `wrapper`，难以定位
 - 文档工具（如 Sphinx、help）失效
@@ -420,7 +446,7 @@ s2 = SensorCalibration.from_sensor_config("IMU_02", raw)
 print(s2.calibrate())  # 输出：[13.5 28.5 43.5 58.5 73.5]
 ```
 
-:::tip 工厂方法的用途
+:::tip[工厂方法的用途]
 `@classmethod` 经常用于定义**多个构造器**。Python 类只能有一个 `__init__`，需要不同的初始化方式时（如从传感器 ID、从配置文件、从原始数据），用类方法封装为 `from_xxx` 形式。
 :::
 
@@ -519,7 +545,7 @@ print(autocorrelation.cache_info())
 # 输出：CacheInfo(hits=1, misses=2, maxsize=64, currsize=2)
 ```
 
-:::warning 缓存的参数必须可哈希
+:::warning[缓存的参数必须可哈希]
 `@cache`/`@lru_cache` 使用字典存储结果，因此参数必须可哈希。numpy array 等不可哈希类型会报错：
 ```py title="Python"
 @cache
@@ -625,7 +651,7 @@ print(raw_signal())
 # [0.2 0.4 0.6 0.8 1. ]
 ```
 
-:::info 装饰器顺序理解
+:::info[装饰器顺序理解]
 - 装饰阶段：从离函数最近的装饰器开始，逐层向外包装
   `raw_signal = normalize(add_timestamp(raw_signal))`
 - 调用阶段：从最外层装饰器开始执行
@@ -731,7 +757,7 @@ print(f"\n--- PSD 计算 ---")
 print(f"频率点数：{len(freqs)}")
 ```
 
-:::tip 装饰器组合的执行顺序
+:::tip[装饰器组合的执行顺序]
 `@A @B @C def f` 等价于 `f = A(B(C(f)))`。
 - 调用 `f()` 时最先执行 `A` 的 wrapper
 - 真正的 `f()` 在最内层被调用
