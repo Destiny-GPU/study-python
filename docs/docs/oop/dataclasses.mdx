@@ -6,6 +6,7 @@ tags: [面向对象, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🏗️ 数据类
 
@@ -719,25 +720,11 @@ print(fc.gains)  # 输出：{'kp': 1.0, 'ki': 0.1, 'kd': 0.01}
 - **TypedDict**：`typing.TypedDict` 用于字典结构的类型注解
 - **模式匹配**：Python 3.10+ 的 `match-case` 与数据类的解构匹配
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 基本数据类 | `@dataclass` | `@dataclass class FlightState3D: x: float; y: float; z: float` |
-| 默认值 | `field: type = value` | `learning_rate: float = 0.001` |
-| 可变默认值 | `field(default_factory=...)` | `gains: dict = field(default_factory=dict)` |
-| 隐藏 repr | `field(repr=False)` | `auth_key: str = field(default="", repr=False)` |
-| 不参与比较 | `field(compare=False)` | `firmware_version: str = field(default="1.0", compare=False)` |
-| 不进入 init | `field(init=False)` | `display_name: str = field(init=False)` |
-| 不可变 | `@dataclass(frozen=True)` | 实例不可修改，自动可哈希 |
-| 节省内存 | `@dataclass(slots=True)` | 生成 `__slots__`，3.10+ |
-| 关键字参数 | `@dataclass(kw_only=True)` | 字段只能用关键字传入，3.10+ |
-| 生成比较 | `@dataclass(order=True)` | 生成 `__lt__`、`__le__` 等 |
-| 初始化钩子 | `def __post_init__(self):` | 派生字段、校验参数 |
-| 仅初始化参数 | `InitVar[type]` | 传入 `__init__` 但不存储 |
-| 转字典 | `asdict(obj)` | 递归转为嵌套字典 |
-| 修改副本 | `replace(obj, **changes)` | 返回修改后的新实例 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["基本数据类","`@dataclass`","`@dataclass class FlightState3D: x: float; y: float; z: float`"],["默认值","`field: type = value`","`learning_rate: float = 0.001`"],["可变默认值","`field(default_factory=...)`","`gains: dict = field(default_factory=dict)`"],["隐藏 repr","`field(repr=False)`","`auth_key: str = field(default=\"\", repr=False)`"],["不参与比较","`field(compare=False)`","`firmware_version: str = field(default=\"1.0\", compare=False)`"],["不进入 init","`field(init=False)`","`display_name: str = field(init=False)`"],["不可变","`@dataclass(frozen=True)`","实例不可修改，自动可哈希"],["节省内存","`@dataclass(slots=True)`","生成 `__slots__`，3.10+"],["关键字参数","`@dataclass(kw_only=True)`","字段只能用关键字传入，3.10+"],["生成比较","`@dataclass(order=True)`","生成 `__lt__`、`__le__` 等"],["初始化钩子","`def __post_init__(self):`","派生字段、校验参数"],["仅初始化参数","`InitVar[type]`","传入 `__init__` 但不存储"],["转字典","`asdict(obj)`","递归转为嵌套字典"],["修改副本","`replace(obj, **changes)`","返回修改后的新实例"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了数据类，核心要点包括：

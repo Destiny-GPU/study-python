@@ -6,6 +6,7 @@ tags: [测试调试]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔍 调试进阶
 
@@ -585,46 +586,11 @@ def count_items(items, counter={}):
 
 ---
 
-## 📊 速查表
-
-### logging 级别速查
-
-| 级别 | 数值 | 使用场景 |
-|------|------|----------|
-| DEBUG | 10 | 开发调试，详细信息 |
-| INFO | 20 | 确认程序按预期运行 |
-| WARNING | 30 | 潜在问题，但程序仍可运行 |
-| ERROR | 40 | 严重问题，功能无法执行 |
-| CRITICAL | 50 | 程序可能无法继续运行 |
-
-### pdb 命令速查
-
-| 命令 | 缩写 | 说明 |
-|------|------|------|
-| next | n | 执行下一行（不进入函数） |
-| step | s | 进入函数内部 |
-| continue | c | 继续执行到下一断点 |
-| print | p | 打印表达式值 |
-| list | l | 显示当前代码上下文 |
-| where | w | 显示调用栈 |
-| quit | q | 退出调试器 |
-| break | b | 设置断点 |
-| clear | cl | 清除断点 |
-
-### 常见异常速查表
-
-| 异常 | 原因 | 解决方案 |
-|------|------|----------|
-| `NameError` | 变量未定义 | 检查拼写和作用域 |
-| `TypeError` | 类型不匹配 | 检查参数类型 |
-| `ValueError` | 值无效 | 检查输入值范围 |
-| `IndexError` | 索引越界 | 检查列表长度 |
-| `KeyError` | 字典键不存在 | 用 `.get()` 或检查键 |
-| `AttributeError` | 对象无此属性 | 检查对象类型和方法名 |
-| `ImportError` | 模块导入失败 | 检查模块名和安装 |
-
----
-
+<CheatCard
+    title="速查表"
+    headers={["级别","数值","使用场景"]}
+    rows={[["DEBUG","10","开发调试，详细信息"],["INFO","20","确认程序按预期运行"],["WARNING","30","潜在问题，但程序仍可运行"],["ERROR","40","严重问题，功能无法执行"],["CRITICAL","50","程序可能无法继续运行"]]}
+  />
 ## ✅ 本节总结
 
 - **logging 模块**：替代 print，实现分级、持久化、格式化日志

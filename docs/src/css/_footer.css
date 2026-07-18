@@ -1,0 +1,42 @@
+/* 页脚优化 */
+.footer {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding: 4rem 0 3rem;
+  background: var(--ifm-background-surface-color);
+}
+
+.footer__links {
+  font-size: 1rem;
+}
+
+.footer__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  color: var(--ifm-color-text-primary);
+}
+
+.footer__link-item {
+  font-size: 1rem;
+  padding: 0.375rem 0;
+  color: var(--ifm-color-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.footer__link-item:hover {
+  color: var(--ifm-color-primary);
+  transform: translateX(4px);
+}
+
+/* 移动端页脚优化 */
+@media screen and (max-width: 996px) {
+  .footer__links {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .footer__col {
+    width: 100%;
+    text-align: center;
+  }
+}

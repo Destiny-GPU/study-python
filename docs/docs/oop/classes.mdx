@@ -6,6 +6,7 @@ tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🏗️ 类与对象
 
@@ -495,24 +496,11 @@ SignalManager(3 signals)
 - **数据类**：了解 Python 3.7+ 的 `@dataclass` 装饰器，简化数据载体类的定义
 - **抽象基类**：使用 `abc` 模块定义接口，强制子类实现特定方法
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 定义类 | `class Name:` | `class Signal:` |
-| 创建实例 | `obj = ClassName(args)` | `s = Signal("正弦波", samples)` |
-| 初始化方法 | `def __init__(self, ...):` | 自动在创建时调用 |
-| 实例方法 | `def method(self):` | `sig.amplitude()` |
-| 类方法 | `@classmethod` + `cls` | `SampleCounter.reset()` |
-| 静态方法 | `@staticmethod` | `SampleCounter.help()` |
-| 类属性 | 类体内定义 | `Signal.unit = "V"` |
-| 实例属性 | `self.attr = value` | `self.name = name` |
-| 用户友好字符串 | `def __str__(self):` | `print(obj)` 调用 |
-| 开发者明确字符串 | `def __repr__(self):` | `repr(obj)` / 容器内调用 |
-| 类型注解 | `attr: type` | `name: str` |
-| 动态属性操作 | `getattr/setattr/hasattr` | `getattr(obj, "name", default)` |
-| 单例模式 | 重写 `__new__` | 控制实例创建 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["定义类","`class Name:`","`class Signal:`"],["创建实例","`obj = ClassName(args)`","`s = Signal(\"正弦波\", samples)`"],["初始化方法","`def __init__(self, ...):`","自动在创建时调用"],["实例方法","`def method(self):`","`sig.amplitude()`"],["类方法","`@classmethod` + `cls`","`SampleCounter.reset()`"],["静态方法","`@staticmethod`","`SampleCounter.help()`"],["类属性","类体内定义","`Signal.unit = \"V\"`"],["实例属性","`self.attr = value`","`self.name = name`"],["用户友好字符串","`def __str__(self):`","`print(obj)` 调用"],["开发者明确字符串","`def __repr__(self):`","`repr(obj)` / 容器内调用"],["类型注解","`attr: type`","`name: str`"],["动态属性操作","`getattr/setattr/hasattr`","`getattr(obj, \"name\", default)`"],["单例模式","重写 `__new__`","控制实例创建"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了面向对象编程的基础——类与对象。核心要点包括：

@@ -6,6 +6,7 @@ tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📝 运算符
 
@@ -630,21 +631,11 @@ print(f"age={age} -> {status}")
 - [Python 运算符优先级文档](https://docs.python.org/zh-cn/3/reference/expressions.html#operator-precedence) - 官方完整优先级表
 - [位运算技巧](https://wiki.python.org/moin/BitwiseOperators) - Python 位运算的常见模式
 
-## 📊 速查表
-
-| 运算符 | 功能 | 示例 |
-|--------|------|------|
-| `+ - * /` | 算术运算 | `7 / 3` → `2.333` |
-| `//` | 整除（向下取整） | `7 // 3` → `2` |
-| `%` | 取模 | `7 % 3` → `1` |
-| `**` | 幂运算 | `2 ** 10` → `1024` |
-| `== != < >` | 比较运算 | `3 < 5` → `True` |
-| `1 < x < 10` | 链式比较 | `1 < 5 < 10` → `True` |
-| `and or not` | 逻辑运算 | `True and False` → `False` |
-| `& | ^ ~` | 位运算 | `0b1010 & 0b1100` → `0b1000` |
-| `:=` | 海象运算符 | `if (n := 5) > 3:` |
-| `x if c else y` | 条件表达式 | `"A" if score >= 90 else "B"` |
-
+<CheatCard
+    title="速查表"
+    headers={["运算符","功能","示例"]}
+    rows={[["`+ - * /`","算术运算","`7 / 3` → `2.333`"],["`//`","整除（向下取整）","`7 // 3` → `2`"],["`%`","取模","`7 % 3` → `1`"],["`**`","幂运算","`2 ** 10` → `1024`"],["`== != < >`","比较运算","`3 < 5` → `True`"],["`1 < x < 10`","链式比较","`1 < 5 < 10` → `True`"],["`and or not`","逻辑运算","`True and False` → `False`"],["`&","^ ~`","位运算","`0b1010 & 0b1100` → `0b1000`"],["`:=`","海象运算符","`if (n := 5) > 3:`"],["`x if c else y`","条件表达式","`\"A\" if score >= 90 else \"B\"`"]]}
+  />
 ## ✅ 本节总结
 
 - **算术运算符**：`+`、`-`、`*`、`/`、`//`（整除）、`%`（取模）、`**`（幂），`/` 总是返回 float

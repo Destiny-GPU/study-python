@@ -6,6 +6,7 @@ tags: [异常处理]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🛡️ 异常基础
 
@@ -621,30 +622,11 @@ for i, sample in enumerate(samples, 1):
 - **日志记录**：`logging.exception()` 自动记录异常堆栈
 - **防御性编程**：EAFP（请求原谅比许可容易）vs LBYL（三思而后行）
 
-## 📊 速查表
-
-| 异常类型 | 触发场景 | 示例 |
-|----------|----------|------|
-| `ValueError` | 值类型正确但内容不合法 | `int("abc")` |
-| `TypeError` | 类型不匹配 | `1 + "2"` |
-| `KeyError` | 字典键不存在 | `d["missing"]` |
-| `IndexError` | 索引越界 | `lst[999]` |
-| `FileNotFoundError` | 文件不存在 | `open("no.txt")` |
-| `PermissionError` | 权限不足 | `open("/root/x")` |
-| `ZeroDivisionError` | 除零 | `5 / 0` |
-| `AttributeError` | 属性不存在 | `"abc".uppercase()` |
-| `NameError` | 变量名未定义 | `print(x)` |
-| `ImportError` | 模块导入失败 | `import nonexistent` |
-| `StopIteration` | 迭代器耗尽 | `next(iter([]))` |
-| `RuntimeError` | 一般运行时错误 | 自定义运行时错误 |
-| `NotImplementedError` | 功能未实现 | 抽象方法占位 |
-| `KeyboardInterrupt` | Ctrl+C 中断 | 用户主动中断 |
-| `SystemExit` | `sys.exit()` 触发 | 程序主动退出 |
-| 查看继承链 | `Exception.__mro__` | 完整继承顺序 |
-| 异常属性 | `exc.args` | 异常参数元组 |
-| OSError 属性 | `exc.errno` | 系统错误码 |
-| 附加说明 | `exc.add_note("msg")` | 3.11+ 特性 |
-
+<CheatCard
+    title="速查表"
+    headers={["异常类型","触发场景","示例"]}
+    rows={[["`ValueError`","值类型正确但内容不合法","`int(\"abc\")`"],["`TypeError`","类型不匹配","`1 + \"2\"`"],["`KeyError`","字典键不存在","`d[\"missing\"]`"],["`IndexError`","索引越界","`lst[999]`"],["`FileNotFoundError`","文件不存在","`open(\"no.txt\")`"],["`PermissionError`","权限不足","`open(\"/root/x\")`"],["`ZeroDivisionError`","除零","`5 / 0`"],["`AttributeError`","属性不存在","`\"abc\".uppercase()`"],["`NameError`","变量名未定义","`print(x)`"],["`ImportError`","模块导入失败","`import nonexistent`"],["`StopIteration`","迭代器耗尽","`next(iter([]))`"],["`RuntimeError`","一般运行时错误","自定义运行时错误"],["`NotImplementedError`","功能未实现","抽象方法占位"],["`KeyboardInterrupt`","Ctrl+C 中断","用户主动中断"],["`SystemExit`","`sys.exit()` 触发","程序主动退出"],["查看继承链","`Exception.__mro__`","完整继承顺序"],["异常属性","`exc.args`","异常参数元组"],["OSError 属性","`exc.errno`","系统错误码"],["附加说明","`exc.add_note(\"msg\")`","3.11+ 特性"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了异常的基础知识，核心要点包括：

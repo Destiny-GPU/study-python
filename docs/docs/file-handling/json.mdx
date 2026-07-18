@@ -4,6 +4,7 @@ title: JSON 处理
 description: 掌握 Python 中 JSON 的序列化与反序列化，处理中文、缩进、自定义类型与日期，以及与 dataclass 的互转。
 tags: [文件操作]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📂 JSON 处理
 
@@ -460,24 +461,11 @@ if __name__ == '__main__':
 3. **自定义序列化**：实现一个支持 `datetime`、`UUID`、`Path` 的 JSON 编码器
 4. **数据验证**：解析 JSON 后验证必需字段是否存在，缺失时提供默认值
 
-## 📊 速查表
-
-| 操作 | 方法 | 说明 |
-|------|------|------|
-| 对象→字符串 | `json.dumps(obj)` | 序列化 |
-| 字符串→对象 | `json.loads(text)` | 反序列化 |
-| 对象→文件 | `json.dump(obj, f)` | 写入文件对象 |
-| 文件→对象 | `json.load(f)` | 从文件对象读取 |
-| 中文输出 | `ensure_ascii=False` | 不转义中文 |
-| 缩进美化 | `indent=2` | 2 空格缩进 |
-| 键排序 | `sort_keys=True` | 输出稳定可比较 |
-| 自定义类型 | `default=my_handler` | 返回可序列化值 |
-| 金额精度 | `parse_float=Decimal` | 避免 float 精度丢失 |
-| 忽略未知键 | `**kwargs` 解构 | 只取需要的字段 |
-| 日期格式 | ISO 8601 | `datetime.isoformat()` |
-| dataclass→JSON | `asdict(dc)` + `dumps` | 先转 dict 再序列化 |
-| JSON→dataclass | `loads` + `**dict` | 反序列化后解构 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","方法","说明"]}
+    rows={[["对象→字符串","`json.dumps(obj)`","序列化"],["字符串→对象","`json.loads(text)`","反序列化"],["对象→文件","`json.dump(obj, f)`","写入文件对象"],["文件→对象","`json.load(f)`","从文件对象读取"],["中文输出","`ensure_ascii=False`","不转义中文"],["缩进美化","`indent=2`","2 空格缩进"],["键排序","`sort_keys=True`","输出稳定可比较"],["自定义类型","`default=my_handler`","返回可序列化值"],["金额精度","`parse_float=Decimal`","避免 float 精度丢失"],["忽略未知键","`**kwargs` 解构","只取需要的字段"],["日期格式","ISO 8601","`datetime.isoformat()`"],["dataclass→JSON","`asdict(dc)` + `dumps`","先转 dict 再序列化"],["JSON→dataclass","`loads` + `**dict`","反序列化后解构"]]}
+  />
 ## 📚 延伸阅读
 
 - **[json 官方文档](https://docs.python.org/zh-cn/3/library/json.html)** - 完整 API 参考

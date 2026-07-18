@@ -4,6 +4,7 @@ title: 🧩 虚拟环境
 description: 理解虚拟环境必要性，使用 venv 创建/激活，掌握 uv、poetry 现代工具与 pyenv 多版本管理，搭建完整 Python 项目工作流。
 tags: [模块与包]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🏠 虚拟环境
 
@@ -736,20 +737,11 @@ uv run greeter Alice  # 跑 CLI
 3. **poetry 工作流**：用 `poetry new` 创建项目，添加依赖，运行测试
 4. **版本管理**：用 `pyenv` 或 `uv python pin` 为项目指定 Python 版本
 
-## 📊 速查表
-
-| 操作 | venv | uv | poetry |
-|------|------|----|--------|
-| 创建环境 | `python -m venv .venv` | `uv venv` | `poetry env use 3.12` |
-| 激活 | `source .venv/bin/activate` | 同 venv | `poetry shell` |
-| 安装包 | `pip install pkg` | `uv add pkg` | `poetry add pkg` |
-| 安装 dev | `pip install -r dev.txt` | `uv add pkg --dev` | `poetry add pkg --group dev` |
-| 同步环境 | `pip install -r req.txt` | `uv sync` | `poetry install` |
-| 运行命令 | `python main.py` | `uv run main.py` | `poetry run main.py` |
-| 构建 | - | `uv build` | `poetry build` |
-| 发布 | - | `uv publish` | `poetry publish` |
-| Python 版本 | 手动安装 | `uv venv --python 3.13` | `pyenv install 3.13` |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","venv","uv","poetry"]}
+    rows={[["创建环境","`python -m venv .venv`","`uv venv`","`poetry env use 3.12`"],["激活","`source .venv/bin/activate`","同 venv","`poetry shell`"],["安装包","`pip install pkg`","`uv add pkg`","`poetry add pkg`"],["安装 dev","`pip install -r dev.txt`","`uv add pkg --dev`","`poetry add pkg --group dev`"],["同步环境","`pip install -r req.txt`","`uv sync`","`poetry install`"],["运行命令","`python main.py`","`uv run main.py`","`poetry run main.py`"],["构建","-","`uv build`","`poetry build`"],["发布","-","`uv publish`","`poetry publish`"],["Python 版本","手动安装","`uv venv --python 3.13`","`pyenv install 3.13`"]]}
+  />
 ## 📚 延伸阅读
 
 - **PEP 405** - Python 虚拟环境规范

@@ -6,6 +6,7 @@ tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -738,21 +739,11 @@ print(f"{x + 1=}, {len(y)=}")
 - [rich 库文档](https://rich.readthedocs.io/) - 终端美化输出完整参考
 - [sys 模块文档](https://docs.python.org/zh-cn/3/library/sys.html) - 标准流与系统参数
 
-## 📊 速查表
-
-| 函数/语法 | 功能 | 示例 |
-|-----------|------|------|
-| `print(*args)` | 打印输出 | `print("a", "b", sep=",")` |
-| `input(prompt)` | 读取输入（返回字符串） | `name = input("姓名：")` |
-| `f"{x:.2f}"` | 格式化浮点 | `f"{3.14:.2f}"` → `"3.14"` |
-| `f"{x:>10}"` | 右对齐 | `f"{'hi':>10}"` → `"        hi"` |
-| `f"{x:,}"` | 千位分隔 | `f"{1234:,}"` → `"1,234"` |
-| `f"{x=}"` | 调试输出 | `x=42` → `"x=42"` |
-| `"{:.2%}".format(x)` | 百分比 | `"{:.2%}".format(0.85)` → `"85.00%"` |
-| `sys.stdout` | 标准输出流 | `print("msg", file=sys.stdout)` |
-| `sys.stderr` | 标准错误流 | `print("err", file=sys.stderr)` |
-| `rprint()` | rich 彩色输出 | `rprint("[red]错误[/red]")` |
-
+<CheatCard
+    title="速查表"
+    headers={["函数/语法","功能","示例"]}
+    rows={[["`print(*args)`","打印输出","`print(\"a\", \"b\", sep=\",\")`"],["`input(prompt)`","读取输入（返回字符串）","`name = input(\"姓名：\")`"],["`f\"{x:.2f}\"`","格式化浮点","`f\"{3.14:.2f}\"` → `\"3.14\"`"],["`f\"{x:>10}\"`","右对齐","`f\"{'hi':>10}\"` → `\"        hi\"`"],["`f\"{x:,}\"`","千位分隔","`f\"{1234:,}\"` → `\"1,234\"`"],["`f\"{x=}\"`","调试输出","`x=42` → `\"x=42\"`"],["`\"{:.2%}\".format(x)`","百分比","`\"{:.2%}\".format(0.85)` → `\"85.00%\"`"],["`sys.stdout`","标准输出流","`print(\"msg\", file=sys.stdout)`"],["`sys.stderr`","标准错误流","`print(\"err\", file=sys.stderr)`"],["`rprint()`","rich 彩色输出","`rprint(\"[red]错误[/red]\")`"]]}
+  />
 ## ✅ 本节总结
 
 - **`print()` 函数**有 4 个关键参数：`sep`（分隔符）、`end`（结尾符）、`file`（输出目标）、`flush`（立即刷新）

@@ -3,16 +3,17 @@
  */
 
 /* 布局优化 - 整体容器更宽，充分利用页面空间 */
-.docRoot_UBD {
+article[class*="docMainContainer"] > div {
   max-width: 1600px !important;
   margin: 0 auto;
 }
 
-.docItemCol_z {
+.col.docItemCol,
+article > .col {
   max-width: 75% !important;
 }
 
-.docItemContainer_c {
+article > .col > div {
   max-width: 100% !important;
 }
 
@@ -73,7 +74,18 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   background-size: 200% 200%;
-  animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .theme-doc-markdown h1 {
+    animation: gradientShift 8s ease infinite;
+  }
 }
 
 .theme-doc-markdown h2 {
@@ -84,8 +96,6 @@
   border-bottom: none;
   position: relative;
   line-height: 1.3;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 600px;
 }
 
 .theme-doc-markdown h2::after {
@@ -116,7 +126,7 @@
 .theme-doc-markdown p {
   line-height: 2;
   margin-bottom: 1.75rem;
-  color: var(--ifm-color-text-secondary);
+  color: var(--ifm-color-text-primary);
 }
 
 .theme-doc-markdown ul,
@@ -128,7 +138,7 @@
 .theme-doc-markdown li {
   margin-bottom: 0.875rem;
   line-height: 1.9;
-  color: var(--ifm-color-text-secondary);
+  color: var(--ifm-color-text-primary);
 }
 
 .theme-doc-markdown li::marker {
@@ -139,8 +149,9 @@
 /* 代码样式 */
 .theme-doc-markdown code {
   font-family: var(--ifm-font-family-monospace);
-  font-size: 0.9em;
-  padding: 0.3em 0.6em;
+  font-feature-settings: var(--code-font-features);
+  font-size: var(--code-inline-size);
+  padding: 0.2em 0.4em;
   border-radius: var(--ifm-radius-sm);
   background: var(--ifm-color-emphasis-100);
   color: var(--ifm-color-violet-dark);
@@ -192,8 +203,6 @@
   border-radius: var(--ifm-radius-md);
   overflow: hidden;
   box-shadow: var(--ifm-shadow-sm);
-  content-visibility: auto;
-  contain-intrinsic-size: 0 200px;
 }
 
 .theme-doc-markdown th,
@@ -290,28 +299,38 @@
   color: var(--ifm-color-text-primary);
 }
 
-/* 代码块语言标签 - 更清晰的样式 */
+/* 代码块标题栏 — macOS 风格窗口装饰 */
 div[class*="codeBlockTitle"] {
   font-size: 0.75rem;
   color: var(--ifm-color-text-muted);
   background: var(--ifm-color-emphasis-100);
   border-bottom: 1px solid var(--ifm-color-emphasis-200);
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1rem 0.5rem 3.5rem;
   font-family: var(--ifm-font-family-monospace);
   letter-spacing: 0.03em;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  position: relative;
 }
 
-/* 代码块语言标签图标 */
+/* macOS 红黄绿圆点 */
 div[class*="codeBlockTitle"]::before {
-  content: '📄';
-  margin-right: 0.5rem;
-  font-size: 0.875rem;
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff5f57;
+  box-shadow:
+    16px 0 0 #febc2e,
+    32px 0 0 #28c840;
 }
 
-/* 代码块语言标签悬停效果 */
+/* 语言标签悬停效果 */
 div[class*="codeBlockTitle"]:hover {
   background: color-mix(in srgb, var(--ifm-color-primary) 5%, var(--ifm-color-emphasis-100));
 }
@@ -330,8 +349,6 @@ div[class*="codeBlockTitle"]:hover {
   margin-bottom: 2rem;
   border: 1px solid var(--ifm-color-emphasis-200);
   transition: box-shadow 0.3s ease, border-color 0.3s ease;
-  content-visibility: auto;
-  contain-intrinsic-size: 0 150px;
 }
 
 .theme-doc-markdown pre:hover {
@@ -352,6 +369,12 @@ div[class*="codeBlockTitle"]:hover {
 /* 代码块行号 */
 .theme-doc-markdown pre code {
   counter-reset: line;
+  font-family: var(--ifm-font-family-monospace);
+  font-feature-settings: var(--code-font-features);
+  font-size: var(--code-block-size);
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+  tab-size: 4;
 }
 
 .theme-doc-markdown pre code .linenumber {
@@ -371,21 +394,31 @@ div[class*="codeBlockTitle"]:hover {
 }
 
 /* 复制按钮增强 */
-.copyButton_c254,
 button[class*="copyButton"] {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
   border-radius: 6px !important;
   padding: 4px 8px !important;
+  opacity: 0.5;
 }
 
-.copyButton_c254:hover,
+pre:hover button[class*="copyButton"] {
+  opacity: 1;
+}
+
 button[class*="copyButton"]:hover {
   background: var(--ifm-color-primary) !important;
   color: white !important;
   transform: scale(1.05);
+  opacity: 1 !important;
 }
 
-/* 代码块顶部渐变线 */
+/* 复制成功状态 */
+button[class*="copyButton"][class*="success"] {
+  background: var(--ifm-color-success) !important;
+  color: white !important;
+}
+
+/* 代码块顶部装饰线 */
 .theme-doc-markdown pre::before {
   content: '';
   position: absolute;
@@ -393,10 +426,7 @@ button[class*="copyButton"]:hover {
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg,
-    var(--ifm-color-primary),
-    var(--ifm-color-violet),
-    var(--ifm-color-accent));
+  background: var(--ifm-color-primary);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -423,7 +453,6 @@ button[class*="copyButton"]:hover {
 }
 
 /* 代码块复制成功动画 */
-.copyButton_c254--success,
 button[class*="copyButton"][class*="success"] {
   color: var(--ifm-color-success) !important;
   background: color-mix(in srgb, var(--ifm-color-success) 12%, transparent) !important;
@@ -505,10 +534,65 @@ button[class*="copyButton"][class*="success"] {
 /* Scroll-reveal animation for doc content elements */
 .theme-doc-markdown > * {
   opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: opacity, transform;
+  transform: translateY(12px);
+  transition: opacity 0.3s ease-out,
+              transform 0.3s ease-out;
+}
+
+/* Mermaid diagrams render asynchronously via useEffect and miss the
+   IntersectionObserver window — keep them visible unconditionally. */
+.theme-doc-markdown > .docusaurus-mermaid-container,
+.theme-doc-markdown > .docusaurus-mermaid-container.scroll-reveal-visible {
+  opacity: 1 !important;
+  transform: none;
+  transition: none;
+}
+
+/* Center mermaid diagrams and ensure text is not clipped */
+.docusaurus-mermaid-container {
+  display: flex;
+  justify-content: center;
+  overflow: visible;
+}
+.docusaurus-mermaid-container > svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Dark mode: ensure mermaid text and borders are visible */
+[data-theme='dark'] .docusaurus-mermaid-container .node .label {
+  fill: #e2e8f0 !important;
+}
+[data-theme='dark'] .docusaurus-mermaid-container .edgeLabel {
+  background-color: #1e293b;
+  color: #94a3b8;
+}
+[data-theme='dark'] .docusaurus-mermaid-container .cluster rect {
+  fill: #1e293b;
+  stroke: #334155;
+}
+[data-theme='dark'] .docusaurus-mermaid-container .note rect {
+  fill: #1e293b;
+  stroke: #f59e0b;
+}
+[data-theme='dark'] .docusaurus-mermaid-container .note .label {
+  color: #e2e8f0;
+}
+
+/* Mermaid subgraph title: larger than node text, no truncation */
+.docusaurus-mermaid-container .cluster-label {
+  font-size: 18px !important;
+  min-width: unset !important;
+  width: auto !important;
+  overflow: visible !important;
+}
+.docusaurus-mermaid-container .cluster-label text {
+  font-size: 18px !important;
+  overflow: visible !important;
+}
+.docusaurus-mermaid-container .cluster-label foreignObject {
+  overflow: visible !important;
+  width: auto !important;
 }
 
 .theme-doc-markdown > *.scroll-reveal-visible {

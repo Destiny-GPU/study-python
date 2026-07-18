@@ -6,6 +6,7 @@ tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📝 字符串
 
@@ -567,21 +568,11 @@ print(f"长度: {len(lang)}")
 - [Python 字符串方法文档](https://docs.python.org/zh-cn/3/library/stdtypes.html#text-sequence-type-str) - 官方完整参考
 - [Unicode HOWTO](https://docs.python.org/zh-cn/3/howto/unicode.html) - 深入理解 Unicode 与编码
 
-## 📊 速查表
-
-| 方法 | 功能 | 示例 |
-|------|------|------|
-| `s.upper()` | 转大写 | `"abc".upper()` → `"ABC"` |
-| `s.lower()` | 转小写 | `"ABC".lower()` → `"abc"` |
-| `s.strip()` | 去两端空白 | `"  hi  ".strip()` → `"hi"` |
-| `s.split()` | 分割字符串 | `"a,b".split(",")` → `["a","b"]` |
-| `",".join(lst)` | 拼接列表 | `",".join(["a","b"])` → `"a,b"` |
-| `s.find(x)` | 查找位置 | `"abc".find("b")` → `1` |
-| `s.replace(a,b)` | 替换 | `"abc".replace("b","x")` → `"axc"` |
-| `s.startswith(x)` | 起始判断 | `"abc".startswith("a")` → `True` |
-| `f"{x:.2f}"` | 格式化数字 | `f"{3.14:.2f}"` → `"3.14"` |
-| `s.encode()` | 编码为 bytes | `"中".encode()` → `b'\xe4\xb8\xad'` |
-
+<CheatCard
+    title="速查表"
+    headers={["方法","功能","示例"]}
+    rows={[["`s.upper()`","转大写","`\"abc\".upper()` → `\"ABC\"`"],["`s.lower()`","转小写","`\"ABC\".lower()` → `\"abc\"`"],["`s.strip()`","去两端空白","`\"  hi  \".strip()` → `\"hi\"`"],["`s.split()`","分割字符串","`\"a,b\".split(\",\")` → `[\"a\",\"b\"]`"],["`\",\".join(lst)`","拼接列表","`\",\".join([\"a\",\"b\"])` → `\"a,b\"`"],["`s.find(x)`","查找位置","`\"abc\".find(\"b\")` → `1`"],["`s.replace(a,b)`","替换","`\"abc\".replace(\"b\",\"x\")` → `\"axc\"`"],["`s.startswith(x)`","起始判断","`\"abc\".startswith(\"a\")` → `True`"],["`f\"{x:.2f}\"`","格式化数字","`f\"{3.14:.2f}\"` → `\"3.14\"`"],["`s.encode()`","编码为 bytes","`\"中\".encode()` → `b'\\xe4\\xb8\\xad'`"]]}
+  />
 ## 常见误区
 
 ### 误区 1：用 `str` 做变量名

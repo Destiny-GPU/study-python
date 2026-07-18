@@ -6,6 +6,7 @@ tags: [进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 异步编程
 
@@ -890,25 +891,11 @@ logging.basicConfig(level=logging.DEBUG)
 3. **生产者-消费者**：用 `asyncio.Queue` 实现异步生产者-消费者模式
 4. **TaskGroup 实践**：用 `TaskGroup` 管理多个并发任务，处理异常组
 
-## 📊 速查表
-
-| 操作 | 方法 | 说明 |
-|------|------|------|
-| 定义协程 | `async def func():` | 返回协程对象 |
-| 运行入口 | `asyncio.run(main())` | 创建并关闭事件循环 |
-| 串行等待 | `await coro` | 等待单个协程完成 |
-| 并发任务 | `asyncio.create_task(coro)` | 后台并发执行 |
-| 收集结果 | `asyncio.gather(*coros)` | 并发执行多个协程 |
-| 保留异常 | `gather(..., return_exceptions=True)` | 异常不中断 |
-| TaskGroup | `async with asyncio.TaskGroup()` | 3.11+ 结构化并发 |
-| 超时控制 | `asyncio.wait_for(coro, timeout)` | 超时抛 TimeoutError |
-| 超时上下文 | `async with asyncio.timeout(sec)` | 3.11+ 上下文超时 |
-| 睡眠 | `await asyncio.sleep(sec)` | 非阻塞睡眠 |
-| 异步上下文 | `async with ctx:` | 异步上下文管理器 |
-| 异步迭代 | `async for item in aiter:` | 异步迭代器 |
-| 异步 HTTP | `aiohttp` / `httpx` | 第三方异步库 |
-| 异常组 | `except* Exception:` | 3.11+ 处理多个异常 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","方法","说明"]}
+    rows={[["定义协程","`async def func():`","返回协程对象"],["运行入口","`asyncio.run(main())`","创建并关闭事件循环"],["串行等待","`await coro`","等待单个协程完成"],["并发任务","`asyncio.create_task(coro)`","后台并发执行"],["收集结果","`asyncio.gather(*coros)`","并发执行多个协程"],["保留异常","`gather(..., return_exceptions=True)`","异常不中断"],["TaskGroup","`async with asyncio.TaskGroup()`","3.11+ 结构化并发"],["超时控制","`asyncio.wait_for(coro, timeout)`","超时抛 TimeoutError"],["超时上下文","`async with asyncio.timeout(sec)`","3.11+ 上下文超时"],["睡眠","`await asyncio.sleep(sec)`","非阻塞睡眠"],["异步上下文","`async with ctx:`","异步上下文管理器"],["异步迭代","`async for item in aiter:`","异步迭代器"],["异步 HTTP","`aiohttp` / `httpx`","第三方异步库"],["异常组","`except* Exception:`","3.11+ 处理多个异常"]]}
+  />
 ## 📚 延伸阅读
 
 - **[asyncio 官方文档](https://docs.python.org/zh-cn/3/library/asyncio.html)** - 完整 API 参考

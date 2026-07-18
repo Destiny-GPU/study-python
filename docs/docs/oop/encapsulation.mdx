@@ -6,6 +6,7 @@ tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🏗️ 封装
 
@@ -671,22 +672,11 @@ print("\n" + pipe.log())
 - **类型提示**：`typing.Final` 标记只读属性，`typing.ClassVar` 标记类变量
 - **对象序列化**：`pickle` 模块与 `__getstate__`/`__setstate__` 自定义序列化
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 公开属性 | `self.name` | 任何地方可访问 |
-| 受保护约定 | `self._name` | 外部可访问但不应该 |
-| 私有（名称改写） | `self.__name` | 改写为 `_类名__name` |
-| 只读属性 | `@property` + getter | `@property def x(self): return self._x` |
-| 可读写属性 | `@property` + `@x.setter` | `@x.setter def x(self, v): ...` |
-| 只定义 getter | 不设 setter | 赋值时抛 `AttributeError` |
-| 限制属性 | `__slots__ = ("x", "y")` | 节省内存，阻止动态添加 |
-| 动态属性操作 | `getattr/setattr/hasattr` | `getattr(obj, "name", default)` |
-| 查看实例属性 | `obj.__dict__` | 显示所有实例属性 |
-| 查看类属性 | `cls.__dict__` | 显示类级别定义 |
-| 模块私有 | `_name` | `from module import *` 不导入 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["公开属性","`self.name`","任何地方可访问"],["受保护约定","`self._name`","外部可访问但不应该"],["私有（名称改写）","`self.__name`","改写为 `_类名__name`"],["只读属性","`@property` + getter","`@property def x(self): return self._x`"],["可读写属性","`@property` + `@x.setter`","`@x.setter def x(self, v): ...`"],["只定义 getter","不设 setter","赋值时抛 `AttributeError`"],["限制属性","`__slots__ = (\"x\", \"y\")`","节省内存，阻止动态添加"],["动态属性操作","`getattr/setattr/hasattr`","`getattr(obj, \"name\", default)`"],["查看实例属性","`obj.__dict__`","显示所有实例属性"],["查看类属性","`cls.__dict__`","显示类级别定义"],["模块私有","`_name`","`from module import *` 不导入"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了封装机制，核心要点包括：

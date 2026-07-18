@@ -165,13 +165,19 @@ function generateCategorySidebar(dirName) {
   if (order) {
     // 使用配置的顺序，但只包含实际存在的文件
     const existing = new Set(getDocIds(dirName));
+    // 如果分类有 link 指向 index，排除 index 文件（它是分类落地页，不应出现在侧边栏项中）
+    if (meta.link && meta.link.id) {
+      const indexId = meta.link.id.split('/').pop();
+      existing.delete(indexId);
+    }
     docIds = order.filter(id => existing.has(id));
     // 追加配置中没有但文件中存在的（新文件忘记加到配置）
-    for (const id of getDocIds(dirName)) {
-      if (!docIds.includes(id)) {
-        docIds.push(id);
-      }
+    const excludeIndex = meta.link?.id?.split('/').pop();
+    const unordered = getDocIds(dirName).filter(id => id !== excludeIndex && !docIds.includes(id));
+    if (unordered.length > 0) {
+      console.warn(`[sidebars] ${dirName}: 以下文档未在 DOC_ORDER 中配置，已追加到末尾: ${unordered.join(', ')}`);
     }
+    docIds.push(...unordered);
   } else {
     // 没有配置，按文件名排序
     docIds = getDocIds(dirName).sort();

@@ -6,6 +6,7 @@ tags: [进阶特性, 基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 类型注解
 
@@ -629,20 +630,11 @@ print(f"可靠: {result.is_reliable}")
 - [mypy 文档](https://mypy.readthedocs.io/) - 最流行的 Python 静态类型检查器
 - [pyright 文档](https://github.com/microsoft/pyright) - Microsoft 开发的快速类型检查器
 
-## 📊 速查表
-
-| 语法 | 含义 | Python 版本 |
-|------|------|-------------|
-| `x: float` | 变量类型注解 | 3.5+ |
-| `def f() -> float:` | 函数返回类型 | 3.5+ |
-| `list[float]` | 泛型容器 | 3.9+ |
-| `int \| str` | 联合类型 | 3.10+ |
-| `X \| None` | 可选类型 | 3.10+ |
-| `type SensorID = str` | 类型别名 | 3.12+ |
-| `def f[T](x: T) -> T:` | 泛型函数 | 3.12+ |
-| `TypeGuard[T]` | 类型守卫 | 3.10+ |
-| `isinstance(x, T)` | 运行时类型检查 | 所有版本 |
-
+<CheatCard
+    title="速查表"
+    headers={["语法","含义","Python 版本"]}
+    rows={[["`x: float`","变量类型注解","3.5+"],["`def f() -> float:`","函数返回类型","3.5+"],["`list[float]`","泛型容器","3.9+"],["`int \\","str`","联合类型","3.10+"],["`X \\","None`","可选类型","3.10+"],["`type SensorID = str`","类型别名","3.12+"],["`def f[T](x: T) -> T:`","泛型函数","3.12+"],["`TypeGuard[T]`","类型守卫","3.10+"],["`isinstance(x, T)`","运行时类型检查","所有版本"]]}
+  />
 ## ✅ 本节总结
 
 - 类型注解是**可选的、不影响运行**的元信息，主要服务于静态类型检查器和 IDE

@@ -6,6 +6,7 @@ tags: [异常处理]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🛡️ 自定义异常
 
@@ -1024,22 +1025,11 @@ GPS-001 状态变更：ok -> degraded
 - **错误码设计**：RESTful API 错误响应标准，HTTP 状态码与业务错误码映射
 - **日志记录**：`logging.exception()` 自动记录异常堆栈，生产环境必备
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 定义异常 | `class X(Exception):` | `class ValidationError(Exception):` |
-| 继承内置异常 | `class X(ValueError):` | `class InvalidSensorError(ValueError):` |
-| 调用父类 | `super().__init__(*args)` | 保留标准行为 |
-| 自定义展示 | `def __str__(self):` | 格式化错误信息 |
-| 额外属性 | `self.field = value` | 携带结构化上下文 |
-| 错误码 | `code = "ERR_CODE"` | 便于程序化处理 |
-| 异常链 | `raise X from Y` | 保留 `__cause__` |
-| 抑制链 | `raise X from None` | 隐藏原始异常 |
-| 异常组 | `ExceptionGroup(msg, [e1, e2])` | 批量收集错误 |
-| 拆解异常组 | `except* Type:` | 3.11+ 语法 |
-| 层次捕获 | `except ParentError:` | 捕获所有子类 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["定义异常","`class X(Exception):`","`class ValidationError(Exception):`"],["继承内置异常","`class X(ValueError):`","`class InvalidSensorError(ValueError):`"],["调用父类","`super().__init__(*args)`","保留标准行为"],["自定义展示","`def __str__(self):`","格式化错误信息"],["额外属性","`self.field = value`","携带结构化上下文"],["错误码","`code = \"ERR_CODE\"`","便于程序化处理"],["异常链","`raise X from Y`","保留 `__cause__`"],["抑制链","`raise X from None`","隐藏原始异常"],["异常组","`ExceptionGroup(msg, [e1, e2])`","批量收集错误"],["拆解异常组","`except* Type:`","3.11+ 语法"],["层次捕获","`except ParentError:`","捕获所有子类"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了自定义异常的设计，核心要点包括：

@@ -49,7 +49,7 @@ export default function DocItemLayout({children}) {
 
   useScrollReveal(contentRef, '.theme-doc-markdown > *', {
     threshold: 0.1,
-    staggerMs: 25,
+    staggerMs: 8,
     visibleClass: 'scroll-reveal-visible',
   });
 

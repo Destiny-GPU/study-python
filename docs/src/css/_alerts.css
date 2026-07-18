@@ -1,0 +1,115 @@
+/* Alert 组件 - 更精致的提示框 */
+.alert {
+  border-radius: var(--ifm-radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.75rem;
+  border-left: 5px solid;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  box-shadow: var(--ifm-shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.alert::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 0%, color-mix(in srgb, var(--ifm-color-primary) 3%, transparent) 100%);
+  pointer-events: none;
+}
+
+.alert--info {
+  background: color-mix(in srgb, var(--ifm-color-info) 8%, transparent);
+  border-color: var(--ifm-color-info);
+}
+
+[data-theme='dark'] .alert--info {
+  background: color-mix(in srgb, var(--ifm-color-info) 15%, transparent);
+}
+
+.alert--info h5 {
+  color: var(--ifm-color-info);
+}
+
+.alert--success {
+  background: color-mix(in srgb, var(--ifm-color-success) 8%, transparent);
+  border-color: var(--ifm-color-success);
+}
+
+.alert--success h5 {
+  color: var(--ifm-color-success);
+}
+
+.alert--warning {
+  background: color-mix(in srgb, var(--ifm-color-warning) 8%, transparent);
+  border-color: var(--ifm-color-warning);
+}
+
+.alert--warning h5 {
+  color: var(--ifm-color-warning);
+}
+
+.alert--danger {
+  background: color-mix(in srgb, var(--ifm-color-error) 8%, transparent);
+  border-color: var(--ifm-color-error);
+}
+
+.alert--danger h5 {
+  color: var(--ifm-color-error);
+}
+
+.alert--tip {
+  background: color-mix(in srgb, var(--ifm-color-secondary) 8%, transparent);
+  border-color: var(--ifm-color-secondary);
+}
+
+.alert--tip h5 {
+  color: var(--ifm-color-secondary);
+}
+
+/* Admonition class shortcuts */
+.theme-admonition.key-points {
+  border-left-color: var(--ifm-color-primary);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ifm-color-primary) 6%, transparent), transparent);
+}
+
+.theme-admonition.key-points h5 {
+  color: var(--ifm-color-primary);
+  font-weight: 700;
+}
+
+.theme-admonition.see-also {
+  border-left-color: var(--ifm-link-color);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ifm-link-color) 5%, transparent), transparent);
+}
+
+.theme-admonition.see-also h5 {
+  color: var(--ifm-link-color);
+}
+
+.theme-admonition.summary {
+  border-left-color: var(--ifm-color-success);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ifm-color-success) 5%, transparent), transparent);
+}
+
+.theme-admonition.summary h5 {
+  color: var(--ifm-color-success);
+  font-weight: 700;
+}
+
+.theme-admonition.safety-warning {
+  border-left-width: 6px;
+  border-left-color: var(--ifm-color-error);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ifm-color-error) 8%, transparent), transparent);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--ifm-color-error) 10%, transparent);
+}
+
+.theme-admonition.safety-warning h5 {
+  color: var(--ifm-color-error);
+  font-weight: 700;
+  font-size: 1.05em;
+}

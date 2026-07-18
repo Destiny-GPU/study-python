@@ -10,14 +10,14 @@
 | [HeroSection](#herosection) | 英雄区域 | 首页顶部区域 |
 | [TypingCode](#typingcode) | 打字机效果 | 代码动画展示 |
 | [PyodideRunner](#pyodiderunner) | Python 运行器 | 浏览器内运行代码 |
-| [ProgressTracker](#progresstracker) | 进度追踪 | 学习进度记录 |
+| [CheatCard](#cheatcard) | 速查卡片 | 交互式速查表 |
+| [ParamPlayground](#paramplayground) | 参数游乐场 | 交互式参数调节与可视化 |
+| [ControlChallenge](#controlchallenge) | 控制挑战 | 飞行控制编程挑战 |
+| [KnowledgeGraph](#knowledgegraph) | 知识图谱 | 交互式知识关系图 |
 | [AutoRelatedDocs](#autorelateddocs) | 相关文档 | 自动推荐相关文章 |
-| [ChapterNav](#chapternav) | 章节导航 | 上下篇导航 |
 | [LearningPath](#learningpath) | 学习路径 | 阶段性学习引导 |
 | [QuoteBlock](#quoteblock) | 名言引用 | 展示名言警句 |
 | [TrackSelector](#trackselector) | 路径选择 | 选择学习路径 |
-| [VisualizeButton](#visualizebutton) | 可视化按钮 | 触发可视化效果 |
-| [About](#about) | 关于页面 | 作者介绍 |
 
 ---
 
@@ -43,14 +43,6 @@ import CardGrid from '@site/src/components/CardGrid';
 - 悬停动画效果
 - 懒加载图片
 - 支持深色/浅色主题
-
-### 数据源
-
-卡片数据硬编码在组件中，包含：
-- emoji 图标
-- 标题
-- 描述
-- 链接
 
 ---
 
@@ -101,12 +93,6 @@ import TypingCode from '@site/src/components/TypingCode';
 - IntersectionObserver 控制动画启停
 - 暗色主题适配
 
-### 性能优化
-
-- 使用 `requestAnimationFrame` 控制动画
-- 当组件不在视口时自动暂停动画
-- 减少不必要的重绘
-
 ---
 
 ## PyodideRunner
@@ -115,7 +101,7 @@ import TypingCode from '@site/src/components/TypingCode';
 
 ### 位置
 
-`src/components/PyodideRunner/index.js`
+`src/components/PyodideRunner/index.jsx`
 
 ### 用法
 
@@ -146,34 +132,127 @@ print("Hello, World!")
 
 ---
 
-## ProgressTracker
+## CheatCard
 
-学习进度追踪组件，记录用户的学习进度。
+交互式速查卡片，支持复制和运行代码。
 
 ### 位置
 
-`src/components/ProgressTracker/index.js`
+`src/components/CheatCard/index.jsx`
 
 ### 用法
 
-```jsx
-import ProgressTracker from '@site/src/components/ProgressTracker';
+```mdx
+import CheatCard from '@site/src/components/CheatCard';
 
-<ProgressTracker />
+<CheatCard
+  title="速查表"
+  headers={['语法', '功能', '示例']}
+  rows={[
+    ['`if condition:`', '条件判断', '`if x > 0: print("正数")`'],
+  ]}
+/>
 ```
 
 ### 特性
 
-- 自动记录已读文档
-- 进度百分比显示
-- localStorage 持久化
-- MutationObserver 实时更新
+- 代码复制到剪贴板
+- 浏览器内运行示例代码
+- 输出结果实时展示
 
-### 数据存储
+---
 
-进度数据存储在 `localStorage`：
-- `study-progress` — 阅读进度百分比
-- `visited-docs` — 已访问文档列表
+## ParamPlayground
+
+交互式参数调节与实时可视化组件。
+
+### 位置
+
+`src/components/ParamPlayground/index.jsx`
+
+### 用法
+
+```mdx
+import ParamPlayground from '@site/src/components/ParamPlayground';
+
+<ParamPlayground
+  title="PID 控制器阶跃响应"
+  code={`
+import numpy as np
+def simulate(kp, ki, kd):
+    ...
+    return t, y
+`}
+  controls={[
+    { id: 'kp', label: 'Kp', min: 0.1, max: 5, step: 0.1, default: 1.5 },
+  ]}
+  chart={{ xLabel: '时间 (s)', yLabel: '输出', title: '阶跃响应' }}
+/>
+```
+
+### 特性
+
+- 滑块/切换控件实时调节参数
+- Canvas 图表实时渲染
+- Pyodide 执行 Python 代码
+
+---
+
+## ControlChallenge
+
+飞行控制编程挑战组件。
+
+### 位置
+
+`src/components/ControlChallenge/index.jsx`
+
+### 用法
+
+```mdx
+import ControlChallenge from '@site/src/components/ControlChallenge';
+
+<ControlChallenge
+  title="挑战：计算升力系数"
+  scenario="你的无人机在高度 100m 处平飞..."
+  objective="编写函数 calculate_lift(v, alpha)"
+  starterCode={`def calculate_lift(v, alpha):\n    pass`}
+  solution={`def calculate_lift(v, alpha):\n    return 2 * 3.14159 * alpha`}
+  tests={[
+    { call: 'calculate_lift(50, 0.1)', expected: [0.5, 0.8], label: '迎角 0.1 rad' },
+  ]}
+/>
+```
+
+### 特性
+
+- CodeMirror 代码编辑器
+- 自动测试验证
+- 提示和答案展示
+
+---
+
+## KnowledgeGraph
+
+交互式知识关系图谱。
+
+### 位置
+
+`src/components/KnowledgeGraph/index.jsx`
+
+### 用法
+
+```mdx
+import KnowledgeGraph from '@site/src/components/KnowledgeGraph';
+
+<KnowledgeGraph />
+```
+
+### 特性
+
+- SVG 渲染，零依赖
+- 缩放/平移交互
+- 点击节点跳转文档
+- 分类过滤
 
 ---
 
@@ -196,37 +275,7 @@ import AutoRelatedDocs from '@site/src/components/AutoRelatedDocs';
 ### 特性
 
 - 基于标签匹配相关文档
-- Set 数据结构优化查找性能
-- 早期终止策略
 - 最多显示 3 个相关文档
-
-### 标签数据
-
-标签数据来自 `src/data/doc-tags.json`，包含 92 个文档的标签映射。
-
----
-
-## ChapterNav
-
-章节导航组件，显示上一篇/下一篇链接。
-
-### 位置
-
-`src/components/ChapterNav/index.js`
-
-### 用法
-
-```jsx
-import ChapterNav from '@site/src/components/ChapterNav';
-
-<ChapterNav />
-```
-
-### 特性
-
-- 自动获取前后文档
-- 响应式设计
-- 平滑过渡动画
 
 ---
 
@@ -251,7 +300,6 @@ import LearningPath from '@site/src/components/LearningPath';
 - 五阶段学习路径
 - 可折叠/展开
 - 进度指示器
-- 动画效果
 
 ---
 
@@ -275,11 +323,6 @@ import QuoteBlock from '@site/src/components/QuoteBlock';
 
 - 随机展示名言
 - 深色/浅色主题适配
-- 渐入动画
-
-### 数据源
-
-名言数据来自 `src/data/quotes.js`。
 
 ---
 
@@ -303,55 +346,6 @@ import TrackSelector from '@site/src/components/TrackSelector';
 
 - 选择学习路径
 - 保存用户选择
-- 响应式设计
-
----
-
-## VisualizeButton
-
-可视化按钮组件，用于触发可视化效果。
-
-### 位置
-
-`src/components/VisualizeButton/index.js`
-
-### 用法
-
-```jsx
-import VisualizeButton from '@site/src/components/VisualizeButton';
-
-<VisualizeButton />
-```
-
-### 特性
-
-- 点击触发可视化
-- 加载状态提示
-- 错误处理
-
----
-
-## About
-
-关于页面组件，展示作者信息。
-
-### 位置
-
-`src/components/About/index.js`
-
-### 用法
-
-```jsx
-import About from '@site/src/components/About';
-
-<About />
-```
-
-### 特性
-
-- 作者信息展示
-- 技能标签
-- 项目链接
 
 ---
 
@@ -360,7 +354,7 @@ import About from '@site/src/components/About';
 ### 添加新组件
 
 1. 在 `src/components/` 下创建新目录
-2. 创建 `index.js` 实现组件
+2. 创建 `index.js` 或 `index.jsx` 实现组件
 3. 创建 `styles.module.css` 添加样式（可选）
 4. 在 `src/components/index.js` 中导出
 5. 在 MDX 文件中使用
@@ -369,36 +363,12 @@ import About from '@site/src/components/About';
 
 ```
 NewComponent/
-├── index.js              # 组件实现
-├── styles.module.css     # CSS 模块
-└── index.test.js         # 测试文件（可选）
+├── index.js / index.jsx   # 组件实现
+└── styles.module.css      # CSS 模块
 ```
 
-### 样式规范
+### 共享代码
 
-- 使用 CSS 模块避免样式冲突
-- 使用 CSS 变量（`_variables.css`）
-- 支持深色/浅色主题
-- 响应式设计
-
-### 性能优化
-
-- 使用 `React.memo` 避免不必要的重渲染
-- 使用 `useMemo` 和 `useCallback` 优化性能
-- 大型组件使用懒加载
-- 动画使用 `will-change` 提示 GPU
-
-### 测试
-
-```bash
-npm run test           # 运行所有测试
-npm run test:watch     # 监听模式
-```
-
----
-
-## 相关链接
-
-- [Docusaurus 插件开发](https://docusaurus.io/docs/plugins)
-- [React 组件最佳实践](https://react.dev/learn/thinking-in-react)
-- [CSS 模块文档](https://github.com/css-modules/css-modules)
+- `src/components/shared/ErrorBoundary.jsx` — 通用错误边界
+- `src/hooks/useTheme.js` — 主题检测 hook
+- `src/components/PyodideRunner/loader.js` — Pyodide 加载与输出捕获工具

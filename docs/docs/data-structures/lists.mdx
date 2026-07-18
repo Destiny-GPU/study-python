@@ -6,6 +6,7 @@ tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📦 列表（List）
 
@@ -176,13 +177,13 @@ sequenceDiagram
     
     Note over List, Memory: 初始状态: [1, 2, 3, _, _, _]
     
-    rect rgb(200, 250, 200)
+    rect rgba(34, 197, 94, 0.15)
     Note over List, Memory: append(4) - O(1)
     List->>Memory: 在索引3写入4
     Memory-->>List: 完成，无元素移动
     end
     
-    rect rgb(250, 200, 200)
+    rect rgba(239, 68, 68, 0.15)
     Note over List, Memory: insert(1, a) - O(n)
     List->>Memory: 索引1-2的元素右移
     Memory->>Memory: [1, _, 2, 3, _, _]
@@ -578,23 +579,11 @@ total = sum(nums)
 - [推导式进阶](/docs/data-structures/comprehensions) - 列表、集合、字典推导式的高级用法
 - [Pythonic 风格](/docs/advanced/pythonic) - 编写地道的 Python 代码
 
-## 📊 速查表
-
-| 操作 | 方法/语法 | 时间复杂度 |
-|------|-----------|------------|
-| 创建列表 | `[1, 2, 3]` 或 `list(iterable)` | O(n) |
-| 索引访问 | `lst[i]` | O(1) |
-| 切片 | `lst[start:stop:step]` | O(k) |
-| 末尾追加 | `lst.append(x)` | O(1) |
-| 末尾弹出 | `lst.pop()` | O(1) |
-| 任意插入 | `lst.insert(i, x)` | O(n) |
-| 按值删除 | `lst.remove(x)` | O(n) |
-| 成员查找 | `x in lst` | O(n) |
-| 排序 | `lst.sort()` 或 `sorted(lst)` | O(n log n) |
-| 反转 | `lst.reverse()` 或 `lst[::-1]` | O(n) |
-| 浅拷贝 | `lst.copy()` 或 `lst[:]` | O(n) |
-| 深拷贝 | `copy.deepcopy(lst)` | O(n) |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","方法/语法","时间复杂度"]}
+    rows={[["创建列表","`[1, 2, 3]` 或 `list(iterable)`","O(n)"],["索引访问","`lst[i]`","O(1)"],["切片","`lst[start:stop:step]`","O(k)"],["末尾追加","`lst.append(x)`","O(1)"],["末尾弹出","`lst.pop()`","O(1)"],["任意插入","`lst.insert(i, x)`","O(n)"],["按值删除","`lst.remove(x)`","O(n)"],["成员查找","`x in lst`","O(n)"],["排序","`lst.sort()` 或 `sorted(lst)`","O(n log n)"],["反转","`lst.reverse()` 或 `lst[::-1]`","O(n)"],["浅拷贝","`lst.copy()` 或 `lst[:]`","O(n)"],["深拷贝","`copy.deepcopy(lst)`","O(n)"]]}
+  />
 ## ✅ 本节总结
 
 - 列表是**有序、可变**的序列容器，支持任意类型元素

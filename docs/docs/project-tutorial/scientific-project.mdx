@@ -6,6 +6,7 @@ tags: [项目实战, 科学计算]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 科研项目实战：飞行数据分析
 
@@ -972,38 +973,11 @@ uv run ruff format src/ tests/
 - **《Python 科学计算》**：Travis E. Oliphant 著，NumPy/SciPy 的经典参考书
 - **PyVista**：3D 科学可视化库，适合处理点云和网格数据
 
-## 📊 速查表
-
-### SciPy 信号处理常用函数
-
-| 函数 | 用途 | 示例 |
-|------|------|------|
-| `butter()` | 设计 Butterworth 滤波器 | `butter(4, 0.1, btype='low')` |
-| `sosfilt()` | SOS 格式滤波 | `sosfilt(sos, data)` |
-| `welch()` | 功率谱密度估计 | `welch(data, fs=1000)` |
-| `fft()` | 快速傅里叶变换 | `fft(data)` |
-| `resample()` | 信号重采样 | `resample(data, num=500)` |
-
-### pytest 数值比较
-
-| 写法 | 含义 | 适用场景 |
-|------|------|----------|
-| `pytest.approx(1.0)` | 精确相等（浮点容差） | 期望值精确 |
-| `pytest.approx(1.0, abs=0.1)` | 绝对误差 ≤ 0.1 | 允许一定偏差 |
-| `pytest.approx(1.0, rel=0.05)` | 相对误差 ≤ 5% | 大数值比较 |
-| `np.allclose(a, b)` | 逐元素近似相等 | 数组比较 |
-| `np.isclose(a, b)` | 逐元素近似相等（标量） | 单值比较 |
-
-### matplotlib 图表类型选择
-
-| 数据类型 | 推荐图表 | 函数 |
-|----------|----------|------|
-| 时序信号 | 折线图 | `ax.plot()` |
-| 频谱 | 半对数折线图 | `ax.semilogy()` |
-| 分布 | 直方图 | `ax.hist()` |
-| 两变量关系 | 散点图 | `ax.scatter()` |
-| 对比 | 子图 | `plt.subplots()` |
-
+<CheatCard
+    title="速查表"
+    headers={["函数","用途","示例"]}
+    rows={[["`butter()`","设计 Butterworth 滤波器","`butter(4, 0.1, btype='low')`"],["`sosfilt()`","SOS 格式滤波","`sosfilt(sos, data)`"],["`welch()`","功率谱密度估计","`welch(data, fs=1000)`"],["`fft()`","快速傅里叶变换","`fft(data)`"],["`resample()`","信号重采样","`resample(data, num=500)`"]]}
+  />
 ## ✅ 本节总结
 
 本节我们构建了一个完整的飞行数据分析科研项目，核心要点包括：

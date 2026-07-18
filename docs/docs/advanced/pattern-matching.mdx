@@ -6,6 +6,7 @@ tags: [进阶特性, 控制流]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 模式匹配详解
 
@@ -923,23 +924,11 @@ for cfg in configs:
 3. **AST 遍历**：用 `ast` 模块解析 Python 代码，用模式匹配分类节点类型
 4. **状态机**：用模式匹配实现一个有限状态机，处理不同状态转换
 
-## 📊 速查表
-
-| 模式 | 语法 | 说明 |
-|------|------|------|
-| 字面量 | `case 0:` | 匹配具体值 |
-| 捕获 | `case x:` | 绑定任意值到变量 |
-| 通配符 | `case _:` | 匹配任意值，不绑定 |
-| 值模式 | `case Color.RED:` | 匹配常量/枚举 |
-| 序列 | `case [a, b, *rest]:` | 解构列表/元组 |
-| 映射 | `case {"key": val, **rest}:` | 解构字典，子集匹配 |
-| 类位置 | `case Point(x, y):` | 需 `__match_args__` |
-| 类关键字 | `case Point(x=x, y=y):` | 更通用，推荐 |
-| OR | `case "a" \| "b":` | 合并多个值 |
-| as 捕获 | `case [x, y] as lst:` | 绑定整体 |
-| 守卫 | `case x if x > 0:` | 条件过滤 |
-| 嵌套 | `case {"users": [{"name": n}]}:` | 深度解构 |
-
+<CheatCard
+    title="速查表"
+    headers={["模式","语法","说明"]}
+    rows={[["字面量","`case 0:`","匹配具体值"],["捕获","`case x:`","绑定任意值到变量"],["通配符","`case _:`","匹配任意值，不绑定"],["值模式","`case Color.RED:`","匹配常量/枚举"],["序列","`case [a, b, *rest]:`","解构列表/元组"],["映射","`case {\"key\": val, **rest}:`","解构字典，子集匹配"],["类位置","`case Point(x, y):`","需 `__match_args__`"],["类关键字","`case Point(x=x, y=y):`","更通用，推荐"],["OR","`case \"a\" \\","\"b\":`","合并多个值"],["as 捕获","`case [x, y] as lst:`","绑定整体"],["守卫","`case x if x > 0:`","条件过滤"],["嵌套","`case {\"users\": [{\"name\": n}]}:`","深度解构"]]}
+  />
 ## 📚 延伸阅读
 
 - **[PEP 634](https://peps.python.org/pep-0634/)** - 结构化模式匹配规范

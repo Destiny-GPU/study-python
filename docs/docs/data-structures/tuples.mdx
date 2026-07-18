@@ -6,6 +6,7 @@ tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📦 元组（Tuple）
 
@@ -355,21 +356,11 @@ if __name__ == "__main__":
 - [typing.NamedTuple 文档](https://docs.python.org/zh-cn/3/library/typing.html#typing.NamedTuple) - 类型注解命名元组
 - [PEP 526 - 变量注解](https://peps.python.org/pep-0526/) - 类型注解语法规范
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 创建元组 | `(a, b)` 或 `a, b` | `point = 3, 4` |
-| 空元组 | `()` 或 `tuple()` | `empty = ()` |
-| 单元素元组 | `(x,)` | `single = (42,)` |
-| 索引访问 | `t[i]` | `t[0]` |
-| 解包 | `a, b = t` | `x, y = (3, 4)` |
-| 星号解包 | `first, *rest = t` | `1, [2, 3, 4]` |
-| 拼接 | `t1 + t2` | `(1, 2) + (3,)` → `(1, 2, 3)` |
-| 重复 | `t * n` | `(1, 2) * 3` → `(1, 2, 1, 2, 1, 2)` |
-| 命名元组 | `typing.NamedTuple` | `class Point(NamedTuple): x: int; y: int` |
-| 替换 | `t._replace(x=val)` | `p._replace(x=10)` |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["创建元组","`(a, b)` 或 `a, b`","`point = 3, 4`"],["空元组","`()` 或 `tuple()`","`empty = ()`"],["单元素元组","`(x,)`","`single = (42,)`"],["索引访问","`t[i]`","`t[0]`"],["解包","`a, b = t`","`x, y = (3, 4)`"],["星号解包","`first, *rest = t`","`1, [2, 3, 4]`"],["拼接","`t1 + t2`","`(1, 2) + (3,)` → `(1, 2, 3)`"],["重复","`t * n`","`(1, 2) * 3` → `(1, 2, 1, 2, 1, 2)`"],["命名元组","`typing.NamedTuple`","`class Point(NamedTuple): x: int; y: int`"],["替换","`t._replace(x=val)`","`p._replace(x=10)`"]]}
+  />
 ## ✅ 本节总结
 
 - 元组是**有序、不可变**的序列，用 `()` 或隐式逗号创建

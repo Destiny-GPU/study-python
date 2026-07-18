@@ -6,6 +6,7 @@ tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📝 注释与文档字符串
 
@@ -788,21 +789,11 @@ print(f"点(0,0) 到 点(3,4) 的距离: {p1.distance_to(p2)}")
 - [Sphinx 文档](https://www.sphinx-doc.org/) - Python 最流行的文档生成工具
 - [Google Python Style Guide - Comments](https://google.github.io/styleguide/pyguide.html#comments) - Google 风格的注释规范
 
-## 📊 速查表
-
-| 标记 | 含义 | 使用场景 |
-|------|------|----------|
-| `# 注释` | 单行注释 | 解释复杂逻辑 |
-| `"""docstring"""` | 文档字符串 | 模块/函数/类/方法说明 |
-| `:param x:` | 参数说明 | Sphinx/reStructuredText |
-| `Args:` | 参数说明 | Google 风格 |
-| `:return:` | 返回值 | Sphinx/reStructuredText |
-| `Returns:` | 返回值 | Google 风格 |
-| `:raises X:` | 异常说明 | Sphinx/reStructuredText |
-| `TODO:` | 待完成 | 标记未完成的功能 |
-| `FIXME:` | 待修复 | 标记已知问题 |
-| `help(obj)` | 查看帮助 | 交互式查询文档 |
-
+<CheatCard
+    title="速查表"
+    headers={["标记","含义","使用场景"]}
+    rows={[["`# 注释`","单行注释","解释复杂逻辑"],["`\"\"\"docstring\"\"\"`","文档字符串","模块/函数/类/方法说明"],["`:param x:`","参数说明","Sphinx/reStructuredText"],["`Args:`","参数说明","Google 风格"],["`:return:`","返回值","Sphinx/reStructuredText"],["`Returns:`","返回值","Google 风格"],["`:raises X:`","异常说明","Sphinx/reStructuredText"],["`TODO:`","待完成","标记未完成的功能"],["`FIXME:`","待修复","标记已知问题"],["`help(obj)`","查看帮助","交互式查询文档"]]}
+  />
 ## ✅ 本节总结
 
 - **单行注释**用 `#`，Python 没有真正的多行注释，三引号字符串只是被丢弃的字符串表达式

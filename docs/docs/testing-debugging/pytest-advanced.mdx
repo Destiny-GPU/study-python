@@ -6,6 +6,7 @@ tags: [测试调试]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🧪 pytest 进阶
 
@@ -467,46 +468,11 @@ def test_fetch_weather_correct_url():
 
 ---
 
-## 📊 速查表
-
-### Mock 常用方法
-
-| 方法 | 说明 |
-|------|------|
-| `mock.return_value = x` | 设置返回值 |
-| `mock.side_effect = [a, b]` | 按顺序返回值 |
-| `mock.side_effect = Exception()` | 抛出异常 |
-| `mock.assert_called_with(...)` | 断言调用参数 |
-| `mock.assert_called_once()` | 断言只调用一次 |
-| `mock.assert_not_called()` | 断言未被调用 |
-| `mock.call_count` | 调用次数 |
-| `mock.reset_mock()` | 重置状态 |
-
-### Markers 速查
-
-| Marker | 用途 |
-|--------|------|
-| `@pytest.mark.skip(reason=...)` | 无条件跳过 |
-| `@pytest.mark.skipif(cond, reason=...)` | 条件跳过 |
-| `@pytest.mark.xfail(strict=True)` | 预期失败 |
-| `@pytest.mark.parametrize(...)` | 参数化测试 |
-| `-m "not slow"` | 运行时排除 |
-
-### 常用 pytest 命令
-
-| 命令 | 说明 |
-|------|------|
-| `pytest -v` | 详细输出 |
-| `pytest -k "test_name"` | 按名称过滤 |
-| `pytest -m "smoke"` | 按 marker 过滤 |
-| `pytest -n auto` | 并行运行 |
-| `pytest --cov=src` | 生成覆盖率 |
-| `pytest --cov-fail-under=80` | 覆盖率阈值 |
-| `pytest -x` | 首次失败即停止 |
-| `pytest --lf` | 只运行上次失败的测试 |
-
----
-
+<CheatCard
+    title="速查表"
+    headers={["方法","说明"]}
+    rows={[["`mock.return_value = x`","设置返回值"],["`mock.side_effect = [a, b]`","按顺序返回值"],["`mock.side_effect = Exception()`","抛出异常"],["`mock.assert_called_with(...)`","断言调用参数"],["`mock.assert_called_once()`","断言只调用一次"],["`mock.assert_not_called()`","断言未被调用"],["`mock.call_count`","调用次数"],["`mock.reset_mock()`","重置状态"]]}
+  />
 ## ✅ 本节总结
 
 | 知识点 | 核心要点 |

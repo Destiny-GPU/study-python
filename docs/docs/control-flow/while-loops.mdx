@@ -6,6 +6,7 @@ tags: [控制流]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔀 while 循环
 
@@ -327,18 +328,11 @@ if __name__ == "__main__":
 - [Python 浮点数精度问题](https://docs.python.org/zh-cn/3/tutorial/floatingpoint.html) - 浮点数精度详解
 - [循环最佳实践](https://docs.python.org/zh-cn/3/faq/design.html#why-does-python-use-methods-for-some-functionality-e-g-list-sort-but-functions-for-others-e-g-len) - 官方设计哲学
 
-## 📊 速查表
-
-| 语法 | 功能 | 示例 |
-|------|------|------|
-| `while condition:` | 条件循环 | `while n < 10:` |
-| `while True:` | 无限循环 | 配合 `break` 使用 |
-| `while...else` | 正常结束执行 | 未被 `break` 打断时执行 |
-| `x := value` | 海象运算符 | `while (line := f.readline()):` |
-| `break` | 跳出循环 | 满足条件时退出 |
-| `continue` | 跳过本次 | 进入下一次迭代 |
-| `max_iter` | 安全阀 | 防止死循环的保护机制 |
-
+<CheatCard
+    title="速查表"
+    headers={["语法","功能","示例"]}
+    rows={[["`while condition:`","条件循环","`while n < 10:`"],["`while True:`","无限循环","配合 `break` 使用"],["`while...else`","正常结束执行","未被 `break` 打断时执行"],["`x := value`","海象运算符","`while (line := f.readline()):`"],["`break`","跳出循环","满足条件时退出"],["`continue`","跳过本次","进入下一次迭代"],["`max_iter`","安全阀","防止死循环的保护机制"]]}
+  />
 ## ✅ 本节总结
 
 - `while` 适合循环次数未知、依赖条件变化的场景

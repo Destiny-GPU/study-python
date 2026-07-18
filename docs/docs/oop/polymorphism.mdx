@@ -6,6 +6,7 @@ tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🏗️ 多态
 
@@ -732,21 +733,11 @@ print(f"控制量总和：{total:.4f}")
 - **类型系统进阶**：`typing.Generic` 泛型、`typing.TypeVar` 类型变量、`typing.overload` 重载
 - **ABC vs Protocol**：何时用名义子类型（ABC），何时用结构子类型（Protocol）
 
-## 📊 速查表
-
-| 概念 | 说明 | 示例 |
-|------|------|------|
-| 鸭子类型 | 关注行为而非类型 | 有 `compute()` 就能调用 |
-| Protocol | 结构化子类型 | `class Controller(Protocol): def compute(...) -> float: ...` |
-| runtime_checkable | 协议支持 isinstance | `@runtime_checkable class X(Protocol): ...` |
-| 动态分派 | 运行时决定调用哪个方法 | `obj.method()` 根据实际类型 |
-| 方法重写 | 子类重新定义父类方法 | `def compute(self, state, target) -> float: ...` |
-| 运算符重载 | 魔术方法支持运算符 | `__add__`、`__eq__`、`__lt__` |
-| 反向运算符 | 左操作数不支持时调用 | `__radd__` 处理 `float + obj` |
-| 策略模式 | 封装算法，替换对象切换策略 | `DisturbanceRejection.compensate(disturbance)` |
-| 组合优于继承 | 用 has-a 替代 is-a | `CompositeController` 实现 `Controllable` 协议 |
-| EAFP 原则 | 请求原谅比许可容易 | `try: obj.method() except AttributeError: ...` |
-
+<CheatCard
+    title="速查表"
+    headers={["概念","说明","示例"]}
+    rows={[["鸭子类型","关注行为而非类型","有 `compute()` 就能调用"],["Protocol","结构化子类型","`class Controller(Protocol): def compute(...) -> float: ...`"],["runtime_checkable","协议支持 isinstance","`@runtime_checkable class X(Protocol): ...`"],["动态分派","运行时决定调用哪个方法","`obj.method()` 根据实际类型"],["方法重写","子类重新定义父类方法","`def compute(self, state, target) -> float: ...`"],["运算符重载","魔术方法支持运算符","`__add__`、`__eq__`、`__lt__`"],["反向运算符","左操作数不支持时调用","`__radd__` 处理 `float + obj`"],["策略模式","封装算法，替换对象切换策略","`DisturbanceRejection.compensate(disturbance)`"],["组合优于继承","用 has-a 替代 is-a","`CompositeController` 实现 `Controllable` 协议"],["EAFP 原则","请求原谅比许可容易","`try: obj.method() except AttributeError: ...`"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了多态机制，核心要点包括：

@@ -67,89 +67,99 @@ const TICK_MS = 30;
 const LINE_PAUSE_MS = 100;
 
 export default function TypingCode() {
-  const [lineIdx, setLineIdx] = useState(0);
-  const [charIdx, setCharIdx] = useState(0);
+  const [tick, setTick] = useState(0);
   const [done, setDone] = useState(false);
   const containerRef = useRef(null);
-  const visibleRef = useRef(false);
-  const rafRef = useRef(null);
-  const lastTickRef = useRef(0);
-  const pauseUntilRef = useRef(0);
+  const stateRef = useRef({ lineIdx: 0, charIdx: 0 });
+  const pausedRef = useRef(false);
+  const intervalRef = useRef(null);
   const loopTimeoutRef = useRef(null);
 
-  // Pause animation when component is not in viewport
+  // Start / stop interval based on visibility
+  const startInterval = () => {
+    if (intervalRef.current) return;
+    let lastTick = performance.now();
+    let pauseUntil = 0;
+
+    intervalRef.current = setInterval(() => {
+      if (pausedRef.current) return;
+
+      const ts = performance.now();
+      if (ts < pauseUntil) return;
+      if (ts - lastTick < TICK_MS) return;
+      lastTick = ts;
+
+      const s = stateRef.current;
+      if (s.lineIdx >= CODE_LINES.length) {
+        setDone(true);
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        return;
+      }
+
+      const line = CODE_LINES[s.lineIdx];
+      const lineLen = line.reduce((sum, t) => sum + t.value.length, 0);
+
+      if (s.charIdx >= lineLen) {
+        pauseUntil = ts + LINE_PAUSE_MS;
+        s.lineIdx += 1;
+        s.charIdx = 0;
+      } else {
+        s.charIdx = Math.min(s.charIdx + CHARS_PER_TICK, lineLen);
+      }
+      setTick((t) => t + 1);
+    }, TICK_MS);
+  };
+
+  // IntersectionObserver: pause when not visible, resume when visible
   useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => { visibleRef.current = entry.isIntersecting; },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          pausedRef.current = false;
+          startInterval();
+        } else {
+          pausedRef.current = true;
+        }
+      },
       { threshold: 0.1 },
     );
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
 
+  // Start animation on mount
   useEffect(() => {
-    if (done) return;
-
-    const step = (ts) => {
-      // Skip frame updates when not visible (still keep loop alive for resume)
-      if (!visibleRef.current) {
-        lastTickRef.current = ts;
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
-      if (lineIdx >= CODE_LINES.length) {
-        setDone(true);
-        return;
-      }
-
-      if (ts < pauseUntilRef.current) {
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
-
-      if (ts - lastTickRef.current < TICK_MS) {
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
-      lastTickRef.current = ts;
-
-      const line = CODE_LINES[lineIdx];
-      const lineLen = line.reduce((sum, t) => sum + t.value.length, 0);
-
-      if (charIdx >= lineLen) {
-        pauseUntilRef.current = ts + LINE_PAUSE_MS;
-        setLineIdx((l) => l + 1);
-        setCharIdx(0);
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
-
-      setCharIdx((c) => Math.min(c + CHARS_PER_TICK, lineLen));
-      rafRef.current = requestAnimationFrame(step);
-    };
-
-    rafRef.current = requestAnimationFrame(step);
+    startInterval();
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
     };
-  }, [lineIdx, charIdx, done]);
+  }, []);
 
+  // Loop: restart after done
   useEffect(() => {
     if (!done) return;
 
     loopTimeoutRef.current = setTimeout(() => {
-      setLineIdx(0);
-      setCharIdx(0);
+      stateRef.current = { lineIdx: 0, charIdx: 0 };
       setDone(false);
+      setTick((t) => t + 1);
+      startInterval();
     }, 5000);
 
     return () => {
       if (loopTimeoutRef.current) clearTimeout(loopTimeoutRef.current);
     };
   }, [done]);
+
+  // Force re-render to read from stateRef
+  void tick;
+
+  const { lineIdx, charIdx } = stateRef.current;
 
   return (
     <div ref={containerRef} className={styles.codeAnimation}>

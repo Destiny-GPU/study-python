@@ -45,13 +45,22 @@ function Card({ icon, logo, title, content, button, href }) {
           <Heading as="h3">{title}</Heading>
           <div className={styles.cardContent}>{content}</div>
           {button && (
-            <Link
-              className={clsx('ds-btn', 'ds-btn-primary', styles.cardButton)}
-              to={button.to}
-              {...getExternalLinkProps(button.to)}
-            >
-              {button.text}
-            </Link>
+            button.to.startsWith('/') && !button.to.startsWith('/docs') && !button.to.startsWith('/blog') && !button.to.startsWith('/notes') ? (
+              <a
+                className={clsx('ds-btn', 'ds-btn-primary', styles.cardButton)}
+                href={button.to}
+              >
+                {button.text}
+              </a>
+            ) : (
+              <Link
+                className={clsx('ds-btn', 'ds-btn-primary', styles.cardButton)}
+                to={button.to}
+                {...getExternalLinkProps(button.to)}
+              >
+                {button.text}
+              </Link>
+            )
           )}
         </div>
       </div>

@@ -4,6 +4,7 @@ title: 🧩 pip 包管理
 description: 掌握 pip install、requirements.txt、pip freeze、pyproject.toml 依赖声明、本地/git 安装、pip-tools 与发布简单包的完整流程。
 tags: [模块与包]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔧 pip 包管理
 
@@ -663,26 +664,11 @@ jobs:
 3. **本地包安装**：创建简单包，用 `pip install -e .` 可编辑模式安装，测试 CLI 入口
 4. **发布流程**：搭建 `sayhi` 包，构建 wheel/sdist，上传到 TestPyPI 验证
 
-## 📊 速查表
-
-| 操作 | 命令 | 示例 |
-|------|------|------|
-| 安装包 | `pip install pkg` | `pip install requests` |
-| 指定版本 | `pip install pkg==x.y` | `pip install requests==2.31.0` |
-| 版本范围 | `pip install "pkg>=x,<y"` | `pip install "requests>=2.30,<3.0"` |
-| 升级包 | `pip install --upgrade pkg` | `pip install --upgrade requests` |
-| 卸载包 | `pip uninstall pkg` | `pip uninstall requests` |
-| 查看信息 | `pip show pkg` | `pip show requests` |
-| 列出包 | `pip list` | `pip list --outdated` |
-| 检查冲突 | `pip check` | 检测依赖不兼容 |
-| 生成锁文件 | `pip freeze > req.txt` | 输出所有精确版本 |
-| 从文件安装 | `pip install -r req.txt` | 批量安装依赖 |
-| 本地安装 | `pip install .` | 当前目录项目 |
-| 可编辑安装 | `pip install -e .` | 开发模式，改动立即生效 |
-| Git 安装 | `pip install git+https://...` | 从 Git 仓库安装 |
-| 构建包 | `python -m build` | 生成 wheel + sdist |
-| 上传包 | `twine upload dist/*` | 发布到 PyPI |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","命令","示例"]}
+    rows={[["安装包","`pip install pkg`","`pip install requests`"],["指定版本","`pip install pkg==x.y`","`pip install requests==2.31.0`"],["版本范围","`pip install \"pkg>=x,<y\"`","`pip install \"requests>=2.30,<3.0\"`"],["升级包","`pip install --upgrade pkg`","`pip install --upgrade requests`"],["卸载包","`pip uninstall pkg`","`pip uninstall requests`"],["查看信息","`pip show pkg`","`pip show requests`"],["列出包","`pip list`","`pip list --outdated`"],["检查冲突","`pip check`","检测依赖不兼容"],["生成锁文件","`pip freeze > req.txt`","输出所有精确版本"],["从文件安装","`pip install -r req.txt`","批量安装依赖"],["本地安装","`pip install .`","当前目录项目"],["可编辑安装","`pip install -e .`","开发模式，改动立即生效"],["Git 安装","`pip install git+https://...`","从 Git 仓库安装"],["构建包","`python -m build`","生成 wheel + sdist"],["上传包","`twine upload dist/*`","发布到 PyPI"]]}
+  />
 ## 📚 延伸阅读
 
 - **PEP 508** - 依赖说明符规范（版本约束、环境标记）

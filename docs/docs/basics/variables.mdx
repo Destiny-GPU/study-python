@@ -6,6 +6,7 @@ tags: [基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📝 变量与数据类型
 
@@ -478,19 +479,11 @@ print(f"42 是 (int, float) 吗? {isinstance(42, (int, float))}")
 - [PEP 604 - 联合类型语法](https://peps.python.org/pep-0604/) - Python 3.10+ 的 `X | Y` 语法
 - [Python 关键字列表](https://docs.python.org/zh-cn/3/reference/lexical_analysis.html#keywords) - 官方保留字完整列表
 
-## 📊 速查表
-
-| 语法 | 含义 | 示例 |
-|------|------|------|
-| `name = value` | 变量赋值 | `age = 25` |
-| `a, b = b, a` | 交换变量 | `x, y = y, x` |
-| `first, *rest = lst` | 星号解包 | `1, [2,3,4,5]` |
-| `x: int = 10` | 类型注解 | `name: str = "Alice"` |
-| `int \| str` | 联合类型 | `def f(x: int \| str)` |
-| `list[str]` | 泛型容器 | `names: list[str] = []` |
-| `isinstance(x, T)` | 类型判断 | `isinstance(x, int)` |
-| `type(x)` | 查看类型 | `type(42)  # <class 'int'>` |
-
+<CheatCard
+    title="速查表"
+    headers={["语法","含义","示例"]}
+    rows={[["`name = value`","变量赋值","`age = 25`"],["`a, b = b, a`","交换变量","`x, y = y, x`"],["`first, *rest = lst`","星号解包","`1, [2,3,4,5]`"],["`x: int = 10`","类型注解","`name: str = \"Alice\"`"],["`int \\","str`","联合类型","`def f(x: int \\","str)`"],["`list[str]`","泛型容器","`names: list[str] = []`"],["`isinstance(x, T)`","类型判断","`isinstance(x, int)`"],["`type(x)`","查看类型","`type(42)  # <class 'int'>`"]]}
+  />
 ## ✅ 本节总结
 
 - Python 变量命名只能用字母、数字、下划线，且不能以数字开头，不能与关键字冲突

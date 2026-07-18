@@ -33,7 +33,6 @@ function createProgressBar() {
       transition: width 0.1s ease-out, box-shadow 0.3s ease;
       background: linear-gradient(90deg, #4a6cf7 0%, #7c5cfc 25%, #9b7cff 50%, #7c5cfc 75%, #4a6cf7 100%);
       background-size: 200% 100%;
-      animation: progressShimmer 2s linear infinite;
       box-shadow: 0 0 8px rgba(74, 108, 247, 0.4), 0 0 16px rgba(74, 108, 247, 0.2);
     }
     #reading-progress.complete {
@@ -42,9 +41,13 @@ function createProgressBar() {
       background: linear-gradient(90deg, #10b981, #34d399, #10b981);
       background-size: 200% 100%;
     }
+    @media (prefers-reduced-motion: no-preference) {
+      #reading-progress {
+        animation: progressShimmer 2s linear infinite;
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       #reading-progress {
-        animation: none;
         transition: width 0.05s linear;
       }
     }

@@ -1,23 +1,10 @@
-import { useState, useCallback, useRef, useEffect, Suspense, lazy, Component } from 'react';
-import { loadPyodide } from './loader';
+import { useState, useCallback, useRef, useEffect, Suspense, lazy } from 'react';
+import { loadPyodide, setupCapture, getCapturedOutput } from './loader';
+import ErrorBoundary from '../shared/ErrorBoundary';
+import useTheme from '../../hooks/useTheme';
 import styles from './styles.module.css';
 
 const CodeMirror = lazy(() => import('@uiw/react-codemirror'));
-
-class ErrorBoundary extends Component {
-  state = { error: null };
-  static getDerivedStateFromError(error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <div className={styles.editor} style={{ padding: '1rem', color: 'var(--ifm-color-danger)' }}>
-          Editor failed to load. Please refresh the page.
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
 /**
  * Interactive Python code runner using Pyodide (WebAssembly).
@@ -34,37 +21,19 @@ export default function PyodideRunner({ children, title }) {
   const [output, setOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
   const [error, setError] = useState(null);
   const [pythonLang, setPythonLang] = useState(null);
-  const [theme, setTheme] = useState('dark');
+  const theme = useTheme();
   const pyodideRef = useRef(null);
 
   useEffect(() => {
     import('@codemirror/lang-python').then(mod => setPythonLang(() => mod.python));
   }, []);
 
-  // Detect theme from Docusaurus data-theme attribute (client-side only)
-  useEffect(() => {
-    const getTheme = () =>
-      document.documentElement.getAttribute('data-theme') || 'dark';
-    setTheme(getTheme());
-
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.attributeName === 'data-theme') {
-          setTheme(getTheme());
-        }
-      }
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-theme'],
-    });
-    return () => observer.disconnect();
-  }, []);
-
   const handleRun = useCallback(async () => {
     setIsRunning(true);
+    setHasRun(true);
     setOutput('');
     setError(null);
 
@@ -78,40 +47,21 @@ export default function PyodideRunner({ children, title }) {
 
       const pyodide = pyodideRef.current;
 
-      // Capture stdout/stderr
-      pyodide.runPython(`
-import sys
-from io import StringIO
-_stdout = StringIO()
-_stderr = StringIO()
-sys.stdout = _stdout
-sys.stderr = _stderr
-`);
+      setupCapture(pyodide);
 
       // Execute user code
       try {
         pyodide.runPython(code);
       } catch (e) {
-        // Get stderr output before re-throwing
-        const stderr = pyodide.runPython('_stderr.getvalue()');
+        const { stderr } = getCapturedOutput(pyodide);
         if (stderr) {
           setOutput(prev => prev + stderr);
         }
         throw e;
       }
 
-      // Collect output
-      const stdout = pyodide.runPython('_stdout.getvalue()');
-      const stderr = pyodide.runPython('_stderr.getvalue()');
-
-      // Restore stdout/stderr
-      pyodide.runPython(`
-sys.stdout = sys.__stdout__
-sys.stderr = sys.__stderr__
-`);
-
-      const allOutput = stdout + stderr;
-      setOutput(allOutput || '(no output)');
+      const { stdout, stderr } = getCapturedOutput(pyodide);
+      setOutput((stdout + stderr) || '(no output)');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -155,7 +105,7 @@ sys.stderr = sys.__stderr__
         <button
           onClick={handleRun}
           disabled={isBusy}
-          className={styles.runButton}
+          className={`${styles.runButton} ${!hasRun ? styles.breathe : ''}`}
         >
           {isLoading ? (
             <>

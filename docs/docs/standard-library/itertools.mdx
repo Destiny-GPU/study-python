@@ -6,6 +6,7 @@ tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔄 itertools 迭代工具
 
@@ -592,30 +593,11 @@ for batch in batched(range(10), 3):
 3. **分组统计**：用 `groupby` 对销售记录按地区分组，统计每组的数量和总额
 4. **无限编号**：用 `count` 和 `zip` 给多段数据自动编号
 
-## 📊 速查表
-
-| 工具 | 用途 | 关键特性 |
-|------|------|----------|
-| `chain` | 串联迭代器 | 不创建中间列表 |
-| `chain.from_iterable` | 扁平化嵌套 | O(n) 复杂度 |
-| `product` | 笛卡尔积 | `repeat=n` 自身积 |
-| `combinations` | 无序组合 | C(n, k) = n!/(k!(n-k)!) |
-| `permutations` | 有序排列 | P(n, k) = n!/(n-k)! |
-| `combinations_with_replacement` | 可重复组合 | C(n+k-1, k) |
-| `accumulate` | 累积运算 | 默认累加，可指定函数 |
-| `groupby` | 相邻分组 | 需先排序或全局分组用 defaultdict |
-| `islice` | 切片迭代器 | 处理无限/大序列 |
-| `starmap` | 解包参数 | 元组→多参数调用 |
-| `zip_longest` | 不等长 zip | `fillvalue` 填缺失 |
-| `count` | 无限递增 | 配合 islice/break |
-| `cycle` | 循环序列 | 配合 islice/break |
-| `repeat` | 重复对象 | 指定次数或无限 |
-| `takewhile` | 取直到失败 | 首次失败停止 |
-| `dropwhile` | 丢弃直到失败 | 之后全部保留 |
-| `filterfalse` | 反向 filter | 保留 False 的元素 |
-| `tee` | 复制迭代器 | 内部缓存，注意内存 |
-| `batched` | 分批处理 | Python 3.12+ 内置 |
-
+<CheatCard
+    title="速查表"
+    headers={["工具","用途","关键特性"]}
+    rows={[["`chain`","串联迭代器","不创建中间列表"],["`chain.from_iterable`","扁平化嵌套","O(n) 复杂度"],["`product`","笛卡尔积","`repeat=n` 自身积"],["`combinations`","无序组合","C(n, k) = n!/(k!(n-k)!)"],["`permutations`","有序排列","P(n, k) = n!/(n-k)!"],["`combinations_with_replacement`","可重复组合","C(n+k-1, k)"],["`accumulate`","累积运算","默认累加，可指定函数"],["`groupby`","相邻分组","需先排序或全局分组用 defaultdict"],["`islice`","切片迭代器","处理无限/大序列"],["`starmap`","解包参数","元组→多参数调用"],["`zip_longest`","不等长 zip","`fillvalue` 填缺失"],["`count`","无限递增","配合 islice/break"],["`cycle`","循环序列","配合 islice/break"],["`repeat`","重复对象","指定次数或无限"],["`takewhile`","取直到失败","首次失败停止"],["`dropwhile`","丢弃直到失败","之后全部保留"],["`filterfalse`","反向 filter","保留 False 的元素"],["`tee`","复制迭代器","内部缓存，注意内存"],["`batched`","分批处理","Python 3.12+ 内置"]]}
+  />
 ## 📚 延伸阅读
 
 - **[itertools 官方文档](https://docs.python.org/zh-cn/3/library/itertools.html)** - 完整 API 参考与食谱

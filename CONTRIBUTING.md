@@ -242,7 +242,6 @@ study-python/
 - [组件文档](docs/src/components/README.md)
 - [客户端模块文档](docs/src/clientModules/README.md)
 - [CSS 样式文档](docs/src/css/README.md)
-- [工具脚本文档](scripts/README.md)
 
 ## 问题反馈
 

@@ -4,6 +4,7 @@ title: 🧩 包
 description: 理解包与目录结构、__init__.py 作用、相对导入与绝对导入、命名空间包、pyproject.toml 项目结构与 src 布局，组织多模块项目。
 tags: [模块与包]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📁 包
 
@@ -618,23 +619,11 @@ loganalyzer app.log --level ERROR --json
 3. **命名空间包**：创建两个独立目录，都包含 `mycompany/tools/`，验证命名空间包合并行为
 4. **完整项目**：用 src 布局 + `pyproject.toml` 搭建一个 CLI 工具，支持 `python -m` 运行
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 普通包 | 含 `__init__.py` 的目录 | `mypackage/__init__.py` |
-| 子包 | 包内的子目录 | `mypackage/sub/__init__.py` |
-| 公开 API | `__all__` 列表 | `__all__ = ["func1", "Class1"]` |
-| 包版本 | `__version__` | `__version__ = "1.0.0"` |
-| 当前包导入 | `from . import module` | 同包内模块互引 |
-| 父包导入 | `from .. import module` | 导入上一级包的模块 |
-| 绝对导入 | `from pkg.sub import name` | PEP 8 推荐方式 |
-| 命名空间包 | 无 `__init__.py` | 多目录拼接同一命名空间 |
-| 项目入口 | `__main__.py` | `python -m mypackage` |
-| 可编辑安装 | `pip install -e .` | 开发期间源码改动立即生效 |
-| 构建配置 | `pyproject.toml` | 现代 Python 项目元数据标准 |
-| src 布局 | `src/pkgname/` | 推荐用于发布库的结构 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["普通包","含 `__init__.py` 的目录","`mypackage/__init__.py`"],["子包","包内的子目录","`mypackage/sub/__init__.py`"],["公开 API","`__all__` 列表","`__all__ = [\"func1\", \"Class1\"]`"],["包版本","`__version__`","`__version__ = \"1.0.0\"`"],["当前包导入","`from . import module`","同包内模块互引"],["父包导入","`from .. import module`","导入上一级包的模块"],["绝对导入","`from pkg.sub import name`","PEP 8 推荐方式"],["命名空间包","无 `__init__.py`","多目录拼接同一命名空间"],["项目入口","`__main__.py`","`python -m mypackage`"],["可编辑安装","`pip install -e .`","开发期间源码改动立即生效"],["构建配置","`pyproject.toml`","现代 Python 项目元数据标准"],["src 布局","`src/pkgname/`","推荐用于发布库的结构"]]}
+  />
 ## 📚 延伸阅读
 
 - **PEP 328** - 导入语法与相对导入规范

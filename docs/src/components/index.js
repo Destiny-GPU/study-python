@@ -1,10 +1,11 @@
 export { default as HeroSection } from './HeroSection';
 export { default as CardGrid } from './CardGrid';
 export { default as PyodideRunner } from './PyodideRunner';
+export { default as ParamPlayground } from './ParamPlayground';
+export { default as ControlChallenge } from './ControlChallenge';
+export { default as KnowledgeGraph } from './KnowledgeGraph';
+export { default as CheatCard } from './CheatCard';
 export { default as LearningPath } from './LearningPath';
 export { default as TrackSelector } from './TrackSelector';
 export { default as QuoteBlock } from './QuoteBlock';
 export { default as AutoRelatedDocs } from './AutoRelatedDocs';
-export { default as ProgressTracker } from './ProgressTracker';
-export { default as VisualizeButton } from './VisualizeButton';
-export { default as ChapterNav } from './ChapterNav';

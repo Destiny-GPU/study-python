@@ -6,6 +6,7 @@ tags: [项目实战]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 完整项目实战：学生成绩管理系统
 
@@ -722,42 +723,11 @@ uv run grade-manager list
 - **Rich**：终端美化输出库，让 CLI 更好看
 - **Poetry / PDM**：更强大的 Python 打包和依赖管理工具
 
-## 📊 速查表
-
-### 项目结构模板
-
-```text title="项目目录"
-my_project/
-├── pyproject.toml          # 项目元数据和工具配置
-├── src/
-│   └── my_package/
-│       ├── __init__.py
-│       ├── models.py       # 数据模型
-│       └── core.py         # 核心逻辑
-└── tests/
-    ├── conftest.py         # 共享 fixture
-    └── test_core.py
-```
-
-### 常用 dataclass 装饰器
-
-| 装饰器 | 用途 | 示例 |
-|--------|------|------|
-| `@dataclass` | 自动生成 `__init__` 等 | `@dataclass class User: name: str` |
-| `field(default_factory=...)` | 可变默认值 | `tags: list = field(default_factory=list)` |
-| `@dataclass(frozen=True)` | 不可变实例 | `@dataclass(frozen=True) class Config` |
-| `@dataclass(slots=True)` | 节省内存 | `@dataclass(slots=True) class Point` |
-
-### argparse 常用参数
-
-| 参数 | 用途 | 示例 |
-|------|------|------|
-| `add_argument()` | 添加参数 | `parser.add_argument("--name", required=True)` |
-| `add_subparsers()` | 子命令 | `sub = parser.add_subparsers(dest="command")` |
-| `type=float` | 类型转换 | `parser.add_argument("--score", type=float)` |
-| `default=` | 默认值 | `parser.add_argument("-f", default="data.json")` |
-| `choices=` | 限定选项 | `parser.add_argument("--level", choices=["A","B","C"])` |
-
+<CheatCard
+    title="速查表"
+    headers={["装饰器","用途","示例"]}
+    rows={[["`@dataclass`","自动生成 `__init__` 等","`@dataclass class User: name: str`"],["`field(default_factory=...)`","可变默认值","`tags: list = field(default_factory=list)`"],["`@dataclass(frozen=True)`","不可变实例","`@dataclass(frozen=True) class Config`"],["`@dataclass(slots=True)`","节省内存","`@dataclass(slots=True) class Point`"]]}
+  />
 ## ✅ 本节总结
 
 本节我们从零构建了一个完整的学生成绩管理系统，核心要点包括：

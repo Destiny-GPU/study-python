@@ -46,6 +46,9 @@
   color: #9a98a8;
   margin-bottom: 2.5rem;
   font-weight: 400;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* 亮色模式副标题 */

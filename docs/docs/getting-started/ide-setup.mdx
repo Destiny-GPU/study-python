@@ -6,6 +6,7 @@ tags: [入门]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🛠️ IDE 配置指南
 
@@ -436,23 +437,11 @@ print(greet("开发者", 25))
 - **测试框架**：pytest 配置与 VS Code 集成
 - **远程开发**：VS Code Remote SSH 连接 Linux 服务器开发
 
-## 📊 速查表
-
-| 操作 | VS Code | PyCharm |
-|------|---------|---------|
-| 打开命令面板 | `Ctrl+Shift+P` | `Ctrl+Shift+A` |
-| 选择解释器 | `Python: Select Interpreter` | `Settings → Project → Python Interpreter` |
-| 格式化代码 | `Ctrl+Shift+I` | `Ctrl+Alt+L` |
-| 启动调试 | `F5` | `Shift+F9` |
-| 单步跳过 | `F10` | `F8` |
-| 单步进入 | `F11` | `F7` |
-| 单步跳出 | `Shift+F11` | `Shift+F8` |
-| 设置断点 | 点击行号左侧 | 点击行号右侧 |
-| 查找引用 | `Shift+F12` | `Alt+F7` |
-| 跳转定义 | `F12` | `Ctrl+B` |
-| 重命名 | `F2` | `Shift+F6` |
-| 运行测试 | `Ctrl+Shift+P → Python: Run Tests` | 右键测试文件 → `Run pytest` |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","VS Code","PyCharm"]}
+    rows={[["打开命令面板","`Ctrl+Shift+P`","`Ctrl+Shift+A`"],["选择解释器","`Python: Select Interpreter`","`Settings → Project → Python Interpreter`"],["格式化代码","`Ctrl+Shift+I`","`Ctrl+Alt+L`"],["启动调试","`F5`","`Shift+F9`"],["单步跳过","`F10`","`F8`"],["单步进入","`F11`","`F7`"],["单步跳出","`Shift+F11`","`Shift+F8`"],["设置断点","点击行号左侧","点击行号右侧"],["查找引用","`Shift+F12`","`Alt+F7`"],["跳转定义","`F12`","`Ctrl+B`"],["重命名","`F2`","`Shift+F6`"],["运行测试","`Ctrl+Shift+P → Python: Run Tests`","右键测试文件 → `Run pytest`"]]}
+  />
 ## ✅ 本节总结
 
 本节我们配置了 Python 开发环境，核心要点包括：

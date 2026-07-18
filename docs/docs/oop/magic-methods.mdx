@@ -6,6 +6,7 @@ tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -943,34 +944,11 @@ print(f"{vel:raw} | {vel}")  # 输出：Vector3D(10, 5, -2) | ⟨10.000, 5.000, 
 - **上下文管理器进阶**：`contextlib` 模块、`@contextmanager`、`AsyncExitStack`
 - **运算符完整清单**：反射运算、原地运算、类型转换运算的完整列表
 
-## 📊 速查表
-
-| 魔术方法 | 触发场景 | 飞行动力学示例 |
-|----------|----------|----------------|
-| `__new__` | 创建实例 | `SensorRegistry` 单例、`Position` 不可变位置 |
-| `__init__` | 初始化实例 | `self.x = x` |
-| `__str__` | `print(obj)` / `str(obj)` | `Attitude` → `"R:15.3° P:-5.2° Y:90.0°"` |
-| `__repr__` | `repr(obj)` / 容器内 | `Attitude(roll=15.3, pitch=-5.2, yaw=90.0)` |
-| `__len__` | `len(obj)` | `RotationMatrix` → 9 个元素 |
-| `__getitem__` | `obj[i]` / 切片 | `RotationMatrix[0, 1]` 访问矩阵元素 |
-| `__setitem__` | `obj[i] = value` | `RotationMatrix[0, 1] = 0.5` |
-| `__delitem__` | `del obj[i]` | 删除航路点 |
-| `__contains__` | `x in obj` | `1.0 in RotationMatrix` |
-| `__iter__` | `iter(obj)` / `for` | `TrajectoryGenerator` 生成航路点 |
-| `__next__` | `next(iterator)` | 推进迭代，结束抛 `StopIteration` |
-| `__eq__` | `a == b` | `StateVector` 按时间+位置判断相等 |
-| `__lt__` | `a < b` | `FlightPhase("起飞") < FlightPhase("巡航")` |
-| `__hash__` | `hash(obj)` / 字典键 | 返回整数哈希值 |
-| `__add__` | `a + b` | `Vector3D` 合成位移 |
-| `__mul__` | `a * b` | `Vector3D` 缩放速度 |
-| `__matmul__` | `a @ b` | `Vector3D` 点积（功率 P=F·v） |
-| `__iadd__` | `a += b` | `StepCounter` 仿真步递增 |
-| `__enter__` | `with obj as x` 进入 | `FlightRecorder` 开始记录 |
-| `__exit__` | `with` 块退出 | `FlightRecorder` 结束记录、处理异常 |
-| `__call__` | `obj(args)` | `StateTransition` 状态转移函数 |
-| `__bool__` | `bool(obj)` / `if obj` | `FlightEnvelope` 是否在安全包线内 |
-| `__format__` | `f"{obj:spec}"` | `FlightEnvelope` 自定义格式化 |
-
+<CheatCard
+    title="速查表"
+    headers={["魔术方法","触发场景","飞行动力学示例"]}
+    rows={[["`__new__`","创建实例","`SensorRegistry` 单例、`Position` 不可变位置"],["`__init__`","初始化实例","`self.x = x`"],["`__str__`","`print(obj)` / `str(obj)`","`Attitude` → `\"R:15.3° P:-5.2° Y:90.0°\"`"],["`__repr__`","`repr(obj)` / 容器内","`Attitude(roll=15.3, pitch=-5.2, yaw=90.0)`"],["`__len__`","`len(obj)`","`RotationMatrix` → 9 个元素"],["`__getitem__`","`obj[i]` / 切片","`RotationMatrix[0, 1]` 访问矩阵元素"],["`__setitem__`","`obj[i] = value`","`RotationMatrix[0, 1] = 0.5`"],["`__delitem__`","`del obj[i]`","删除航路点"],["`__contains__`","`x in obj`","`1.0 in RotationMatrix`"],["`__iter__`","`iter(obj)` / `for`","`TrajectoryGenerator` 生成航路点"],["`__next__`","`next(iterator)`","推进迭代，结束抛 `StopIteration`"],["`__eq__`","`a == b`","`StateVector` 按时间+位置判断相等"],["`__lt__`","`a < b`","`FlightPhase(\"起飞\") < FlightPhase(\"巡航\")`"],["`__hash__`","`hash(obj)` / 字典键","返回整数哈希值"],["`__add__`","`a + b`","`Vector3D` 合成位移"],["`__mul__`","`a * b`","`Vector3D` 缩放速度"],["`__matmul__`","`a @ b`","`Vector3D` 点积（功率 P=F·v）"],["`__iadd__`","`a += b`","`StepCounter` 仿真步递增"],["`__enter__`","`with obj as x` 进入","`FlightRecorder` 开始记录"],["`__exit__`","`with` 块退出","`FlightRecorder` 结束记录、处理异常"],["`__call__`","`obj(args)`","`StateTransition` 状态转移函数"],["`__bool__`","`bool(obj)` / `if obj`","`FlightEnvelope` 是否在安全包线内"],["`__format__`","`f\"{obj:spec}\"`","`FlightEnvelope` 自定义格式化"]]}
+  />
 ## ✅ 本节总结
 
 本节我们以飞行动力学为背景，系统学习了魔术方法，核心要点包括：

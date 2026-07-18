@@ -4,6 +4,7 @@ title: 🧩 模块
 description: 掌握 import 语句、from...import、别名导入、__name__ == '__main__'、__all__、模块搜索路径 sys.path 与 __pycache__，编写可复用的工具模块。
 tags: [模块与包]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🧩 模块
 
@@ -523,26 +524,11 @@ print(camel_to_snake("getUserById"))  # 输出：get_user_by_id
 - **命名空间包**：跨多个目录分布的同名包
 - **importlib**：动态导入模块，`importlib.import_module()` 运行时导入
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 导入模块 | `import module` | `import math` |
-| 导入名称 | `from module import name` | `from math import pi` |
-| 别名导入 | `import module as alias` | `import numpy as np` |
-| 多名称导入 | `from module import a, b` | `from math import pi, sqrt` |
-| 全部导入 | `from module import *` | ❌ 不推荐 |
-| 公开 API | `__all__ = ["func1"]` | 控制 `import *` 行为 |
-| 模块名 | `__name__` | 直接运行时为 `"__main__"` |
-| 入口守卫 | `if __name__ == "__main__":` | 避免导入副作用 |
-| 模块缓存 | `sys.modules` | 记录已加载模块 |
-| 搜索路径 | `sys.path` | 模块查找顺序 |
-| 重新加载 | `importlib.reload(mod)` | 开发调试用 |
-| 模块版本 | `module.__version__` | 查看版本号 |
-| 模块路径 | `module.__file__` | 查看文件位置 |
-| 运行模块 | `python -m module` | 推荐方式 |
-| 模块自测 | `doctest.testmod()` | 文档字符串测试 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["导入模块","`import module`","`import math`"],["导入名称","`from module import name`","`from math import pi`"],["别名导入","`import module as alias`","`import numpy as np`"],["多名称导入","`from module import a, b`","`from math import pi, sqrt`"],["全部导入","`from module import *`","❌ 不推荐"],["公开 API","`__all__ = [\"func1\"]`","控制 `import *` 行为"],["模块名","`__name__`","直接运行时为 `\"__main__\"`"],["入口守卫","`if __name__ == \"__main__\":`","避免导入副作用"],["模块缓存","`sys.modules`","记录已加载模块"],["搜索路径","`sys.path`","模块查找顺序"],["重新加载","`importlib.reload(mod)`","开发调试用"],["模块版本","`module.__version__`","查看版本号"],["模块路径","`module.__file__`","查看文件位置"],["运行模块","`python -m module`","推荐方式"],["模块自测","`doctest.testmod()`","文档字符串测试"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了 Python 模块机制，核心要点包括：

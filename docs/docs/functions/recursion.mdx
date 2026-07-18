@@ -6,6 +6,7 @@ tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # ⚙️ 递归
 
@@ -634,21 +635,11 @@ print(merge_sort([3200, 1500, 4800, 2100, 3200, 900, 5600]))
 - [sys.setrecursionlimit](https://docs.python.org/zh-cn/3/library/sys.html#sys.setrecursionlimit) - 修改递归深度限制
 - [分治算法](https://en.wikipedia.org/wiki/Divide-and-conquer_algorithm) - 分治策略详解
 
-## 📊 速查表
-
-| 概念 | 说明 | 示例 |
-|------|------|------|
-| 基线条件 | 递归终止条件 | `if altitude <= 0: return v0` |
-| 递归条件 | 调用自身处理子问题 | `return compute_max_speed(altitude - 100, ...)` |
-| 递归深度限制 | 默认 1000 层 | `sys.getrecursionlimit()` |
-| 记忆化搜索 | 缓存已计算结果 | `@functools.cache` |
-| 尾递归 | 最后一步是递归调用 | Python 不做 TCO 优化 |
-| 迭代替代 | 用循环替代递归 | `while` 循环 + 累加器 |
-| 分治算法 | 分→治→合 | 快速排序、归并排序 |
-| 决策树遍历 | 天然适合递归 | 飞行安全检查、包线验证 |
-| 汉诺塔变体 | 经典递归问题 | 飞行任务调度 `T(n) = 2*T(n-1) + 1` |
-| 延迟绑定 | 循环中闭包陷阱 | `lambda i=i: i` 修复 |
-
+<CheatCard
+    title="速查表"
+    headers={["概念","说明","示例"]}
+    rows={[["基线条件","递归终止条件","`if altitude <= 0: return v0`"],["递归条件","调用自身处理子问题","`return compute_max_speed(altitude - 100, ...)`"],["递归深度限制","默认 1000 层","`sys.getrecursionlimit()`"],["记忆化搜索","缓存已计算结果","`@functools.cache`"],["尾递归","最后一步是递归调用","Python 不做 TCO 优化"],["迭代替代","用循环替代递归","`while` 循环 + 累加器"],["分治算法","分→治→合","快速排序、归并排序"],["决策树遍历","天然适合递归","飞行安全检查、包线验证"],["汉诺塔变体","经典递归问题","飞行任务调度 `T(n) = 2*T(n-1) + 1`"],["延迟绑定","循环中闭包陷阱","`lambda i=i: i` 修复"]]}
+  />
 ## ✅ 本节总结
 
 - 递归函数必须包含**基线条件**（终止）和**递归条件**（调用自身）

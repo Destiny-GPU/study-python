@@ -6,6 +6,7 @@ tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # ⚙️ 作用域 LEGB
 
@@ -588,21 +589,11 @@ class AltitudeTracker:
 - [闭包与自由变量](https://docs.python.org/zh-cn/3/reference/datamodel.html) - Python 数据模型中的闭包说明
 - [Python 命名空间](https://docs.python.org/zh-cn/3/tutorial/classes.html#scopes-and-namespaces-example) - 命名空间示例
 
-## 📊 速查表
-
-| 概念 | 说明 | 示例 |
-|------|------|------|
-| L 局部作用域 | 函数内部定义的变量 | `def f(): alt = 10000` |
-| E 嵌套作用域 | 外层函数的局部变量 | 闭包中引用外层变量 |
-| G 全局作用域 | 模块级变量 | 文件顶层定义的变量 |
-| B 内置作用域 | Python 内置名称 | `len`、`print`、`int` |
-| global 声明 | 修改全局变量 | `global total_flights; total_flights += 1` |
-| nonlocal 声明 | 修改外层嵌套变量 | `nonlocal altitude; altitude += delta` |
-| 闭包条件 | 嵌套+引用+返回 | 工厂函数模式 |
-| 延迟绑定修复 | 默认参数立即绑定 | `lambda i=i: i` |
-| 修改 vs 绑定 | 修改内容不需声明 | `waypoints.append(1)` 不需 `global` |
-| 控制流作用域 | `if/for/while` 不创建新作用域 | 循环变量在循环外可见 |
-
+<CheatCard
+    title="速查表"
+    headers={["概念","说明","示例"]}
+    rows={[["L 局部作用域","函数内部定义的变量","`def f(): alt = 10000`"],["E 嵌套作用域","外层函数的局部变量","闭包中引用外层变量"],["G 全局作用域","模块级变量","文件顶层定义的变量"],["B 内置作用域","Python 内置名称","`len`、`print`、`int`"],["global 声明","修改全局变量","`global total_flights; total_flights += 1`"],["nonlocal 声明","修改外层嵌套变量","`nonlocal altitude; altitude += delta`"],["闭包条件","嵌套+引用+返回","工厂函数模式"],["延迟绑定修复","默认参数立即绑定","`lambda i=i: i`"],["修改 vs 绑定","修改内容不需声明","`waypoints.append(1)` 不需 `global`"],["控制流作用域","`if/for/while` 不创建新作用域","循环变量在循环外可见"]]}
+  />
 ## ✅ 本节总结
 
 - Python 用 **LEGB 规则**查找变量：Local → Enclosing → Global → Built-in

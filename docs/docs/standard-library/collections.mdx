@@ -6,6 +6,7 @@ tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🗂️ collections 容器扩展
 
@@ -668,20 +669,11 @@ stop_word_count: 9
 3. **配置管理**：用 `ChainMap` 实现"环境变量 > 配置文件 > 默认值"三级配置系统
 4. **不区分大小写字典**：用 `UserDict` 实现键不区分大小写的字典类
 
-## 📊 速查表
-
-| 容器 | 用途 | 关键特性 |
-|------|------|----------|
-| `namedtuple` | 具名元组 | 不可变、字段名访问、内存紧凑 |
-| `deque` | 双端队列 | 两端 O(1)、`maxlen` 自动淘汰 |
-| `Counter` | 计数器 | `most_common`、加减运算 |
-| `defaultdict` | 默认值字典 | 自动创建缺失键、避免 `KeyError` |
-| `OrderedDict` | 有序字典 | `move_to_end`、顺序敏感比较 |
-| `ChainMap` | 链式字典 | 多层级查询、不复制数据 |
-| `UserDict` | 字典包装类 | 安全扩展、所有方法经过 `data` |
-| `UserList` | 列表包装类 | 安全扩展、支持自定义 `append` |
-| `UserString` | 字符串包装类 | 安全扩展、可添加自定义方法 |
-
+<CheatCard
+    title="速查表"
+    headers={["容器","用途","关键特性"]}
+    rows={[["`namedtuple`","具名元组","不可变、字段名访问、内存紧凑"],["`deque`","双端队列","两端 O(1)、`maxlen` 自动淘汰"],["`Counter`","计数器","`most_common`、加减运算"],["`defaultdict`","默认值字典","自动创建缺失键、避免 `KeyError`"],["`OrderedDict`","有序字典","`move_to_end`、顺序敏感比较"],["`ChainMap`","链式字典","多层级查询、不复制数据"],["`UserDict`","字典包装类","安全扩展、所有方法经过 `data`"],["`UserList`","列表包装类","安全扩展、支持自定义 `append`"],["`UserString`","字符串包装类","安全扩展、可添加自定义方法"]]}
+  />
 ## 📚 延伸阅读
 
 - **[collections 官方文档](https://docs.python.org/zh-cn/3/library/collections.html)** - 完整 API 参考
