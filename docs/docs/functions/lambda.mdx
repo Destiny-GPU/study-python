@@ -6,6 +6,7 @@ tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
@@ -606,19 +607,11 @@ by_primary = sorted(by_secondary, key=lambda s: s["type"])         # 再按类�
 - [Python 函数式编程指南](https://docs.python.org/zh-cn/3/howto/functional.html) - 函数式编程范式
 - [PEP 572 - 海象运算符](https://peps.python.org/pep-0572/) - 赋值表达式规范
 
-## 📊 速查表
-
-| 场景 | lambda 写法 | 更优替代 |
-|------|-------------|----------|
-| 加法 | `lambda a, b: a + b` | `operator.add` |
-| 字典取值 | `lambda s: s["key"]` | `itemgetter("key")` |
-| 属性访问 | `lambda s: s.attr` | `attrgetter("attr")` |
-| 方法调用 | `lambda s: s.method()` | `methodcaller("method")` |
-| 排序 key | `lambda s: s["sampling_rate"]` | `itemgetter("sampling_rate")` |
-| 默认值工厂 | `lambda: []` | `list` 或 `defaultdict(list)` |
-| 采样间隔 | `lambda fs: 1.0 / fs` | 列表推导式 `[1.0/fs for fs in ...]` |
-| 过滤高频 | `lambda s: s["rate"] > 200` | 列表推导式 `[s for s in ... if s["rate"]>200]` |
-
+<CheatCard
+    title="速查表"
+    headers={["场景","lambda 写法","更优替代"]}
+    rows={[["加法","`lambda a, b: a + b`","`operator.add`"],["字典取值","`lambda s: s[\"key\"]`","`itemgetter(\"key\")`"],["属性访问","`lambda s: s.attr`","`attrgetter(\"attr\")`"],["方法调用","`lambda s: s.method()`","`methodcaller(\"method\")`"],["排序 key","`lambda s: s[\"sampling_rate\"]`","`itemgetter(\"sampling_rate\")`"],["默认值工厂","`lambda: []`","`list` 或 `defaultdict(list)`"],["采样间隔","`lambda fs: 1.0 / fs`","列表推导式 `[1.0/fs for fs in ...]`"],["过滤高频","`lambda s: s[\"rate\"] > 200`","列表推导式 `[s for s in ... if s[\"rate\"]>200]`"]]}
+  />
 ## ✅ 本节总结
 
 - `lambda 参数: 表达式` 创建匿名函数，主体只能是单个表达式

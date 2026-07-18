@@ -187,9 +187,7 @@ tags: [python, learning]
 | `HeroSection` | 首页英雄区域 |
 | `TypingCode` | 打字机效果代码展示 |
 | `PyodideRunner` | 浏览器内 Python 运行器 |
-| `ProgressTracker` | 学习进度追踪 |
 | `AutoRelatedDocs` | 自动相关文档推荐 |
-| `ChapterNav` | 章节导航 |
 | `LearningPath` | 学习路径展示 |
 | `QuoteBlock` | 名言引用块 |
 | `TrackSelector` | 学习路径选择器 |
@@ -202,9 +200,10 @@ CSS 按功能模块化拆分：
 
 - `_variables.css` — 设计令牌（颜色、字体、阴影）
 - `_base.css` — 基础样式
-- `_components.css` — 导航栏、侧边栏、按钮、卡片
+- `_components.css` — 组件样式（拆分为 `_navbar.css`、`_sidebar.css`、`_footer.css`、`_buttons.css`、`_cards.css`、`_alerts.css`）
 - `_doc-content.css` — 文档内容样式
 - `_pages.css` — 页面特定样式
+- `_responsive.css` — 响应式断点
 
 入口文件 `custom.css` 通过 `@import` 引入所有模块。
 

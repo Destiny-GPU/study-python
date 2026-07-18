@@ -1,0 +1,125 @@
+---
+sidebar_position: 2
+sidebar_label: '飞行器控制挑战'
+title: 飞行器控制挑战
+description: 用 Python 解决真实的飞行控制问题。
+tags: [挑战, 飞行控制, 互动]
+---
+
+import ControlChallenge from '@site/src/components/ControlChallenge';
+
+# 飞行器 Control Challenge
+
+每学完一个章节，用所学知识解决一个真实的飞行控制问题。
+
+---
+
+<ControlChallenge
+  title="挑战：计算升力系数"
+  scenario="你的无人机在高度 100m 处以 50 m/s 的速度平飞。空气密度 ρ = 1.225 kg/m³，机翼面积 S = 2.0 m²。你需要计算维持平飞所需的升力系数 CL。"
+  objective="编写函数 calculate_lift(alpha)，其中 alpha 是迎角（弧度），返回升力系数 CL = 2πα（薄翼理论小迎角近似）"
+  starterCode={`import math
+
+def calculate_lift(alpha):
+    """
+    计算升力系数 CL
+    alpha: 迎角 (弧度)
+    返回: 升力系数 CL
+
+    提示: 薄翼理论给出 CL = 2 * pi * alpha
+    """
+    # TODO: 实现这个函数
+    pass
+
+# 测试你的函数
+print(f"alpha=0.05 rad -> CL = {calculate_lift(0.05)}")
+print(f"alpha=0.10 rad -> CL = {calculate_lift(0.10)}")
+print(f"alpha=0.15 rad -> CL = {calculate_lift(0.15)}")
+`}
+  solution={`import math
+
+def calculate_lift(alpha):
+    """
+    计算升力系数 CL
+    薄翼理论: CL = 2 * pi * alpha (小迎角近似)
+    """
+    return 2 * math.pi * alpha
+
+# 测试
+print(f"alpha=0.05 rad -> CL = {calculate_lift(0.05):.4f}")
+print(f"alpha=0.10 rad -> CL = {calculate_lift(0.10):.4f}")
+print(f"alpha=0.15 rad -> CL = {calculate_lift(0.15):.4f}")`}
+  tests={[
+    { call: 'calculate_lift(0.05)', expected: [0.3, 0.33], label: 'α = 0.05 rad → CL ≈ 0.314' },
+    { call: 'calculate_lift(0.10)', expected: [0.62, 0.64], label: 'α = 0.10 rad → CL ≈ 0.628' },
+    { call: 'calculate_lift(0.15)', expected: [0.94, 0.96], label: 'α = 0.15 rad → CL ≈ 0.942' },
+  ]}
+/>
+
+---
+
+<ControlChallenge
+  title="挑战：飞行速度包线计算"
+  scenario="某型无人机的设计参数：最大升力系数 CL_max = 1.8，最小阻力系数 CD_min = 0.02，翼载 W/S = 150 N/m²，空气密度 ρ = 1.225 kg/m³。"
+  objective="编写函数 stall_speed() 返回失速速度（m/s）。失速速度是升力刚好等于重力时的速度：V_stall = sqrt(2 * W/S / (ρ * CL_max))"
+  starterCode={`import math
+
+def stall_speed():
+    """
+    计算失速速度
+    W/S = 150 N/m² (翼载)
+    rho = 1.225 kg/m³ (空气密度)
+    CL_max = 1.8 (最大升力系数)
+
+    失速速度: V = sqrt(2 * W/S / (rho * CL_max))
+    """
+    W_S = 150    # 翼载 N/m²
+    rho = 1.225  # 空气密度 kg/m³
+    CL_max = 1.8 # 最大升力系数
+
+    # TODO: 计算失速速度
+    pass
+
+print(f"失速速度: {stall_speed():.2f} m/s")
+`}
+  solution={`import math
+
+def stall_speed():
+    W_S = 150    # 翼载 N/m²
+    rho = 1.225  # 空气密度 kg/m³
+    CL_max = 1.8 # 最大升力系数
+
+    return math.sqrt(2 * W_S / (rho * CL_max))
+
+print(f"失速速度: {stall_speed():.2f} m/s")`}
+  tests={[
+    { call: 'stall_speed()', expected: [11.7, 11.8], label: '失速速度 ≈ 11.75 m/s' },
+  ]}
+/>
+
+---
+
+## 如何使用
+
+在任何教程 MDX 文件中添加挑战：
+
+```jsx
+import ControlChallenge from '@site/src/components/ControlChallenge';
+
+<ControlChallenge
+  title="挑战标题"
+  scenario="场景描述..."
+  objective="你要完成的任务..."
+  starterCode={`# 起始代码`}
+  solution={`# 参考答案`}
+  tests={[
+    { call: 'function_name(args)', expected: [min, max], label: '测试描述' },
+  ]}
+/>
+```
+
+:::tip
+- `tests` 中的 `expected` 是 `[最小值, 最大值]` 范围，允许浮点误差
+- `solution` 可选，不提供则不显示"查看答案"按钮
+- `starterCode` 中用 `# TODO` 标记需要学生填写的位置
+:::

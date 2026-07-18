@@ -5,6 +5,7 @@ description: 学习 Python 的 for 循环、range、enumerate、zip 等遍历技
 tags: [控制流]
 ---
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔀 for 循环
 
@@ -373,19 +374,11 @@ print(total)  # 1155
 - [itertools 模块](https://docs.python.org/zh-cn/3/library/itertools.html) - 高效迭代器函数库
 - [PEP 618 - zip strict](https://peps.python.org/pep-0618/) - Python 3.10+ zip 严格模式
 
-## 📊 速查表
-
-| 函数/语法 | 功能 | 示例 |
-|-----------|------|------|
-| `for x in iterable` | 遍历可迭代对象 | `for c in "abc":` |
-| `range(n)` | 生成 0~n-1 | `range(5)` → `0,1,2,3,4` |
-| `range(a, b, s)` | 带步长序列 | `range(0, 10, 2)` → `0,2,4,6,8` |
-| `enumerate(seq)` | 索引+元素 | `enumerate(["a","b"])` → `(0,"a"),(1,"b")` |
-| `zip(a, b)` | 并行遍历 | `zip([1,2], ["a","b"])` → `(1,"a"),(2,"b")` |
-| `zip(..., strict=True)` | 严格长度检查 | 长度不一致时抛异常 |
-| `for...else` | 正常结束执行 | 未被 `break` 打断时执行 |
-| `[x for x in seq]` | 列表推导式 | `[i**2 for i in range(5)]` |
-
+<CheatCard
+    title="速查表"
+    headers={["函数/语法","功能","示例"]}
+    rows={[["`for x in iterable`","遍历可迭代对象","`for c in \"abc\":`"],["`range(n)`","生成 0~n-1","`range(5)` → `0,1,2,3,4`"],["`range(a, b, s)`","带步长序列","`range(0, 10, 2)` → `0,2,4,6,8`"],["`enumerate(seq)`","索引+元素","`enumerate([\"a\",\"b\"])` → `(0,\"a\"),(1,\"b\")`"],["`zip(a, b)`","并行遍历","`zip([1,2], [\"a\",\"b\"])` → `(1,\"a\"),(2,\"b\")`"],["`zip(..., strict=True)`","严格长度检查","长度不一致时抛异常"],["`for...else`","正常结束执行","未被 `break` 打断时执行"],["`[x for x in seq]`","列表推导式","`[i**2 for i in range(5)]`"]]}
+  />
 ## ✅ 本节总结
 
 - `for` 循环遍历可迭代对象，是 Python 中最常用的循环形式

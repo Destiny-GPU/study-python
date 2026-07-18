@@ -4,6 +4,7 @@ title: 读写文件
 description: 掌握 Python 中文件读写的基础操作，包括 open 函数、with 上下文管理器、各种读写模式与编码处理。
 tags: [文件操作]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📂 读写文件
 
@@ -471,28 +472,11 @@ print(f"解密: {decrypted}")
 3. **日志过滤**：读取日志文件，过滤出包含 "ERROR" 的行并输出
 4. **编码转换**：将 GBK 编码的文件转换为 UTF-8 编码
 
-## 📊 速查表
-
-| 操作 | 方法 | 说明 |
-|------|------|------|
-| 打开文件 | `open(path, mode, encoding)` | 永远指定 encoding |
-| 安全打开 | `with open(...) as f:` | 自动关闭，异常安全 |
-| 读取全部 | `f.read()` | 适合小文件 |
-| 读取一行 | `f.readline()` | 返回含换行符的字符串 |
-| 读取所有行 | `f.readlines()` | 返回列表，占内存 |
-| 逐行迭代 | `for line in f:` | 大文件推荐 |
-| 写入字符串 | `f.write(text)` | 不自动换行 |
-| 写入多行 | `f.writelines(lines)` | 不自动换行 |
-| 分块读取 | `f.read(chunk_size)` | 控制内存占用 |
-| 文件指针 | `f.seek(pos)` / `f.tell()` | 移动/获取指针位置 |
-| 刷新缓冲 | `f.flush()` | 强制写入磁盘 |
-| 文本模式 | `'r'` / `'w'` / `'a'` / `'x'` | 默认模式 |
-| 二进制模式 | `'rb'` / `'wb'` / `'ab'` | 图片、音频等 |
-| 读写模式 | `'r+'` / `'w+'` / `'a+'` | 同时读写 |
-| 错误处理 | `errors='replace'` | 替换坏字节为 `` |
-| 错误处理 | `errors='ignore'` | 跳过坏字节 |
-| 换行控制 | `newline=''` | CSV 文件推荐 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","方法","说明"]}
+    rows={[["打开文件","`open(path, mode, encoding)`","永远指定 encoding"],["安全打开","`with open(...) as f:`","自动关闭，异常安全"],["读取全部","`f.read()`","适合小文件"],["读取一行","`f.readline()`","返回含换行符的字符串"],["读取所有行","`f.readlines()`","返回列表，占内存"],["逐行迭代","`for line in f:`","大文件推荐"],["写入字符串","`f.write(text)`","不自动换行"],["写入多行","`f.writelines(lines)`","不自动换行"],["分块读取","`f.read(chunk_size)`","控制内存占用"],["文件指针","`f.seek(pos)` / `f.tell()`","移动/获取指针位置"],["刷新缓冲","`f.flush()`","强制写入磁盘"],["文本模式","`'r'` / `'w'` / `'a'` / `'x'`","默认模式"],["二进制模式","`'rb'` / `'wb'` / `'ab'`","图片、音频等"],["读写模式","`'r+'` / `'w+'` / `'a+'`","同时读写"],["错误处理","`errors='replace'`","替换坏字节为 ``"],["错误处理","`errors='ignore'`","跳过坏字节"],["换行控制","`newline=''`","CSV 文件推荐"]]}
+  />
 ## 📚 延伸阅读
 
 - **[open() 官方文档](https://docs.python.org/zh-cn/3/library/functions.html#open)** - 完整参数说明

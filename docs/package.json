@@ -22,9 +22,11 @@
     "@docusaurus/faster": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.2",
     "@docusaurus/theme-mermaid": "^3.10.2",
+    "@easyops-cn/docusaurus-search-local": "^0.55.2",
     "@mdx-js/react": "^3.0.0",
     "@uiw/react-codemirror": "^4.25.11",
     "clsx": "^2.0.0",
+    "lunr-languages": "^1.20.0",
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -32,8 +34,6 @@
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.10.2",
     "@docusaurus/types": "^3.10.2",
-    "@easyops-cn/docusaurus-search-local": "^0.55.2",
-    "lunr-languages": "^1.20.0",
     "markdownlint-cli2": "^0.23.0"
   },
   "browserslist": {

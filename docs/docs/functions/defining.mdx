@@ -6,6 +6,7 @@ tags: [函数]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # ⚙️ 定义与调用函数
 
@@ -481,21 +482,11 @@ if __name__ == "__main__":
 - [PEP 484 - 类型提示](https://peps.python.org/pep-0484/) - 类型注解规范
 - [typing 模块文档](https://docs.python.org/zh-cn/3/library/typing.html) - 类型提示高级用法
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 定义函数 | `def name(params):` | `def add(a, b): return a + b` |
-| 返回值 | `return value` | `return x, y`（元组） |
-| 无返回值 | 隐式返回 `None` | `print()` 返回 `None` |
-| 文档字符串 | `"""doc"""` | 函数体第一行 |
-| 类型注解 | `def f(x: int) -> int:` | 参数和返回值标注 |
-| 联合类型 | `X \| Y` (3.10+) | `int \| None` |
-| 函数赋值 | `f = func` | `yell = shout` |
-| 函数传参 | `apply(func, arg)` | `map(str, [1,2,3])` |
-| 函数返回 | `return func` | 工厂函数模式 |
-| 入口判断 | `if __name__ == "__main__":` | 脚本入口 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["定义函数","`def name(params):`","`def add(a, b): return a + b`"],["返回值","`return value`","`return x, y`（元组）"],["无返回值","隐式返回 `None`","`print()` 返回 `None`"],["文档字符串","`\"\"\"doc\"\"\"`","函数体第一行"],["类型注解","`def f(x: int) -> int:`","参数和返回值标注"],["联合类型","`X \\","Y` (3.10+)","`int \\","None`"],["函数赋值","`f = func`","`yell = shout`"],["函数传参","`apply(func, arg)`","`map(str, [1,2,3])`"],["函数返回","`return func`","工厂函数模式"],["入口判断","`if __name__ == \"__main__\":`","脚本入口"]]}
+  />
 ## ✅ 本节总结
 
 - 使用 `def` 定义函数，通过函数名加括号调用

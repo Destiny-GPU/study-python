@@ -6,6 +6,7 @@ tags: [函数, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # ⚙️ 装饰器
 
@@ -778,21 +779,11 @@ print(f"频率点数：{len(freqs)}")
 - [functools.cache 文档](https://docs.python.org/zh-cn/3/library/functools.html#functools.cache) - 缓存装饰器
 - [contextlib.contextmanager](https://docs.python.org/zh-cn/3/library/contextlib.html#contextlib.contextmanager) - 上下文管理器装饰器
 
-## 📊 速查表
-
-| 装饰器 | 功能 | 示例 |
-|--------|------|------|
-| `@wraps(func)` | 保留原函数元信息 | 装饰器内部使用 |
-| `@staticmethod` | 静态方法 | `SignalUtils.snr_db(100, 1)` |
-| `@classmethod` | 类方法/工厂方法 | `SensorCalibration.from_sensor_config("IMU_01", data)` |
-| `@property` | 属性访问器 | `filter.nyquist_freq`（无需括号） |
-| `@cache` | 无界缓存 | `@cache def design_filter(...)` |
-| `@lru_cache(maxsize)` | LRU 缓存 | `@lru_cache(64)` |
-| `@dataclass` | 自动生成方法 | `@dataclass class FilterConfig: ...` |
-| `@contextmanager` | 上下文管理器 | `with signal_capture("IMU", 2.0): ...` |
-| 带参数装饰器 | 三层嵌套 | `@smooth(window_size=5)` |
-| 装饰器叠加 | 从下往上装饰 | `@normalize @add_timestamp def f` |
-
+<CheatCard
+    title="速查表"
+    headers={["装饰器","功能","示例"]}
+    rows={[["`@wraps(func)`","保留原函数元信息","装饰器内部使用"],["`@staticmethod`","静态方法","`SignalUtils.snr_db(100, 1)`"],["`@classmethod`","类方法/工厂方法","`SensorCalibration.from_sensor_config(\"IMU_01\", data)`"],["`@property`","属性访问器","`filter.nyquist_freq`（无需括号）"],["`@cache`","无界缓存","`@cache def design_filter(...)`"],["`@lru_cache(maxsize)`","LRU 缓存","`@lru_cache(64)`"],["`@dataclass`","自动生成方法","`@dataclass class FilterConfig: ...`"],["`@contextmanager`","上下文管理器","`with signal_capture(\"IMU\", 2.0): ...`"],["带参数装饰器","三层嵌套","`@smooth(window_size=5)`"],["装饰器叠加","从下往上装饰","`@normalize @add_timestamp def f`"]]}
+  />
 ## ✅ 本节总结
 
 - 装饰器本质是接收函数、返回函数的高阶函数，是闭包的经典应用

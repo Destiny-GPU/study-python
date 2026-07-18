@@ -270,34 +270,3 @@
   margin: 0 auto;
   line-height: 1.7;
 }
-
-/* ==========================================
-   Responsive Design
-   ========================================== */
-
-@media (max-width: 996px) {
-  .navbar {
-    background: var(--ifm-background-color);
-    backdrop-filter: none;
-  }
-
-  .sidebar {
-    backdrop-filter: blur(20px);
-  }
-
-  .theme-doc-markdown h1 {
-    font-size: 2.5rem;
-  }
-
-  .theme-doc-markdown h2 {
-    font-size: 1.875rem;
-  }
-
-  .theme-doc-markdown h3 {
-    font-size: 1.5rem;
-  }
-
-  .footer {
-    padding: 3rem 0 2rem;
-  }
-}

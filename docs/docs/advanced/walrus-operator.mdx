@@ -6,6 +6,7 @@ tags: [进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 海象运算符
 
@@ -654,17 +655,11 @@ print(f"\n总共 {chunks_count} 块，{total_bytes} 字节")
 3. **文件读取循环**：用 `while (chunk := f.read(n)):` 实现分块读取
 4. **推导式过滤**：用 `:=` 在列表推导式中复用计算结果，避免重复调用函数
 
-## 📊 速查表
-
-| 场景 | 传统写法 | 海象运算符写法 |
-|------|---------|---------------|
-| if 条件 | `n = func(); if n > 0:` | `if (n := func()) > 0:` |
-| while 循环 | `line = read(); while line:` | `while (line := read()):` |
-| 推导式 | `[f(n) for n in nums if f(n) > 0]` | `[y for n in nums if (y := f(n)) > 0]` |
-| 正则匹配 | `m = re.match(...); if m:` | `if (m := re.match(...)):` |
-| 字典 get | `v = d.get(k); if v:` | `if (v := d.get(k)):` |
-| 异常信息 | `except Exception as e:` | 不适用（已有 as 语法） |
-
+<CheatCard
+    title="速查表"
+    headers={["场景","传统写法","海象运算符写法"]}
+    rows={[["if 条件","`n = func(); if n > 0:`","`if (n := func()) > 0:`"],["while 循环","`line = read(); while line:`","`while (line := read()):`"],["推导式","`[f(n) for n in nums if f(n) > 0]`","`[y for n in nums if (y := f(n)) > 0]`"],["正则匹配","`m = re.match(...); if m:`","`if (m := re.match(...)):`"],["字典 get","`v = d.get(k); if v:`","`if (v := d.get(k)):`"],["异常信息","`except Exception as e:`","不适用（已有 as 语法）"]]}
+  />
 ## 📚 延伸阅读
 
 - **[PEP 572](https://peps.python.org/pep-0572/)** - 海象运算符规范

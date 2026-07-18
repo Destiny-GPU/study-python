@@ -6,6 +6,7 @@ tags: [面向对象]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🏗️ 继承
 
@@ -804,23 +805,11 @@ LowPassFilter 的 MRO: ['LowPassFilter', 'FrequencyFilter', 'SignalFilter', 'ABC
 - **类型系统**：`typing.Protocol` 实现结构子类型，`typing.cast` 类型转换
 - **元类**：`type` 元类与自定义元类，控制类的创建过程
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 单继承 | `class Child(Parent):` | `class LowPassFilter(FrequencyFilter):` |
-| 方法重写 | 重新定义同名方法 | `def apply(self, x, fs): ...` |
-| 调用父类 | `super().method()` | `super().__init__(cutoff)` |
-| 多继承 | `class Child(A, B):` | `class CachedFilter(Loggable, Cacheable):` |
-| 查看 MRO | `Class.__mro__` 或 `Class.mro()` | `LowPassFilter.__mro__` |
-| 实例检查 | `isinstance(obj, cls)` | `isinstance(lpf, SignalFilter)` |
-| 子类检查 | `issubclass(sub, sup)` | `issubclass(LowPassFilter, SignalFilter)` |
-| 抽象基类 | `class X(ABC):` | `class SignalFilter(ABC):` |
-| 抽象方法 | `@abstractmethod` | `@abstractmethod def apply(self, x, fs): ...` |
-| Mixin | 以 `Mixin` 结尾的类 | `class LoggableMixin:` |
-| 协作式多继承 | `super()` + `**kwargs` | 菱形继承推荐写法 |
-| 精确类型匹配 | `type(obj) is cls` | 不匹配子类 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["单继承","`class Child(Parent):`","`class LowPassFilter(FrequencyFilter):`"],["方法重写","重新定义同名方法","`def apply(self, x, fs): ...`"],["调用父类","`super().method()`","`super().__init__(cutoff)`"],["多继承","`class Child(A, B):`","`class CachedFilter(Loggable, Cacheable):`"],["查看 MRO","`Class.__mro__` 或 `Class.mro()`","`LowPassFilter.__mro__`"],["实例检查","`isinstance(obj, cls)`","`isinstance(lpf, SignalFilter)`"],["子类检查","`issubclass(sub, sup)`","`issubclass(LowPassFilter, SignalFilter)`"],["抽象基类","`class X(ABC):`","`class SignalFilter(ABC):`"],["抽象方法","`@abstractmethod`","`@abstractmethod def apply(self, x, fs): ...`"],["Mixin","以 `Mixin` 结尾的类","`class LoggableMixin:`"],["协作式多继承","`super()` + `**kwargs`","菱形继承推荐写法"],["精确类型匹配","`type(obj) is cls`","不匹配子类"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了继承机制，核心要点包括：

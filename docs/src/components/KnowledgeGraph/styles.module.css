@@ -1,0 +1,180 @@
+.wrapper {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-radius-lg);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  background: var(--ifm-background-color);
+  box-shadow: var(--ifm-shadow-md);
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-surface-color);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-radius-sm);
+  background: var(--ifm-card-background-color);
+  color: var(--ifm-color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.legendItem:hover {
+  border-color: var(--cat-color, var(--ifm-color-primary));
+  color: var(--ifm-color-text-primary);
+}
+
+.legendActive {
+  border-color: var(--cat-color, var(--ifm-color-primary));
+  background: color-mix(in srgb, var(--cat-color, var(--ifm-color-primary)) 10%, transparent);
+  color: var(--ifm-color-text-primary);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* SVG Container */
+.svgContainer {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--ifm-color-primary) 3%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, color-mix(in srgb, #8b5cf6 3%, transparent) 0%, transparent 50%),
+    var(--ifm-background-color);
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+/* Edge */
+.edge {
+  pointer-events: none;
+}
+
+.edgeHidden {
+  opacity: 0 !important;
+}
+
+/* Node */
+.nodeGroup {
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.nodeHidden {
+  pointer-events: none;
+}
+
+.nodeLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+  transition: color 0.2s ease;
+}
+
+/* Zoom Controls */
+.zoomControls {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zoomBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-radius-sm);
+  background: var(--ifm-card-background-color);
+  color: var(--ifm-color-text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: var(--ifm-shadow-sm);
+}
+
+.zoomBtn:hover {
+  background: var(--ifm-color-emphasis-100);
+  color: var(--ifm-color-text-primary);
+}
+
+/* Instructions */
+.instructions {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-surface-color);
+  font-size: 0.75rem;
+  color: var(--ifm-color-text-muted);
+}
+
+/* Dark mode */
+[data-theme='dark'] .svgContainer {
+  background:
+    radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--ifm-color-primary) 5%, transparent) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, color-mix(in srgb, #8b5cf6 5%, transparent) 0%, transparent 50%),
+    var(--ifm-background-color);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .svgContainer {
+    height: 350px;
+  }
+
+  .legend {
+    padding: 0.625rem 1rem;
+    gap: 0.375rem;
+  }
+
+  .legendItem {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .instructions {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.6875rem;
+  }
+}

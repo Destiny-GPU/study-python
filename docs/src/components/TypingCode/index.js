@@ -83,7 +83,17 @@ export default function TypingCode() {
     if (!node) return;
 
     const observer = new IntersectionObserver(
-      ([entry]) => { visibleRef.current = entry.isIntersecting; },
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting;
+        // Restart rAF loop when component becomes visible again
+        if (entry.isIntersecting && !rafRef.current && !done) {
+          lastTickRef.current = performance.now();
+          rafRef.current = requestAnimationFrame(() => {
+            // Trigger a re-render to restart the loop
+            setCharIdx((c) => c);
+          });
+        }
+      },
       { threshold: 0.1 },
     );
     observer.observe(node);
@@ -94,10 +104,10 @@ export default function TypingCode() {
     if (done) return;
 
     const step = (ts) => {
-      // Skip frame updates when not visible (still keep loop alive for resume)
+      // Stop loop entirely when not visible; IntersectionObserver restarts it
       if (!visibleRef.current) {
         lastTickRef.current = ts;
-        rafRef.current = requestAnimationFrame(step);
+        rafRef.current = null;
         return;
       }
       if (lineIdx >= CODE_LINES.length) {

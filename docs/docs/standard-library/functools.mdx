@@ -6,6 +6,7 @@ tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🧮 functools 函数工具
 
@@ -909,21 +910,11 @@ fib(10) = 55
 3. **类型分派**：用 `@singledispatch` 实现一个支持多种数据类型的序列化函数
 4. **比较运算补全**：用 `@total_ordering` 实现一个可比较的版本号类（如 `1.2.3`）
 
-## 📊 速查表
-
-| 工具 | 用途 | 关键特性 |
-|------|------|----------|
-| `@cache` | 无界缓存 | Python 3.9+，参数有限时用 |
-| `@lru_cache` | LRU 淘汰缓存 | `maxsize` 限制大小，`typed` 区分类型 |
-| `@cached_property` | 方法结果缓存 | 计算一次后缓存，失效用 `del` |
-| `partial` | 偏函数 | 固定部分参数，比 lambda 更直观 |
-| `reduce` | 归约函数 | 序列→单值，能用内置就别用 |
-| `singledispatch` | 类型分派 | 按第一个参数类型分派 |
-| `singledispatchmethod` | 方法类型分派 | Python 3.11+，用于类方法 |
-| `@wraps` | 保留元信息 | 装饰器必备，保留 `__name__`/`__doc__` |
-| `@total_ordering` | 补全比较运算 | 只需 `__eq__` + `__lt__` |
-| `cmp_to_key` | 旧式比较转 key | 迁移遗留代码用 |
-
+<CheatCard
+    title="速查表"
+    headers={["工具","用途","关键特性"]}
+    rows={[["`@cache`","无界缓存","Python 3.9+，参数有限时用"],["`@lru_cache`","LRU 淘汰缓存","`maxsize` 限制大小，`typed` 区分类型"],["`@cached_property`","方法结果缓存","计算一次后缓存，失效用 `del`"],["`partial`","偏函数","固定部分参数，比 lambda 更直观"],["`reduce`","归约函数","序列→单值，能用内置就别用"],["`singledispatch`","类型分派","按第一个参数类型分派"],["`singledispatchmethod`","方法类型分派","Python 3.11+，用于类方法"],["`@wraps`","保留元信息","装饰器必备，保留 `__name__`/`__doc__`"],["`@total_ordering`","补全比较运算","只需 `__eq__` + `__lt__`"],["`cmp_to_key`","旧式比较转 key","迁移遗留代码用"]]}
+  />
 ## 📚 延伸阅读
 
 - **[functools 官方文档](https://docs.python.org/zh-cn/3/library/functools.html)** - 完整 API 参考

@@ -6,6 +6,7 @@ tags: [控制流, 进阶特性]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔀 结构化模式匹配
 
@@ -523,21 +524,11 @@ for t in tests:
 - [PEP 636 - 教程](https://peps.python.org/pep-0636/) - 官方教程
 - [dataclass 文档](https://docs.python.org/zh-cn/3/library/dataclasses.html) - 自动生成 `__match_args__`
 
-## 📊 速查表
-
-| 模式类型 | 语法 | 示例 |
-|----------|------|------|
-| 字面量 | `case 200:` | 匹配固定值 |
-| 通配符 | `case _:` | 匹配任意值（兜底） |
-| 变量绑定 | `case x:` | 捕获值到变量 |
-| 或逻辑 | `case "a" \| "b":` | 多值匹配 |
-| 序列解构 | `case [x, y]:` | 匹配二元组 |
-| 剩余元素 | `case [first, *rest]:` | 捕获剩余 |
-| 字典解构 | `case {"key": value}:` | 子集键匹配 |
-| 类解构 | `case Point(x, y):` | 属性解构 |
-| 守卫条件 | `case x if x > 0:` | 条件过滤 |
-| as 绑定 | `case (x, y) as point:` | 整体绑定 |
-
+<CheatCard
+    title="速查表"
+    headers={["模式类型","语法","示例"]}
+    rows={[["字面量","`case 200:`","匹配固定值"],["通配符","`case _:`","匹配任意值（兜底）"],["变量绑定","`case x:`","捕获值到变量"],["或逻辑","`case \"a\" \\","\"b\":`","多值匹配"],["序列解构","`case [x, y]:`","匹配二元组"],["剩余元素","`case [first, *rest]:`","捕获剩余"],["字典解构","`case {\"key\": value}:`","子集键匹配"],["类解构","`case Point(x, y):`","属性解构"],["守卫条件","`case x if x > 0:`","条件过滤"],["as 绑定","`case (x, y) as point:`","整体绑定"]]}
+  />
 ## ✅ 本节总结
 
 - `match-case`（Python 3.10+）是远比 `if-elif-else` 强大的模式匹配机制

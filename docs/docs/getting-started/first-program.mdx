@@ -6,6 +6,7 @@ tags: [入门]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🛠️ 第一个 Python 程序
 
@@ -398,27 +399,11 @@ print("完成")
 - **typer**：第三方库，用类型注解自动生成 CLI 应用
 - **REPL 增强工具**：`ipython`、`bpython` 提供更强大的交互式体验
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 打印字符串 | `print("text")` | `print("Hello")` |
-| 多值打印 | `print(a, b, c)` | `print("姓名:", name)` |
-| 自定义分隔符 | `sep="..."` | `print(2025, 7, 10, sep="-")` |
-| 自定义结尾 | `end="..."` | `print("加载中", end="...")` |
-| f-string | `f"{var}"` | `f"我叫{name}"` |
-| 格式化数字 | `f"{val:.2f}"` | `f"{3.14159:.2f}"` → `"3.14"` |
-| 单行注释 | `# 注释` | `# 这是一行注释` |
-| 多行注释 | `"""..."""` | `"""多行注释"""` |
-| 文档字符串 | 函数/类第一行 | `def f(): """doc"""` |
-| 运行脚本 | `python3 file.py` | `python3 hello.py` |
-| 命令行参数 | `sys.argv` | `sys.argv[1]` 第一个参数 |
-| 进入 REPL | `python3` | 交互式解释器 |
-| 退出 REPL | `exit()` | 或 `quit()` |
-| 查看方法 | `dir(obj)` | `dir("hello")` |
-| 查看帮助 | `help(func)` | `help(print)` |
-| 上次结果 | `_` | `100 * 2` → `200`，`_ + 1` → `201` |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["打印字符串","`print(\"text\")`","`print(\"Hello\")`"],["多值打印","`print(a, b, c)`","`print(\"姓名:\", name)`"],["自定义分隔符","`sep=\"...\"`","`print(2025, 7, 10, sep=\"-\")`"],["自定义结尾","`end=\"...\"`","`print(\"加载中\", end=\"...\")`"],["f-string","`f\"{var}\"`","`f\"我叫{name}\"`"],["格式化数字","`f\"{val:.2f}\"`","`f\"{3.14159:.2f}\"` → `\"3.14\"`"],["单行注释","`# 注释`","`# 这是一行注释`"],["多行注释","`\"\"\"...\"\"\"`","`\"\"\"多行注释\"\"\"`"],["文档字符串","函数/类第一行","`def f(): \"\"\"doc\"\"\"`"],["运行脚本","`python3 file.py`","`python3 hello.py`"],["命令行参数","`sys.argv`","`sys.argv[1]` 第一个参数"],["进入 REPL","`python3`","交互式解释器"],["退出 REPL","`exit()`","或 `quit()`"],["查看方法","`dir(obj)`","`dir(\"hello\")`"],["查看帮助","`help(func)`","`help(print)`"],["上次结果","`_`","`100 * 2` → `200`，`_ + 1` → `201`"]]}
+  />
 ## ✅ 本节总结
 
 本节我们编写了第一个 Python 程序，核心要点包括：

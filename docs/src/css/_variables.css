@@ -42,11 +42,17 @@
   --ifm-color-info-light: #60a5fa;
 
   /* 字体配置 */
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: color-mix(in srgb, var(--ifm-color-primary) 12%, transparent);
-
   --ifm-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+
+  /* 等宽字体特性：开启连字（=> >= -> 等连成符号），提升代码观感 */
+  --code-font-features: 'liga' 1, 'calt' 1, 'zero' 1;
+
+  /* 代码字号集中管控（取代散落的 0.9em 等），桌面/移动分别覆盖 */
+  --code-block-size: 1rem;
+  --code-inline-size: 0.95em;
+
+  --docusaurus-highlighted-code-line-bg: color-mix(in srgb, var(--ifm-color-primary) 12%, transparent);
 
   /* 背景色 - 暖白 (Warm Off-White) */
   --ifm-background-color: #faf9f7;

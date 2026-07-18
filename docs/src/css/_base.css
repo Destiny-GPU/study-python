@@ -2,15 +2,39 @@
  * 基础样式 - HTML、Body、滚动条
  */
 
+/* 自托管等宽字体（JetBrains Mono），摆脱 Google Fonts CDN 在国内加载慢/失败的问题。
+   路径为 Docusaurus 的 static 目录，构建后位于站点根 /fonts/ 下。 */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2');
+}
+
 html {
   scroll-behavior: smooth;
-  font-size: 18px;
+  font-size: 19px;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
   font-family: var(--ifm-font-family-base);
-  font-size: 1.125rem;
+  font-size: 1.2rem;
   line-height: 1.9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -51,4 +75,25 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* 全站键盘 focus 指示器 */
+:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ifm-color-primary);
+  outline-offset: 2px;
+}
+
+input[type="range"]:focus-visible {
+  outline: none;
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ifm-color-primary) 40%, transparent);
 }

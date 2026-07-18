@@ -10,18 +10,18 @@ const editUrl = 'https://github.com/Destiny-GPU/study-python/tree/main/docs/';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'Study Python',
-  tagline: '从入门到精通的 Python 系统学习之旅',
+  title: 'Destiny',
+  tagline: '代码示例 + 实战项目 + 学习笔记',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: {
       removeLegacyPostBuildHeadAttribute: true,
-      useCssCascadeLayers: true,
+      useCssCascadeLayers: false,
       siteStorageNamespacing: true,
       fasterByDefault: true,
-      mdx1CompatDisabledByDefault: true,
+      mdx1CompatDisabledByDefault: false,
     },
     faster: true,
   },
@@ -38,7 +38,7 @@ const config = {
 
   titleDelimiter: ' · ',
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'warn',
 
   // 即使不使用国际化，也可以用此字段设置 html lang
   i18n: {
@@ -100,40 +100,9 @@ const config = {
     }],
   ],
 
-  stylesheets: [
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
-  ],
-
-  headTags: [
-    {
-      tagName: 'link',
-      attributes: {
-        rel: 'preconnect',
-        href: 'https://fonts.googleapis.com',
-      },
-    },
-    {
-      tagName: 'link',
-      attributes: {
-        rel: 'preconnect',
-        href: 'https://fonts.gstatic.com',
-        crossorigin: true,
-      },
-    },
-    {
-      tagName: 'link',
-      attributes: {
-        rel: 'preload',
-        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap',
-        as: 'style',
-      },
-    },
-  ],
-
   clientModules: [
     require.resolve('./src/clientModules/progressBar.js'),
     require.resolve('./src/clientModules/constellation.js'),
-    require.resolve('./src/clientModules/progressTracker.js'),
   ],
 
   themeConfig:
@@ -144,22 +113,65 @@ const config = {
         {name: 'author', content: 'Destiny - 自动控制 + 强化学习博士'},
         {name: 'keywords', content: 'Python, 强化学习, 飞行控制, 深度学习, 自动控制, 智能决策'},
         {property: 'og:type', content: 'website'},
-        {property: 'og:title', content: 'Study Python - 从入门到精通的 Python 系统学习之旅'},
-        {property: 'og:description', content: '现代 Python 学习指南，从零开始到高级特性，包含丰富的代码示例和实战项目。'},
-        {property: 'og:image', content: 'https://study-python-zj.pages.dev/img/docusaurus-social-card.jpg'},
+        {property: 'og:title', content: 'Python 系统学习指南 · Destiny'},
+        {property: 'og:description', content: '从入门到精通的 Python 系统学习之旅~'},
+        {property: 'og:image', content: '/img/docusaurus-social-card.jpg'},
+        {property: 'og:image:width', content: '1200'},
+        {property: 'og:image:height', content: '630'},
         {name: 'twitter:card', content: 'summary_large_image'},
         {name: 'twitter:site', content: '@Destiny_GPU'},
-        {name: 'twitter:title', content: 'Study Python - 从入门到精通的 Python 系统学习之旅'},
-        {name: 'twitter:description', content: '现代 Python 学习指南，从零开始到高级特性，包含丰富的代码示例和实战项目。'},
-        {name: 'twitter:image', content: 'https://study-python-zj.pages.dev/img/docusaurus-social-card.jpg'},
+        {name: 'twitter:title', content: 'Python 系统学习指南 · Destiny'},
+        {name: 'twitter:description', content: '从入门到精通的 Python 系统学习之旅~'},
+        {name: 'twitter:image', content: '/img/docusaurus-social-card.jpg'},
       ],
       colorMode: {
         respectPrefersColorScheme: true,
       },
       mermaid: {
         theme: {
-          light: 'neutral',
+          light: 'base',
           dark: 'dark',
+        },
+        options: {
+          fontSize: 15,
+          themeVariables: {
+            fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+            primaryColor: '#e0e7ff',
+            primaryTextColor: '#1a1a2e',
+            primaryBorderColor: '#4a6cf7',
+            lineColor: '#9a98a8',
+            secondaryColor: '#dcfce7',
+            tertiaryColor: '#fef3c7',
+            noteBkgColor: '#fef9c3',
+            noteTextColor: '#1a1a2e',
+            noteBorderColor: '#f59e0b',
+            actorBkg: '#e0e7ff',
+            actorBorder: '#4a6cf7',
+            actorTextColor: '#1a1a2e',
+            signalColor: '#5a5a6e',
+            signalTextColor: '#5a5a6e',
+            clusterBkg: '#f3f1ed',
+            clusterBorder: '#d0cec8',
+          },
+          darkThemeVariables: {
+            fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
+            primaryColor: '#1e3a5f',
+            primaryTextColor: '#e2e8f0',
+            primaryBorderColor: '#6d8efb',
+            lineColor: '#6d8efb',
+            secondaryColor: '#1e293b',
+            tertiaryColor: '#0f172a',
+            noteBkgColor: '#1e293b',
+            noteTextColor: '#e2e8f0',
+            noteBorderColor: '#f59e0b',
+            actorBkg: '#1e3a5f',
+            actorBorder: '#6d8efb',
+            actorTextColor: '#e2e8f0',
+            signalColor: '#94a3b8',
+            signalTextColor: '#94a3b8',
+            clusterBkg: '#1e293b',
+            clusterBorder: '#334155',
+          },
         },
       },
       navbar: {

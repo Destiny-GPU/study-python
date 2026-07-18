@@ -5,6 +5,7 @@ description: 学习 Python 中 if/elif/else 条件判断语句、条件表达式
 tags: [控制流]
 ---
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔀 条件语句
 
@@ -309,18 +310,11 @@ for s in (95, 82, 73, 60, 45, 120, -5):
 - [Python 真值测试文档](https://docs.python.org/zh-cn/3/library/stdtypes.html#truth-value-testing) - 官方真值规则说明
 - [PEP 8 - 编程建议](https://peps.python.org/pep-0008/#programming-recommendations) - 条件语句的最佳实践
 
-## 📊 速查表
-
-| 语法 | 功能 | 示例 |
-|------|------|------|
-| `if condition:` | 条件判断 | `if x > 0: print("正数")` |
-| `if-else` | 两分支 | `x if cond else y` |
-| `if-elif-else` | 多分支 | `if/elif/else` 链式判断 |
-| `x if c else y` | 三元运算符 | `"成年" if age>=18 else "未成年"` |
-| `and or not` | 逻辑运算 | `x > 0 and x < 100` |
-| `if container:` | 真值测试 | `if items:` 判断非空 |
-| `a and b` | 短路求值 | `items and items[0]` |
-
+<CheatCard
+    title="速查表"
+    headers={["语法","功能","示例"]}
+    rows={[["`if condition:`","条件判断","`if x > 0: print(\"正数\")`"],["`if-else`","两分支","`x if cond else y`"],["`if-elif-else`","多分支","`if/elif/else` 链式判断"],["`x if c else y`","三元运算符","`\"成年\" if age>=18 else \"未成年\"`"],["`and or not`","逻辑运算","`x > 0 and x < 100`"],["`if container:`","真值测试","`if items:` 判断非空"],["`a and b`","短路求值","`items and items[0]`"]]}
+  />
 ## ✅ 本节总结
 
 - Python 用 `if` / `elif` / `else` 实现分支判断，依靠缩进划分代码块

@@ -56,18 +56,23 @@ docs/
 │   │   ├── HeroSection/       # 英雄区域
 │   │   ├── TypingCode/        # 打字机效果
 │   │   ├── PyodideRunner/     # Python 运行器
-│   │   ├── ProgressTracker/   # 进度追踪
 │   │   ├── AutoRelatedDocs/   # 相关文档推荐
-│   │   ├── ChapterNav/        # 章节导航
 │   │   ├── LearningPath/      # 学习路径
 │   │   ├── QuoteBlock/        # 名言引用
 │   │   └── TrackSelector/     # 路径选择
 │   ├── css/                   # 样式文件 (模块化)
 │   │   ├── _variables.css     # 设计令牌
 │   │   ├── _base.css          # 基础样式
-│   │   ├── _components.css    # 组件样式
+│   │   ├── _components.css    # 组件样式入口
+│   │   │   ├── _navbar.css    # 导航栏
+│   │   │   ├── _sidebar.css   # 侧边栏
+│   │   │   ├── _footer.css    # 页脚
+│   │   │   ├── _buttons.css   # 按钮
+│   │   │   ├── _cards.css     # 卡片
+│   │   │   └── _alerts.css    # 提示框
 │   │   ├── _doc-content.css   # 文档内容样式
 │   │   ├── _pages.css         # 页面样式
+│   │   ├── _responsive.css    # 响应式断点
 │   │   └── custom.css         # 入口文件
 │   ├── clientModules/         # 客户端脚本
 │   │   ├── constellation.js   # 星座动画入口
@@ -79,7 +84,7 @@ docs/
 │   │   ├── doc-tags.json      # 文档标签
 │   │   └── quotes.js          # 名言数据
 │   ├── hooks/                 # React Hooks
-│   │   └── useScrollReveal.js # 滚动显示动画
+│   │   └── useTheme.js        # 主题检测
 │   ├── pages/                 # 自定义页面
 │   └── theme/                 # Docusaurus 主题覆盖
 ├── static/                    # 静态资源
@@ -149,7 +154,7 @@ const DOC_ORDER = {
 
 - `_variables.css` — 设计令牌（颜色、字体、阴影、间距）
 - `_base.css` — 基础样式（重置、排版、工具类）
-- `_components.css` — 组件样式（导航栏、侧边栏、按钮、卡片）
+- `_components.css` — 组件样式（拆分为 `_navbar.css`、`_sidebar.css`、`_footer.css`、`_buttons.css`、`_cards.css`、`_alerts.css`）
 - `_doc-content.css` — 文档内容样式（代码块、表格、提示框）
 - `_pages.css` — 页面特定样式（首页、关于页）
 
@@ -189,7 +194,6 @@ ComponentName/
 | `HeroSection` | 首页英雄区域 | `src/components/HeroSection/` |
 | `TypingCode` | 打字机效果 | `src/components/TypingCode/` |
 | `PyodideRunner` | Python 代码运行 | `src/components/PyodideRunner/` |
-| `ProgressTracker` | 进度追踪 | `src/components/ProgressTracker/` |
 | `AutoRelatedDocs` | 相关文档推荐 | `src/components/AutoRelatedDocs/` |
 
 详细组件文档请查看 [src/components/README.md](src/components/README.md)。

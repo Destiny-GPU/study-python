@@ -6,6 +6,7 @@ tags: [进阶特性, 基础语法]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🚀 Pythonic 编程哲学
 
@@ -279,19 +280,11 @@ def process_data(data):
 3. **上下文管理器**：实现一个自定义的计时器上下文管理器
 4. **解包技巧**：用解包简化函数返回值的处理
 
-## 📊 速查表
-
-| 原则 | Pythonic ✅ | Non-Pythonic ❌ |
-|------|------------|----------------|
-| 可读性 | `if user.is_active:` | `if user.is_active == True:` |
-| EAFP | `try: d[k] except KeyError:` | `if k in d: d[k]` |
-| 推导式 | `[x**2 for x in nums]` | `for x in nums: result.append(x**2)` |
-| 解包 | `a, b = b, a` | `temp = a; a = b; b = temp` |
-| 上下文管理 | `with open(f) as fp:` | `fp = open(f); ...; fp.close()` |
-| 空值判断 | `if not lst:` | `if len(lst) == 0:` |
-| 字符串拼接 | `''.join(parts)` | `s = ''; for p in parts: s += p` |
-| 默认值 | `d.get(k, default)` | `if k in d: d[k] else: default` |
-
+<CheatCard
+    title="速查表"
+    headers={["原则","Pythonic ✅","Non-Pythonic ❌"]}
+    rows={[["可读性","`if user.is_active:`","`if user.is_active == True:`"],["EAFP","`try: d[k] except KeyError:`","`if k in d: d[k]`"],["推导式","`[x**2 for x in nums]`","`for x in nums: result.append(x**2)`"],["解包","`a, b = b, a`","`temp = a; a = b; b = temp`"],["上下文管理","`with open(f) as fp:`","`fp = open(f); ...; fp.close()`"],["空值判断","`if not lst:`","`if len(lst) == 0:`"],["字符串拼接","`''.join(parts)`","`s = ''; for p in parts: s += p`"],["默认值","`d.get(k, default)`","`if k in d: d[k] else: default`"]]}
+  />
 ## 📚 延伸阅读
 
 - **[Python 之禅](https://peps.python.org/pep-0020/)** - PEP 20

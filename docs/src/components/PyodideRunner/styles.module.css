@@ -58,6 +58,22 @@
   box-shadow: var(--ifm-shadow-md);
 }
 
+/* Breathing glow — stops after first run */
+.breathe {
+  animation: breathe 2.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 108, 247, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(74, 108, 247, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathe {
+    animation: none;
+  }
+}
+
 .runButton:disabled {
   opacity: 0.7;
   cursor: not-allowed;

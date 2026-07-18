@@ -45,6 +45,7 @@ docs/.docusaurus/
 .trae/
 .mimocode/
 .opencode/
+memory/
 docs/compose/
 research/
 

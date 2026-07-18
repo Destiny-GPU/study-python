@@ -167,11 +167,11 @@ function generateCategorySidebar(dirName) {
     const existing = new Set(getDocIds(dirName));
     docIds = order.filter(id => existing.has(id));
     // 追加配置中没有但文件中存在的（新文件忘记加到配置）
-    for (const id of getDocIds(dirName)) {
-      if (!docIds.includes(id)) {
-        docIds.push(id);
-      }
+    const unordered = getDocIds(dirName).filter(id => !docIds.includes(id));
+    if (unordered.length > 0) {
+      console.warn(`[sidebars] ${dirName}: 以下文档未在 DOC_ORDER 中配置，已追加到末尾: ${unordered.join(', ')}`);
     }
+    docIds.push(...unordered);
   } else {
     // 没有配置，按文件名排序
     docIds = getDocIds(dirName).sort();

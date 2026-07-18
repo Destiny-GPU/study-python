@@ -84,8 +84,8 @@ export default function Home() {
 
   return (
     <Layout
-      title={`${siteConfig.title} - Python 学习指南`}
-      description="现代 Python 学习指南，从零开始到高级特性"
+      title="Python 系统学习指南"
+      description="从入门到精通的 Python 系统学习之旅~"
     >
       <HomepageHeader />
       <main>

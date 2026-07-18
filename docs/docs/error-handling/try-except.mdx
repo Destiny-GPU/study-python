@@ -6,6 +6,7 @@ tags: [异常处理]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🛡️ try-except 语句
 
@@ -902,23 +903,11 @@ baro   读取成功：101325.0 Pa
 - **日志记录**：`logging.exception()` 自动记录异常堆栈，飞行日志分析必备
 - **asyncio 异常处理**：TaskGroup、ExceptionGroup 在多传感器并发采集中的应用
 
-## 📊 速查表
-
-| 语法 | 说明 | 示例 |
-|------|------|------|
-| 基本捕获 | `except Type:` | `except ValueError:` |
-| 绑定异常 | `except Type as e:` | `except KeyError as e:` |
-| 多异常元组 | `except (A, B):` | `except (KeyError, IndexError):` |
-| 成功后执行 | `else:` | try 无异常时执行 |
-| 始终执行 | `finally:` | 清理资源、关闭文件 |
-| 重新抛出 | `raise` | 保留原始 Traceback |
-| 显式链式 | `raise X from Y` | 转换异常，保留 `__cause__` |
-| 抑制链 | `raise X from None` | 隐藏原始异常 |
-| 异常组 | `ExceptionGroup(msg, [e1, e2])` | 并发场景多异常 |
-| 拆解异常组 | `except* Type:` | 3.11+ 语法 |
-| 兜底捕获 | `except Exception:` | 捕获所有普通异常 |
-| 禁止裸捕获 | ❌ `except:` | 会吞掉 KeyboardInterrupt |
-
+<CheatCard
+    title="速查表"
+    headers={["语法","说明","示例"]}
+    rows={[["基本捕获","`except Type:`","`except ValueError:`"],["绑定异常","`except Type as e:`","`except KeyError as e:`"],["多异常元组","`except (A, B):`","`except (KeyError, IndexError):`"],["成功后执行","`else:`","try 无异常时执行"],["始终执行","`finally:`","清理资源、关闭文件"],["重新抛出","`raise`","保留原始 Traceback"],["显式链式","`raise X from Y`","转换异常，保留 `__cause__`"],["抑制链","`raise X from None`","隐藏原始异常"],["异常组","`ExceptionGroup(msg, [e1, e2])`","并发场景多异常"],["拆解异常组","`except* Type:`","3.11+ 语法"],["兜底捕获","`except Exception:`","捕获所有普通异常"],["禁止裸捕获","❌ `except:`","会吞掉 KeyboardInterrupt"]]}
+  />
 ## ✅ 本节总结
 
 本节我们系统学习了 try-except 语句，核心要点包括：

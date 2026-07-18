@@ -4,6 +4,7 @@ title: CSV 处理
 description: 使用标准库 csv 模块读写 CSV 文件，掌握 reader/writer、DictReader/DictWriter、分隔符与引号规则，以及与 pandas 的对比。
 tags: [文件操作]
 ---
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📂 CSV 处理
 
@@ -501,25 +502,11 @@ if __name__ == '__main__':
 3. **大文件处理**：用 `itertools.islice` 分批读取百万行 CSV，统计每批的平均值
 4. **数据合并**：读取两个有相同表头的 CSV，合并后去重输出
 
-## 📊 速查表
-
-| 操作 | 方法 | 说明 |
-|------|------|------|
-| 读取列表 | `csv.reader(f)` | 每行返回 list |
-| 读取字典 | `csv.DictReader(f)` | 每行返回 dict，首行为表头 |
-| 写入列表 | `csv.writer(f)` | `writerow()` / `writerows()` |
-| 写入字典 | `csv.DictWriter(f, fieldnames)` | 需指定 `fieldnames` |
-| 写表头 | `writer.writeheader()` | DictWriter 专用 |
-| 分隔符 | `delimiter=','` | 默认逗号，Excel 中文版常用 `;` |
-| 引号控制 | `quoting=csv.QUOTE_MINIMAL` | 默认，必要时加引号 |
-| 全部加引号 | `quoting=csv.QUOTE_ALL` | 所有字段都加引号 |
-| 数字加引号 | `quoting=csv.QUOTE_NONNUMERIC` | 非数字字段加引号 |
-| 不加引号 | `quoting=csv.QUOTE_NONE` | 需指定 `escapechar` |
-| 转义字符 | `escapechar='\\'` | QUOTE_NONE 时必需 |
-| 打开文件 | `newline=''` | 避免 Windows 换行问题 |
-| 编码 | `encoding='utf-8'` | 推荐，Excel 中文版用 `utf-8-sig` |
-| 分批读取 | `itertools.islice(reader, n)` | 大文件分批处理 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","方法","说明"]}
+    rows={[["读取列表","`csv.reader(f)`","每行返回 list"],["读取字典","`csv.DictReader(f)`","每行返回 dict，首行为表头"],["写入列表","`csv.writer(f)`","`writerow()` / `writerows()`"],["写入字典","`csv.DictWriter(f, fieldnames)`","需指定 `fieldnames`"],["写表头","`writer.writeheader()`","DictWriter 专用"],["分隔符","`delimiter=','`","默认逗号，Excel 中文版常用 `;`"],["引号控制","`quoting=csv.QUOTE_MINIMAL`","默认，必要时加引号"],["全部加引号","`quoting=csv.QUOTE_ALL`","所有字段都加引号"],["数字加引号","`quoting=csv.QUOTE_NONNUMERIC`","非数字字段加引号"],["不加引号","`quoting=csv.QUOTE_NONE`","需指定 `escapechar`"],["转义字符","`escapechar='\\\\'`","QUOTE_NONE 时必需"],["打开文件","`newline=''`","避免 Windows 换行问题"],["编码","`encoding='utf-8'`","推荐，Excel 中文版用 `utf-8-sig`"],["分批读取","`itertools.islice(reader, n)`","大文件分批处理"]]}
+  />
 ## 📚 延伸阅读
 
 - **[csv 官方文档](https://docs.python.org/zh-cn/3/library/csv.html)** - 完整 API 参考

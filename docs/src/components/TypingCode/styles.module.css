@@ -97,6 +97,10 @@
   50% { opacity: 0; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .cursor { animation: none; }
+}
+
 /* Syntax highlighting tokens - all reference CSS variables */
 .codeKeyword { color: var(--code-keyword); }
 .codeBuiltin { color: var(--code-builtin); }

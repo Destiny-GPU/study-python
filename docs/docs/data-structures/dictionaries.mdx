@@ -6,6 +6,7 @@ tags: [数据结构]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 📦 字典（Dict）
 
@@ -554,21 +555,11 @@ d = {1: "int_one", True: "bool_true"}
 - [collections 模块文档](https://docs.python.org/zh-cn/3/library/collections.html) - defaultdict/Counter/OrderedDict 详解
 - [typing.TypedDict 文档](https://docs.python.org/zh-cn/3/library/typing.html#typing.TypedDict) - 类型化字典
 
-## 📊 速查表
-
-| 操作 | 语法 | 示例 |
-|------|------|------|
-| 创建字典 | `{"k": v}` 或 `dict()` | `d = {"a": 1}` |
-| 访问值 | `d[key]` | `d["a"]` → `1` |
-| 安全访问 | `d.get(key, default)` | `d.get("x", 0)` |
-| 设置默认值 | `d.setdefault(k, v)` | 不存在则设置并返回 |
-| 合并字典 | `d1 | d2` | 右侧覆盖左侧 |
-| 原地合并 | `d1 |= d2` | 等价于 `d1.update(d2)` |
-| 遍历键值 | `for k, v in d.items()` | 按插入顺序 |
-| 字典推导式 | `{k: v for ...}` | `{x: x**2 for x in range(5)}` |
-| 计数 | `Counter(iterable)` | `Counter("abc")` |
-| 分组 | `defaultdict(list)` | 按条件累积元素 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","语法","示例"]}
+    rows={[["创建字典","`{\"k\": v}` 或 `dict()`","`d = {\"a\": 1}`"],["访问值","`d[key]`","`d[\"a\"]` → `1`"],["安全访问","`d.get(key, default)`","`d.get(\"x\", 0)`"],["设置默认值","`d.setdefault(k, v)`","不存在则设置并返回"],["合并字典","`d1","d2`","右侧覆盖左侧"],["原地合并","`d1","= d2`","等价于 `d1.update(d2)`"],["遍历键值","`for k, v in d.items()`","按插入顺序"],["字典推导式","`{k: v for ...}`","`{x: x**2 for x in range(5)}`"],["计数","`Counter(iterable)`","`Counter(\"abc\")`"],["分组","`defaultdict(list)`","按条件累积元素"]]}
+  />
 ## ✅ 本节总结
 
 - 字典是**键值映射**，基于哈希表，平均 O(1) 查找

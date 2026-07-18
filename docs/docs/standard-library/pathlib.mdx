@@ -6,6 +6,7 @@ tags: [标准库]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🔗 pathlib 路径库
 
@@ -729,38 +730,11 @@ Python 文件：0 个，共 0 行
 3. **路径转换**：实现一个函数，将 Windows 风格路径转换为 Linux 风格（跨平台分析）
 4. **日志清理**：查找 7 天前的 `.log` 文件并删除，使用 `stat().st_mtime` 判断时间
 
-## 📊 速查表
-
-| 操作 | 方法 | 说明 |
-|------|------|------|
-| 构造路径 | `Path("/a/b/c")` | 多段直接传参 |
-| 用户目录 | `Path.home()` | 返回 `~` 展开后的路径 |
-| 当前目录 | `Path.cwd()` | 返回当前工作目录 |
-| 拼接路径 | `base / "sub" / "file.txt"` | `/` 运算符 |
-| 文件名 | `p.name` | 完整文件名 |
-| 无扩展名 | `p.stem` | 不含最后一个扩展名 |
-| 扩展名 | `p.suffix` / `p.suffixes` | 最后一个/所有扩展名 |
-| 父目录 | `p.parent` / `p.parents` | 单层/所有父目录 |
-| 替换文件名 | `p.with_name("new.txt")` | 保持目录不变 |
-| 替换扩展名 | `p.with_suffix(".md")` | 保持文件名不变 |
-| 替换 stem | `p.with_stem("new")` | Python 3.12+ |
-| 替换父目录 | `p.with_parent("/tmp")` | Python 3.12+ |
-| 读取文本 | `p.read_text(encoding="utf-8")` | 适合小文件 |
-| 写入文本 | `p.write_text(text, encoding="utf-8")` | 覆盖写入 |
-| 查找文件 | `p.glob("*.py")` | 当前层匹配 |
-| 递归查找 | `p.rglob("*.py")` | 递归所有子目录 |
-| 判断存在 | `p.exists()` / `p.is_file()` | 是否存在/是否文件 |
-| 文件信息 | `p.stat()` | 大小、时间、权限 |
-| 创建目录 | `p.mkdir(parents=True, exist_ok=True)` | 递归创建 |
-| 删除文件 | `p.unlink(missing_ok=True)` | 3.8+ 支持 missing_ok |
-| 删除空目录 | `p.rmdir()` | 非空目录抛异常 |
-| 重命名 | `p.rename(new)` | 目标存在时行为依赖系统 |
-| 原子替换 | `p.replace(new)` | 始终覆盖，跨平台一致 |
-| 规范化 | `p.resolve()` | 解析符号链接和 `.`/`..` |
-| 相对路径 | `p.relative_to(base, walk_up=True)` | 3.12+ 支持向上回溯 |
-| 展开 ~ | `p.expanduser()` | 展开用户主目录 |
-| 遍历目录 | `p.walk()` | Python 3.12+，返回 Path 对象 |
-
+<CheatCard
+    title="速查表"
+    headers={["操作","方法","说明"]}
+    rows={[["构造路径","`Path(\"/a/b/c\")`","多段直接传参"],["用户目录","`Path.home()`","返回 `~` 展开后的路径"],["当前目录","`Path.cwd()`","返回当前工作目录"],["拼接路径","`base / \"sub\" / \"file.txt\"`","`/` 运算符"],["文件名","`p.name`","完整文件名"],["无扩展名","`p.stem`","不含最后一个扩展名"],["扩展名","`p.suffix` / `p.suffixes`","最后一个/所有扩展名"],["父目录","`p.parent` / `p.parents`","单层/所有父目录"],["替换文件名","`p.with_name(\"new.txt\")`","保持目录不变"],["替换扩展名","`p.with_suffix(\".md\")`","保持文件名不变"],["替换 stem","`p.with_stem(\"new\")`","Python 3.12+"],["替换父目录","`p.with_parent(\"/tmp\")`","Python 3.12+"],["读取文本","`p.read_text(encoding=\"utf-8\")`","适合小文件"],["写入文本","`p.write_text(text, encoding=\"utf-8\")`","覆盖写入"],["查找文件","`p.glob(\"*.py\")`","当前层匹配"],["递归查找","`p.rglob(\"*.py\")`","递归所有子目录"],["判断存在","`p.exists()` / `p.is_file()`","是否存在/是否文件"],["文件信息","`p.stat()`","大小、时间、权限"],["创建目录","`p.mkdir(parents=True, exist_ok=True)`","递归创建"],["删除文件","`p.unlink(missing_ok=True)`","3.8+ 支持 missing_ok"],["删除空目录","`p.rmdir()`","非空目录抛异常"],["重命名","`p.rename(new)`","目标存在时行为依赖系统"],["原子替换","`p.replace(new)`","始终覆盖，跨平台一致"],["规范化","`p.resolve()`","解析符号链接和 `.`/`..`"],["相对路径","`p.relative_to(base, walk_up=True)`","3.12+ 支持向上回溯"],["展开 ~","`p.expanduser()`","展开用户主目录"],["遍历目录","`p.walk()`","Python 3.12+，返回 Path 对象"]]}
+  />
 ## 📚 延伸阅读
 
 - **[pathlib 官方文档](https://docs.python.org/zh-cn/3/library/pathlib.html)** - 完整 API 参考

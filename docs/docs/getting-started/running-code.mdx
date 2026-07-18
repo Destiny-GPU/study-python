@@ -6,6 +6,7 @@ tags: [入门]
 ---
 
 import { PyodideRunner } from '@site/src/components';
+import CheatCard from '@site/src/components/CheatCard';
 
 # 🛠️ 运行 Python 代码的方式
 
@@ -501,22 +502,11 @@ print(f">>> 'hello'.upper()\n{'hello'.upper()}")
 - **IPython**：增强的 REPL，支持自动补全、魔法命令、内省
 - **pytest**：现代测试框架，`uv run pytest` 运行测试
 
-## 📊 速查表
-
-| 运行方式 | 命令 | 适用场景 |
-|----------|------|----------|
-| 运行脚本 | `python3 file.py` | 日常脚本、生产部署 |
-| 运行模块 | `python3 -m module` | 包内入口、标准库工具 |
-| 内联执行 | `python3 -c "code"` | 一行命令、临时计算 |
-| REPL | `python3` | 探索 API、试代码片段 |
-| 调试模式 | `python3 -i file.py` | 事后排查变量、即时实验 |
-| 入口惯用法 | `if __name__ == "__main__":` | 让脚本可复用、可测试 |
-| uv run | `uv run python main.py` | 现代项目运行标准方式 |
-| Jupyter | `jupyter lab` | 数据探索、教学演示 |
-| HTTP 服务器 | `python3 -m http.server` | 快速分享文件 |
-| 性能测试 | `python3 -m timeit "code"` | 测量代码执行时间 |
-| 查看文档 | `python3 -m pydoc module` | 查看模块文档 |
-
+<CheatCard
+    title="速查表"
+    headers={["运行方式","命令","适用场景"]}
+    rows={[["运行脚本","`python3 file.py`","日常脚本、生产部署"],["运行模块","`python3 -m module`","包内入口、标准库工具"],["内联执行","`python3 -c \"code\"`","一行命令、临时计算"],["REPL","`python3`","探索 API、试代码片段"],["调试模式","`python3 -i file.py`","事后排查变量、即时实验"],["入口惯用法","`if __name__ == \"__main__\":`","让脚本可复用、可测试"],["uv run","`uv run python main.py`","现代项目运行标准方式"],["Jupyter","`jupyter lab`","数据探索、教学演示"],["HTTP 服务器","`python3 -m http.server`","快速分享文件"],["性能测试","`python3 -m timeit \"code\"`","测量代码执行时间"],["查看文档","`python3 -m pydoc module`","查看模块文档"]]}
+  />
 ## ✅ 本节总结
 
 本节我们学习了多种运行 Python 代码的方式，核心要点包括：
