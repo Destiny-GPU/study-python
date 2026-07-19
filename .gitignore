@@ -39,6 +39,7 @@ pyrightconfig.json
 docs/node_modules/
 docs/build/
 docs/.docusaurus/
+docs/.wrangler/
 
 ### Agent artifacts ###
 .compose/
