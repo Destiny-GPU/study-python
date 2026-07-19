@@ -2,17 +2,19 @@
 sidebar_position: 2
 sidebar_label: '飞行器控制挑战'
 title: 飞行器控制挑战
-description: 用 Python 解决真实的飞行控制问题。
-tags: [挑战, 飞行控制, 互动]
+description: 用 Python 解决真实的飞行控制问题，从空气动力学到数值积分。
+tags: [挑战, 飞行控制, 互动, 数值方法]
 ---
 
 import ControlChallenge from '@site/src/components/ControlChallenge';
 
-# 飞行器 Control Challenge
+# 飞行器控制挑战
 
-每学完一个章节，用所学知识解决一个真实的飞行控制问题。
+每学完一个章节，用所学知识解决一个真实的飞行控制问题。挑战涵盖空气动力学、坐标变换、运动学/动力学方程和数值积分方法。
 
 ---
+
+## 1. 空气动力学基础
 
 <ControlChallenge
   title="挑战：计算升力系数"
@@ -99,27 +101,254 @@ print(f"失速速度: {stall_speed():.2f} m/s")`}
 
 ---
 
-## 如何使用
-
-在任何教程 MDX 文件中添加挑战：
-
-```jsx
-import ControlChallenge from '@site/src/components/ControlChallenge';
+## 2. 坐标系与变换
 
 <ControlChallenge
-  title="挑战标题"
-  scenario="场景描述..."
-  objective="你要完成的任务..."
-  starterCode={`# 起始代码`}
-  solution={`# 参考答案`}
+  title="挑战：机体坐标系到地理坐标系变换"
+  scenario="无人机在机体坐标系下的速度为 (u, v, w) = (20, 0, -2) m/s（u 为前向，v 为侧向，w 为下向）。当前姿态：滚转角 φ = 10°，俯仰角 θ = 5°，偏航角 ψ = 30°。"
+  objective="编写函数 body_to_earth(u, v, w, phi, theta, psi) 将机体坐标系速度变换到地理坐标系（NED: 北-东-地）。使用欧拉角旋转矩阵。"
+  starterCode={`import math
+
+def body_to_earth(u, v, w, phi, theta, psi):
+    """
+    机体坐标系 -> 地理坐标系 (NED) 速度变换
+
+    旋转矩阵 R = Rz(psi) * Ry(theta) * Rx(phi)
+
+    参数:
+        u, v, w: 机体坐标系速度 (m/s)
+        phi:   滚转角 (弧度)
+        theta: 俯仰角 (弧度)
+        psi:   偏航角 (弧度)
+
+    返回: (vn, ve, vd) 地理坐标系速度
+    """
+    # TODO: 实现旋转矩阵并计算
+    # 提示:
+    # Rx = [[1, 0, 0], [0, cos(φ), sin(φ)], [0, -sin(φ), cos(φ)]]
+    # Ry = [[cos(θ), 0, -sin(θ)], [0, 1, 0], [sin(θ), 0, cos(θ)]]
+    # Rz = [[cos(ψ), sin(ψ), 0], [-sin(ψ), cos(ψ), 0], [0, 0, 1]]
+    pass
+
+# 测试
+vn, ve, vd = body_to_earth(20, 0, -2, math.radians(10), math.radians(5), math.radians(30))
+print(f"北向: {vn:.2f} m/s, 东向: {ve:.2f} m/s, 地向: {vd:.2f} m/s")
+`}
+  solution={`import math
+
+def body_to_earth(u, v, w, phi, theta, psi):
+    """
+    机体坐标系 -> 地理坐标系 (NED) 速度变换
+    R = Rz(psi) @ Ry(theta) @ Rx(phi)
+    """
+    cp, sp = math.cos(phi), math.sin(phi)
+    ct, st = math.cos(theta), math.sin(theta)
+    cy, sy = math.cos(psi), math.sin(psi)
+
+    # 旋转矩阵 R = Rz @ Ry @ Rx
+    r00 = cy * ct
+    r01 = cy * st * sp - sy * cp
+    r02 = cy * st * cp + sy * sp
+    r10 = sy * ct
+    r11 = sy * st * sp + cy * cp
+    r12 = sy * st * cp - cy * sp
+    r20 = -st
+    r21 = ct * sp
+    r22 = ct * cp
+
+    vn = r00 * u + r01 * v + r02 * w
+    ve = r10 * u + r11 * v + r12 * w
+    vd = r20 * u + r21 * v + r22 * w
+
+    return vn, ve, vd
+
+vn, ve, vd = body_to_earth(20, 0, -2, math.radians(10), math.radians(5), math.radians(30))
+print(f"北向: {vn:.2f} m/s, 东向: {ve:.2f} m/s, 地向: {vd:.2f} m/s")`}
   tests={[
-    { call: 'function_name(args)', expected: [min, max], label: '测试描述' },
+    { call: 'body_to_earth(20, 0, -2, 0.1745, 0.0873, 0.5236)[0]', expected: [16.5, 17.5], label: '北向速度 ≈ 17.0 m/s' },
+    { call: 'body_to_earth(20, 0, -2, 0.1745, 0.0873, 0.5236)[1]', expected: [9.0, 10.2], label: '东向速度 ≈ 9.6 m/s' },
+    { call: 'body_to_earth(20, 0, -2, 0.1745, 0.0873, 0.5236)[2]', expected: [-3.8, -2.8], label: '地向速度 ≈ -3.3 m/s' },
   ]}
 />
-```
 
-:::tip
-- `tests` 中的 `expected` 是 `[最小值, 最大值]` 范围，允许浮点误差
-- `solution` 可选，不提供则不显示"查看答案"按钮
-- `starterCode` 中用 `# TODO` 标记需要学生填写的位置
-:::
+---
+
+## 3. 运动学与动力学
+
+<ControlChallenge
+  title="挑战：四旋翼运动学方程"
+  scenario="四旋翼无人机当前状态：位置 (x, z) = (0, 0) m，速度 (vx, vz) = (5, 0) m/s，姿态角 θ = 10°（俯仰）。推力 T = 15 N，质量 m = 2 kg，重力加速度 g = 9.81 m/s²。"
+  objective="编写函数 dynamics(theta, T, m, g) 返回加速度 (ax, az)。简化二维模型：ax = (T/m) * sin(θ)，az = (T/m) * cos(θ) - g"
+  starterCode={`import math
+
+def dynamics(theta, T, m, g):
+    """
+    四旋翼二维动力学方程 (简化模型)
+
+    参数:
+        theta: 俯仰角 (弧度)
+        T: 推力 (N)
+        m: 质量 (kg)
+        g: 重力加速度 (m/s²)
+
+    返回: (ax, az) 加速度 (m/s²)
+    水平: ax = (T/m) * sin(θ)
+    垂直: az = (T/m) * cos(θ) - g
+    """
+    # TODO: 计算加速度
+    pass
+
+# 测试
+ax, az = dynamics(math.radians(10), 15, 2, 9.81)
+print(f"ax = {ax:.2f} m/s², az = {az:.2f} m/s²")
+`}
+  solution={`import math
+
+def dynamics(theta, T, m, g):
+    """
+    四旋翼二维动力学方程
+    ax = (T/m) * sin(θ)  — 推力的水平分量产生水平加速度
+    az = (T/m) * cos(θ) - g  — 推力垂直分量减去重力
+    """
+    ax = (T / m) * math.sin(theta)
+    az = (T / m) * math.cos(theta) - g
+    return ax, az
+
+ax, az = dynamics(math.radians(10), 15, 2, 9.81)
+print(f"ax = {ax:.2f} m/s², az = {az:.2f} m/s²")`}
+  tests={[
+    { call: 'dynamics(0.1745, 15, 2, 9.81)[0]', expected: [1.28, 1.32], label: 'ax ≈ 1.30 m/s²' },
+    { call: 'dynamics(0.1745, 15, 2, 9.81)[1]', expected: [-2.58, -2.50], label: 'az ≈ -2.54 m/s²' },
+  ]}
+/>
+
+---
+
+## 4. 数值积分方法
+
+<ControlChallenge
+  title="挑战：欧拉法积分轨迹"
+  scenario="四旋翼从原点起飞，初始速度 (vx, vz) = (5, 0) m/s。加速度恒定 (ax, az) = (1.3, -2.5) m/s²（来自上一挑战的结果）。采样时间 dt = 0.1 s。"
+  objective="编写函数 euler_integrate(vx0, vz0, ax, az, dt, steps) 返回 steps 步后的位置 (x, z)。使用前向欧拉法：v += a*dt，p += v*dt"
+  starterCode={`def euler_integrate(vx0, vz0, ax, az, dt, steps):
+    """
+    欧拉法数值积分
+
+    参数:
+        vx0, vz0: 初始速度 (m/s)
+        ax, az:   加速度 (m/s²)，假设恒定
+        dt:       时间步长 (s)
+        steps:    积分步数
+
+    返回: (x, z) 最终位置 (m)
+
+    提示: 每步更新
+        vx = vx + ax * dt
+        vz = vz + az * dt
+        x  = x  + vx * dt
+        z  = z  + vz * dt
+    """
+    x, z = 0.0, 0.0
+    vx, vz = vx0, vz0
+
+    # TODO: 循环 steps 次，每次更新速度和位置
+    pass
+
+x, z = euler_integrate(5, 0, 1.3, -2.5, 0.1, 100)
+print(f"10s 后位置: x = {x:.2f} m, z = {z:.2f} m")
+`}
+  solution={`def euler_integrate(vx0, vz0, ax, az, dt, steps):
+    """
+    前向欧拉法: v(n+1) = v(n) + a*dt, p(n+1) = p(n) + v(n)*dt
+    """
+    x, z = 0.0, 0.0
+    vx, vz = vx0, vz0
+
+    for _ in range(steps):
+        vx += ax * dt
+        vz += az * dt
+        x += vx * dt
+        z += vz * dt
+
+    return x, z
+
+x, z = euler_integrate(5, 0, 1.3, -2.5, 0.1, 100)
+print(f"10s 后位置: x = {x:.2f} m, z = {z:.2f} m")`}
+  tests={[
+    { call: 'euler_integrate(5, 0, 1.3, -2.5, 0.1, 100)[0]', expected: [62.5, 64.5], label: 'x ≈ 63.5 m' },
+    { call: 'euler_integrate(5, 0, 1.3, -2.5, 0.1, 100)[1]', expected: [-126.0, -124.0], label: 'z ≈ -125.0 m' },
+  ]}
+/>
+
+---
+
+<ControlChallenge
+  title="挑战：四阶龙格-库塔法 (RK4)"
+  scenario="欧拉法精度有限，步长大时误差累积明显。四阶龙格-库塔法 (RK4) 是工程中最常用的高精度积分方法，截断误差为 O(dt⁵)。"
+  objective="编写函数 rk4_step(f, t, y, dt) 执行一步 RK4 积分。f(t, y) 是导数函数，y 是状态向量（列表）。"
+  starterCode={`def rk4_step(f, t, y, dt):
+    """
+    四阶龙格-库塔法 (RK4) 单步积分
+
+    k1 = f(t, y)
+    k2 = f(t + dt/2, y + dt/2 * k1)
+    k3 = f(t + dt/2, y + dt/2 * k2)
+    k4 = f(t + dt,   y + dt   * k3)
+
+    y_next = y + (dt/6) * (k1 + 2*k2 + 2*k3 + k4)
+
+    参数:
+        f:  导数函数 f(t, y) -> list[float]
+        t:  当前时间
+        y:  当前状态向量 (list)
+        dt: 时间步长
+
+    返回: 下一时刻的状态向量 (list)
+    """
+    # TODO: 实现 RK4 单步
+    pass
+
+# 测试: 简单的指数衰减 dy/dt = -y, y(0)=1
+# 解析解: y(t) = e^(-t)
+def decay(t, y):
+    return [-y[0]]
+
+y = [1.0]
+for i in range(100):
+    y = rk4_step(decay, i * 0.01, y, 0.01)
+
+print(f"数值解: y(1) = {y[0]:.6f}")
+print(f"解析解: y(1) = {2.718281828 ** (-1):.6f}")
+`}
+  solution={`def rk4_step(f, t, y, dt):
+    """
+    四阶龙格-库塔法 (RK4)
+
+    精度: O(dt⁵)，比欧拉法 O(dt²) 高四个数量级
+    """
+    k1 = f(t, y)
+    k2 = f(t + dt / 2, [yi + dt / 2 * ki for yi, ki in zip(y, k1)])
+    k3 = f(t + dt / 2, [yi + dt / 2 * ki for yi, ki in zip(y, k2)])
+    k4 = f(t + dt,     [yi + dt     * ki for yi, ki in zip(y, k3)])
+
+    y_next = [
+        yi + (dt / 6) * (ki1 + 2 * ki2 + 2 * ki3 + ki4)
+        for yi, ki1, ki2, ki3, ki4 in zip(y, k1, k2, k3, k4)
+    ]
+    return y_next
+
+# 测试: 指数衰减 dy/dt = -y, y(0)=1, 解析解 y=e^(-t)
+def decay(t, y):
+    return [-y[0]]
+
+y = [1.0]
+for i in range(100):
+    y = rk4_step(decay, i * 0.01, y, 0.01)
+
+print(f"数值解: y(1) = {y[0]:.6f}")
+print(f"解析解: y(1) = {2.718281828 ** (-1):.6f}")`}
+  tests={[
+    { call: 'rk4_step(lambda t, y: [-y[0]], 0, [1.0], 0.01)[0]', expected: [0.9900, 0.9901], label: 'RK4 单步: e^(-0.01) ≈ 0.9900' },
+    { call: 'rk4_step(lambda t, y: [y[0]], 0, [1.0], 0.1)[0]', expected: [1.1051, 1.1052], label: 'RK4 指数增长: e^(0.1) ≈ 1.1052' },
+  ]}
+/>

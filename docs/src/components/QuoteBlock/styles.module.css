@@ -5,13 +5,13 @@
   border-radius: 0 var(--ifm-radius-md) var(--ifm-radius-md) 0;
   background:
     linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--ifm-color-primary) 3%, transparent),
-      color-mix(in srgb, var(--ifm-color-primary) 8%, transparent),
-      color-mix(in srgb, var(--ifm-color-violet) 6%, transparent),
-      color-mix(in srgb, var(--ifm-color-primary) 3%, transparent)
-    ) 0% 50% / 300% 100% no-repeat;
-  animation: quoteShimmer 8s ease-in-out infinite;
+      135deg,
+      color-mix(in srgb, var(--ifm-color-primary) 12%, transparent),
+      color-mix(in srgb, var(--ifm-color-violet) 16%, transparent),
+      color-mix(in srgb, var(--ifm-color-accent) 12%, transparent),
+      color-mix(in srgb, var(--ifm-color-primary) 8%, transparent)
+    ) 0% 0% / 300% 300% no-repeat;
+  animation: quoteShimmer 6s ease infinite;
   position: relative;
   overflow: hidden;
   transition: border-color 0.3s ease;
@@ -24,18 +24,21 @@
 [data-theme='dark'] .quoteBlock {
   background:
     linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--ifm-color-primary) 5%, transparent),
-      color-mix(in srgb, var(--ifm-color-primary) 14%, transparent),
-      color-mix(in srgb, var(--ifm-color-violet) 10%, transparent),
-      color-mix(in srgb, var(--ifm-color-primary) 5%, transparent)
-    ) 0% 50% / 300% 100% no-repeat;
-  animation: quoteShimmer 8s ease-in-out infinite;
+      135deg,
+      color-mix(in srgb, var(--ifm-color-primary) 16%, transparent),
+      color-mix(in srgb, var(--ifm-color-violet) 22%, transparent),
+      color-mix(in srgb, var(--ifm-color-accent) 16%, transparent),
+      color-mix(in srgb, var(--ifm-color-primary) 10%, transparent)
+    ) 0% 0% / 300% 300% no-repeat;
+  animation: quoteShimmer 6s ease infinite;
 }
 
+/* Reuse the same keyframe as H1 so both pulse in sync */
 @keyframes quoteShimmer {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0% { background-position: 0% 0%; }
+  33% { background-position: 100% 100%; }
+  66% { background-position: 50% 0%; }
+  100% { background-position: 0% 0%; }
 }
 
 .quoteBlock::before {
@@ -46,15 +49,16 @@
   font-size: 4rem;
   font-family: Georgia, 'Times New Roman', serif;
   color: var(--ifm-color-primary);
-  opacity: 0.12;
+  opacity: 0.15;
   line-height: 1;
   pointer-events: none;
-  animation: quotePulse 4s ease-in-out infinite;
+  animation: quotePulse 6s ease infinite;
 }
 
 @keyframes quotePulse {
-  0%, 100% { opacity: 0.12; transform: scale(1); }
-  50% { opacity: 0.2; transform: scale(1.05); }
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  33% { opacity: 0.3; transform: scale(1.08); }
+  66% { opacity: 0.2; transform: scale(1.03); }
 }
 
 .quoteText {

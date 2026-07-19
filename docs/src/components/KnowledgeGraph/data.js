@@ -28,23 +28,23 @@ export const nodes = [
   { id: 'error-handling',   label: '异常处理',          category: 'intermediate', x: 480, y: 280, path: '/docs/error-handling/try-except' },
   { id: 'file-handling',    label: '文件操作',          category: 'intermediate', x: 480, y: 380, path: '/docs/file-handling/read-write' },
 
-  // 高级主题
-  { id: 'standard-library', label: '标准库',            category: 'advanced',   x: 680, y: 80,  path: '/docs/standard-library/collections' },
-  { id: 'numpy',             label: 'NumPy',            category: 'advanced',   x: 680, y: 180, path: '/docs/scientific-computing/numpy-fundamentals' },
-  { id: 'scipy',             label: 'SciPy',            category: 'advanced',   x: 680, y: 280, path: '/docs/scientific-computing/scipy-intro' },
-  { id: 'pandas',            label: 'pandas',           category: 'advanced',   x: 780, y: 180, path: '/docs/scientific-computing/pandas-intro' },
-  { id: 'matplotlib',        label: 'matplotlib',       category: 'advanced',   x: 780, y: 280, path: '/docs/scientific-computing/matplotlib-intro' },
-  { id: 'pytorch',           label: 'PyTorch',          category: 'advanced',   x: 780, y: 380, path: '/docs/scientific-computing/pytorch-intro' },
-  { id: 'typing',            label: '类型标注',          category: 'advanced',   x: 680, y: 380, path: '/docs/advanced/typing-module' },
-  { id: 'async',             label: '异步编程',          category: 'advanced',   x: 880, y: 280, path: '/docs/advanced/async-await' },
-  { id: 'decorators',        label: '装饰器',            category: 'advanced',   x: 880, y: 180, path: '/docs/functions/decorators' },
-  { id: 'generators',        label: '生成器',            category: 'advanced',   x: 880, y: 80,  path: '/docs/functions/generators' },
+  // 高级主题 — 三列间距从 100px 拉大到 160px，避免节点重叠
+  { id: 'standard-library', label: '标准库',            category: 'advanced',   x: 650, y: 80,  path: '/docs/standard-library/collections' },
+  { id: 'numpy',             label: 'NumPy',            category: 'advanced',   x: 650, y: 180, path: '/docs/scientific-computing/numpy-fundamentals' },
+  { id: 'scipy',             label: 'SciPy',            category: 'advanced',   x: 650, y: 280, path: '/docs/scientific-computing/scipy-intro' },
+  { id: 'pandas',            label: 'pandas',           category: 'advanced',   x: 810, y: 180, path: '/docs/scientific-computing/pandas-intro' },
+  { id: 'matplotlib',        label: 'matplotlib',       category: 'advanced',   x: 810, y: 280, path: '/docs/scientific-computing/matplotlib-intro' },
+  { id: 'pytorch',           label: 'PyTorch',          category: 'advanced',   x: 810, y: 380, path: '/docs/scientific-computing/pytorch-intro' },
+  { id: 'typing',            label: '类型标注',          category: 'advanced',   x: 650, y: 380, path: '/docs/advanced/typing-module' },
+  { id: 'async',             label: '异步编程',          category: 'advanced',   x: 970, y: 280, path: '/docs/advanced/async-await' },
+  { id: 'decorators',        label: '装饰器',            category: 'advanced',   x: 970, y: 180, path: '/docs/functions/decorators' },
+  { id: 'generators',        label: '生成器',            category: 'advanced',   x: 970, y: 80,  path: '/docs/functions/generators' },
 
   // 工程实践
   { id: 'testing',           label: '测试与调试',        category: 'engineering', x: 480, y: 480, path: '/docs/testing-debugging/' },
-  { id: 'threading',         label: '并行计算',          category: 'engineering', x: 680, y: 480, path: '/docs/parallel-computing/threading' },
-  { id: 'performance',       label: '性能优化',          category: 'engineering', x: 880, y: 480, path: '/docs/performance/profiling' },
-  { id: 'project',           label: '项目实战',          category: 'engineering', x: 680, y: 580, path: '/docs/project-tutorial/' },
+  { id: 'threading',         label: '并行计算',          category: 'engineering', x: 650, y: 480, path: '/docs/parallel-computing/threading' },
+  { id: 'performance',       label: '性能优化',          category: 'engineering', x: 970, y: 480, path: '/docs/performance/profiling' },
+  { id: 'project',           label: '项目实战',          category: 'engineering', x: 650, y: 580, path: '/docs/project-tutorial/' },
 ];
 
 export const edges = [

@@ -65,6 +65,21 @@
   border-radius: var(--ifm-radius-sm);
 }
 
+.groupSeparator {
+  height: 1px;
+  background: var(--ifm-color-emphasis-200);
+  margin: 0.75rem 0;
+}
+
+.groupLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ifm-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
 .slider {
   -webkit-appearance: none;
   appearance: none;
@@ -172,12 +187,13 @@
 .vizPanel {
   display: flex;
   flex-direction: column;
-  min-height: 300px;
+  min-height: 400px;
 }
 
 .chartCanvas {
   width: 100%;
-  height: 280px;
+  flex: 1;
+  min-height: 260px;
   display: block;
 }
 
@@ -185,9 +201,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 280px;
+  flex: 1;
+  min-height: 260px;
   color: var(--ifm-color-text-muted);
   font-size: 0.875rem;
+}
+
+/* Block Diagram */
+.blockDiagram {
+  padding: 1.25rem 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-surface-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blockDiagram svg {
+  width: 100%;
+  max-width: 580px;
+  height: auto;
 }
 
 .output {
@@ -200,6 +233,23 @@
   border-top: 1px solid var(--ifm-color-emphasis-200);
   max-height: 120px;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  position: relative;
+}
+
+.outputScrollable::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 16px;
+  background: linear-gradient(transparent, #1e1e2e);
+  pointer-events: none;
+}
+
+[data-theme='light'] .outputScrollable::after {
+  background: linear-gradient(transparent, #f8f9fa);
 }
 
 .output pre {

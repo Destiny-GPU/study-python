@@ -37,11 +37,11 @@ const FeatureList = [
     button: { text: '查看实践', to: '/docs/getting-started/running-code' },
   },
   {
-    id: 'community',
-    title: '强大的生态系统',
-    icon: '🌐',
-    content: 'Python 拥有丰富的第三方库和活跃的社区，从数据科学到 Web 开发，一应俱全。',
-    button: { text: '了解更多', to: '/docs/getting-started/installation' },
+    id: 'interactive',
+    title: '交互体验',
+    icon: '🎮',
+    content: '知识图谱可视化学习路径，在浏览器里直接运行 Python，通过控制挑战检验学习成果。',
+    button: { text: '进入体验', to: '/docs/demos/knowledge-graph' },
   },
   {
     id: 'about',

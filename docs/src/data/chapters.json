@@ -2,31 +2,31 @@
   "phases": [
     {
       "emoji": "📘",
-      "label": "Phase 1 · 必修基础",
+      "label": "必修基础",
       "description": "从零开始，掌握 Python 核心语法",
       "categories": ["getting-started", "basics", "control-flow", "data-structures"]
     },
     {
       "emoji": "📗",
-      "label": "Phase 2 · 核心技能",
+      "label": "核心技能",
       "description": "函数、面向对象、模块化编程",
       "categories": ["functions", "oop", "modules", "error-handling"]
     },
     {
       "emoji": "📙",
-      "label": "Phase 3 · 实用技能",
+      "label": "实用技能",
       "description": "文件操作、标准库、测试调试",
       "categories": ["file-handling", "standard-library", "testing-debugging"]
     },
     {
       "emoji": "📕",
-      "label": "Phase 4 · 科学计算",
+      "label": "科学计算",
       "description": "第三方库、并行计算、性能优化、项目实战",
       "categories": ["scientific-computing", "parallel-computing", "performance", "project-tutorial"]
     },
     {
       "emoji": "📚",
-      "label": "Phase 5 · 进阶深造",
+      "label": "进阶深造",
       "description": "类型系统、异步编程、Pythonic 哲学",
       "categories": ["advanced"]
     }

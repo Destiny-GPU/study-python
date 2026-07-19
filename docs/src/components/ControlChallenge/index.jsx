@@ -38,12 +38,28 @@ export default function ControlChallenge({
   const [showHint, setShowHint] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
   const [pythonLang, setPythonLang] = useState(null);
+  const [isOutputScrollable, setIsOutputScrollable] = useState(false);
+  const [isErrorScrollable, setIsErrorScrollable] = useState(false);
   const theme = useTheme();
   const pyodideRef = useRef(null);
+  const outputRef = useRef(null);
+  const errorRef = useRef(null);
 
   useEffect(() => {
     import('@codemirror/lang-python').then(mod => setPythonLang(() => mod.python));
   }, []);
+
+  // Check if output/error is scrollable
+  useEffect(() => {
+    [outputRef, errorRef].forEach((ref) => {
+      const el = ref.current;
+      if (el) {
+        const scrollable = el.scrollHeight > el.clientHeight;
+        if (ref === outputRef) setIsOutputScrollable(scrollable);
+        else setIsErrorScrollable(scrollable);
+      }
+    });
+  }, [output, error]);
 
   const runTests = useCallback(async () => {
     setIsRunning(true);
@@ -199,15 +215,15 @@ export default function ControlChallenge({
 
       {/* Output */}
       {output && !results && (
-        <div className={styles.output}>
-          <pre>{output}</pre>
+        <div className={`${styles.output} ${isOutputScrollable ? styles.outputScrollable : ''}`}>
+          <pre ref={outputRef}>{output}</pre>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className={styles.error}>
-          <pre>{error}</pre>
+        <div className={`${styles.error} ${isErrorScrollable ? styles.outputScrollable : ''}`}>
+          <pre ref={errorRef}>{error}</pre>
         </div>
       )}
     </div>

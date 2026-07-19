@@ -198,7 +198,7 @@ function generatePhasedSidebar() {
   return PHASES.map(phase => ({
     type: 'category',
     label: phase.label,
-    collapsed: false,
+    collapsed: true,
     items: phase.categories
       .filter(dirName => fs.existsSync(path.join(docsDir, dirName)))
       .map(dirName => generateCategorySidebar(dirName)),
@@ -208,11 +208,23 @@ function generatePhasedSidebar() {
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   tutorialSidebar: [
-    // 根级文档（intro, playground）保持原有 position 排序
+    // 根级文档
     'intro',
-    'playground',
+    'demos/knowledge-graph',
     // 五阶段分组文档
     ...generatePhasedSidebar(),
+    // 交互体验
+    {
+      type: 'category',
+      label: '🎮 交互体验',
+      collapsed: true,
+      items: [
+        'demos/control-challenge',
+        'demos/param-playground',
+        'demos/wind-disturbance',
+      ],
+    },
+    'playground',
   ],
 };
 

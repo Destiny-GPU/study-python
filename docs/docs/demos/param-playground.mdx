@@ -1,57 +1,22 @@
 ---
 sidebar_position: 1
-sidebar_label: '交互式参数调节'
-title: 交互式参数调节
-description: 拖动滑块，实时观察参数变化对结果的影响。
-tags: [交互, 可视化]
+sidebar_label: 'PID 参数调节'
+title: PID 参数调节
+description: 拖动滑块，实时观察 PID 控制器参数和被控对象参数对阶跃响应的影响。
+tags: [交互, 可视化, PID, 控制理论]
 ---
 
 import ParamPlayground from '@site/src/components/ParamPlayground';
 
-# 交互式参数调节
+# PID 参数调节
 
-拖动下方的滑块，实时观察 PID 控制器参数对阶跃响应的影响。
+拖动滑块，实时观察 PID 控制器参数和被控对象参数对阶跃响应的影响。页面包含两种典型被控对象，帮助理解不同系统的控制特性。
 
-<ParamPlayground
-  title="PID 控制器阶跃响应"
-  code={`
-import numpy as np
+## PID 控制器
 
-# PID 控制器模拟
-dt = 0.01
-t = np.arange(0, 5, dt)
-setpoint = 1.0
-y = np.zeros_like(t)
-e_sum = 0
-e_prev = 0
-
-for i in range(1, len(t)):
-    e = setpoint - y[i-1]
-    e_sum += e * dt
-    e_dot = (e - e_prev) / dt
-    u = kp * e + ki * e_sum + kd * e_dot
-    y[i] = y[i-1] + u * dt
-    e_prev = e
-
-_chart_x = t.tolist()
-_chart_y = y.tolist()
-print(f"稳态误差: {abs(setpoint - y[-1]):.4f}")
-print(f"超调量: {max(0, (max(y) - setpoint) / setpoint * 100):.1f}%")
-`}
-  controls={[
-    { id: 'kp', label: 'Kp (比例增益)', min: 0.1, max: 8, step: 0.1, default: 2.0 },
-    { id: 'ki', label: 'Ki (积分增益)', min: 0, max: 3, step: 0.05, default: 0.8 },
-    { id: 'kd', label: 'Kd (微分增益)', min: 0, max: 3, step: 0.05, default: 0.5 },
-  ]}
-  chart={{ xLabel: '时间 (s)', yLabel: '输出', title: '阶跃响应' }}
-/>
-
-## 工作原理
-
-1. **拖动滑块** 修改 PID 参数 (Kp, Ki, Kd)
-2. **代码自动执行** — Pyodide 在浏览器中运行 Python 计算
-3. **图表实时更新** — Canvas 绘制阶跃响应曲线
-4. **输出面板** 显示稳态误差和超调量
+- **Kp**：比例增益，决定对当前误差的响应强度
+- **Ki**：积分增益，消除稳态误差，但可能引起振荡
+- **Kd**：微分增益，预测误差趋势，抑制超调
 
 ## 调参技巧
 
@@ -60,5 +25,127 @@ print(f"超调量: {max(0, (max(y) - setpoint) / setpoint * 100):.1f}%")
 - **增大 Kd** → 抑制超调，但对噪声敏感
 
 :::tip
-尝试找到一组参数，使超调量小于 5% 且稳态误差接近 0。这是控制工程中的经典调参问题。
+每个示例都分为"PID 控制器"和"被控对象"两组参数。先固定 PID 调被控对象，再固定被控对象调 PID — 这就是控制工程中"建模"和"调参"两个独立步骤。
 :::
+
+---
+
+## 一阶惯性环节
+
+### 被控对象
+
+传递函数 `G(s) = K / (Ts + 1)`，最常见的工业过程模型：
+- **K（系统增益）**：输入信号的放大倍数，K 越大系统对输入越敏感
+- **T（时间常数）**：系统响应的惯性，T 越大响应越慢（如大质量物体、大容量水箱）
+
+### 典型应用
+
+温度控制、液位控制、电机调速 — 输出不会瞬间跟随输入变化，而是以指数方式渐近目标值。
+
+<ParamPlayground
+  title="一阶系统阶跃响应"
+  plantType="first-order"
+  code={`
+# PID + 一阶惯性环节
+dt = 0.01
+t = [i * dt for i in range(500)]
+setpoint = 1.0
+y = [0.0] * len(t)
+e_sum = 0
+e_prev = 0
+
+for i in range(1, len(t)):
+    e = setpoint - y[i-1]
+    e_sum += e * dt
+    e_dot = (e - e_prev) / dt
+    u = kp * e + ki * e_sum + kd * e_dot
+    y[i] = y[i-1] + (K * u - y[i-1]) / T * dt
+    e_prev = e
+
+_chart_x = t
+_chart_y = y
+print(f"稳态误差: {abs(setpoint - y[-1]):.4f}")
+print(f"超调量: {max(0, (max(y) - setpoint) / setpoint * 100):.1f}%")
+`}
+  controls={[
+    { id: 'kp', label: 'Kp (比例增益)', min: 0.1, max: 8, step: 0.1, default: 2.0, group: 'PID 控制器' },
+    { id: 'ki', label: 'Ki (积分增益)', min: 0, max: 3, step: 0.05, default: 0.8, group: 'PID 控制器' },
+    { id: 'kd', label: 'Kd (微分增益)', min: 0, max: 3, step: 0.05, default: 0.5, group: 'PID 控制器' },
+    { id: 'K', label: 'K (系统增益)', min: 0.2, max: 3, step: 0.1, default: 1.0, group: '被控对象' },
+    { id: 'T', label: 'T (时间常数 s)', min: 0.1, max: 5, step: 0.1, default: 1.0, group: '被控对象' },
+  ]}
+  chart={{ xLabel: '时间 (s)', yLabel: '输出', title: '阶跃响应' }}
+/>
+
+---
+
+## 二阶系统
+
+### 被控对象
+
+传递函数 `G(s) = ωn² / (s² + 2ζωn·s + ωn²)`，控制理论中最经典的模型：
+- **ωn（自然频率）**：系统固有振荡频率，ωn 越大响应越快
+- **ζ（阻尼比）**：决定系统是否有振荡 — ζ < 1 欠阻尼（振荡），ζ = 1 临界阻尼，ζ > 1 过阻尼（迟钝）
+
+### 典型应用
+
+弹簧-质量-阻尼器、RLC 电路、机械臂关节 — 输出可能出现振荡，阻尼比是决定系统行为的关键参数。
+
+<ParamPlayground
+  title="二阶系统阶跃响应"
+  plantType="second-order"
+  code={`
+# PID + 二阶系统: G(s) = wn^2 / (s^2 + 2*zeta*wn*s + wn^2)
+# 状态空间: x1' = x2, x2' = -wn^2*x1 - 2*zeta*wn*x2 + wn^2*u
+dt = 0.01
+t = [i * dt for i in range(500)]
+setpoint = 1.0
+x1 = 0.0  # 输出
+x2 = 0.0  # 输出变化率
+e_sum = 0
+e_prev = 0
+
+for i in range(1, len(t)):
+    e = setpoint - x1
+    e_sum += e * dt
+    e_dot = (e - e_prev) / dt
+    u = kp * e + ki * e_sum + kd * e_dot
+    # 二阶系统状态方程
+    dx1 = x2
+    dx2 = -wn**2 * x1 - 2 * zeta * wn * x2 + wn**2 * u
+    x1 += dx1 * dt
+    x2 += dx2 * dt
+    e_prev = e
+
+y = [0.0] * len(t)
+# 重跑一次记录 y 序列
+x1 = 0.0
+x2 = 0.0
+e_sum = 0
+e_prev = 0
+for i in range(1, len(t)):
+    e = setpoint - x1
+    e_sum += e * dt
+    e_dot = (e - e_prev) / dt
+    u = kp * e + ki * e_sum + kd * e_dot
+    dx1 = x2
+    dx2 = -wn**2 * x1 - 2 * zeta * wn * x2 + wn**2 * u
+    x1 += dx1 * dt
+    x2 += dx2 * dt
+    y[i] = x1
+    e_prev = e
+
+_chart_x = t
+_chart_y = y
+print(f"稳态误差: {abs(setpoint - y[-1]):.4f}")
+print(f"超调量: {max(0, (max(y) - setpoint) / setpoint * 100):.1f}%")
+`}
+  controls={[
+    { id: 'kp', label: 'Kp (比例增益)', min: 0.1, max: 20, step: 0.1, default: 5.0, group: 'PID 控制器' },
+    { id: 'ki', label: 'Ki (积分增益)', min: 0, max: 10, step: 0.1, default: 2.0, group: 'PID 控制器' },
+    { id: 'kd', label: 'Kd (微分增益)', min: 0, max: 5, step: 0.1, default: 1.0, group: 'PID 控制器' },
+    { id: 'wn', label: 'ωn (自然频率 rad/s)', min: 0.5, max: 10, step: 0.1, default: 3.0, group: '被控对象' },
+    { id: 'zeta', label: 'ζ (阻尼比)', min: 0.05, max: 2.0, step: 0.05, default: 0.3, group: '被控对象' },
+  ]}
+  chart={{ xLabel: '时间 (s)', yLabel: '输出', title: '阶跃响应' }}
+/>

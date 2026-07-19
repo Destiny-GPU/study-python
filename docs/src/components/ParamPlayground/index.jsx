@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { loadPyodide, setupCapture, getCapturedOutput } from '../PyodideRunner/loader';
 import useTheme from '../../hooks/useTheme';
+import BlockDiagram from './BlockDiagram';
 import styles from './styles.module.css';
 
 /**
@@ -185,6 +186,7 @@ export default function ParamPlayground({
   code,
   controls = [],
   chart = {},
+  plantType = 'first-order',
 }) {
   const [params, setParams] = useState(() => {
     const initial = {};
@@ -195,9 +197,19 @@ export default function ParamPlayground({
   const [output, setOutput] = useState('');
   const [error, setError] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isScrollable, setIsScrollable] = useState(false);
   const theme = useTheme();
   const pyodideRef = useRef(null);
   const runTimerRef = useRef(null);
+  const outputRef = useRef(null);
+
+  // Check if output is scrollable
+  useEffect(() => {
+    const el = outputRef.current;
+    if (el) {
+      setIsScrollable(el.scrollHeight > el.clientHeight);
+    }
+  }, [output, error]);
 
   const runCode = useCallback(async (currentParams) => {
     if (!code) return;
@@ -283,23 +295,30 @@ export default function ParamPlayground({
         {/* Controls panel */}
         <div className={styles.controlsPanel}>
           <div className={styles.controlsTitle}>参数调节</div>
-          {controls.map((ctrl) =>
-            ctrl.type === 'toggle' ? (
-              <ToggleControl
-                key={ctrl.id}
-                control={ctrl}
-                value={params[ctrl.id]}
-                onChange={(v) => handleParamChange(ctrl.id, v)}
-              />
-            ) : (
-              <SliderControl
-                key={ctrl.id}
-                control={ctrl}
-                value={params[ctrl.id]}
-                onChange={(v) => handleParamChange(ctrl.id, v)}
-              />
-            )
-          )}
+          {controls.map((ctrl, idx) => {
+            const showGroup = ctrl.group && (idx === 0 || controls[idx - 1].group !== ctrl.group);
+            return (
+              <React.Fragment key={ctrl.id}>
+                {showGroup && idx > 0 && <div className={styles.groupSeparator} />}
+                {showGroup && (
+                  <div className={styles.groupLabel}>{ctrl.group}</div>
+                )}
+                {ctrl.type === 'toggle' ? (
+                  <ToggleControl
+                    control={ctrl}
+                    value={params[ctrl.id]}
+                    onChange={(v) => handleParamChange(ctrl.id, v)}
+                  />
+                ) : (
+                  <SliderControl
+                    control={ctrl}
+                    value={params[ctrl.id]}
+                    onChange={(v) => handleParamChange(ctrl.id, v)}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
           <button
             className={styles.runBtn}
             onClick={() => runCode(params)}
@@ -325,10 +344,12 @@ export default function ParamPlayground({
             </div>
           )}
 
+          <BlockDiagram plantType={plantType} params={params} theme={theme} />
+
           {/* Output panel */}
           {(output || error) && (
-            <div className={`${styles.output} ${error ? styles.outputError : ''}`}>
-              <pre>{error || output}</pre>
+            <div className={`${styles.output} ${error ? styles.outputError : ''} ${isScrollable ? styles.outputScrollable : ''}`}>
+              <pre ref={outputRef}>{error || output}</pre>
             </div>
           )}
         </div>

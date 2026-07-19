@@ -118,11 +118,27 @@
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.875rem;
   line-height: 1.6;
+  position: relative;
 }
 
 .outputPanel.outputError {
   background: #1e1e2e;
   border-top: 3px solid var(--ifm-color-error);
+}
+
+.outputPanel.outputScrollable::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(transparent, #1e1e2e);
+  pointer-events: none;
+}
+
+[data-theme='light'] .outputPanel.outputScrollable::after {
+  background: linear-gradient(transparent, #f8f9fa);
 }
 
 .outputLabel {
@@ -159,6 +175,7 @@
   word-break: break-word;
   max-height: 300px;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* CodeMirror editor themes */

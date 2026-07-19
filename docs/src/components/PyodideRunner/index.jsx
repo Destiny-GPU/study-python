@@ -24,8 +24,10 @@ export default function PyodideRunner({ children, title }) {
   const [hasRun, setHasRun] = useState(false);
   const [error, setError] = useState(null);
   const [pythonLang, setPythonLang] = useState(null);
+  const [isScrollable, setIsScrollable] = useState(false);
   const theme = useTheme();
   const pyodideRef = useRef(null);
+  const outputRef = useRef(null);
 
   useEffect(() => {
     import('@codemirror/lang-python').then(mod => setPythonLang(() => mod.python));
@@ -77,6 +79,14 @@ export default function PyodideRunner({ children, title }) {
   }, [children]);
 
   const isBusy = isLoading || isRunning;
+
+  // Check if output is scrollable
+  useEffect(() => {
+    const el = outputRef.current;
+    if (el) {
+      setIsScrollable(el.scrollHeight > el.clientHeight);
+    }
+  }, [output, error]);
 
   return (
     <div className={styles.container}>
@@ -135,11 +145,11 @@ export default function PyodideRunner({ children, title }) {
       </div>
 
       {(output || error) && (
-        <div className={`${styles.outputPanel} ${error ? styles.outputError : ''}`}>
+        <div className={`${styles.outputPanel} ${error ? styles.outputError : ''} ${isScrollable ? styles.outputScrollable : ''}`}>
           <div className={styles.outputLabel}>
             {error ? 'Error' : 'Output'}
           </div>
-          <pre className={styles.outputContent}>
+          <pre ref={outputRef} className={styles.outputContent}>
             {error || output}
           </pre>
         </div>
