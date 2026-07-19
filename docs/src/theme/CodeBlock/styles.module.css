@@ -1,0 +1,25 @@
+.codeBlockWrapper {
+  position: relative;
+}
+
+.askButton {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--ifm-color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  z-index: 1;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.askButton:hover {
+  opacity: 1;
+  background: var(--ifm-color-primary-dark);
+}

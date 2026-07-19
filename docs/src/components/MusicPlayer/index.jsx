@@ -4,6 +4,18 @@ import styles from './styles.module.css';
 const API = 'https://api.jamendo.com/v3.0';
 const CLIENT_ID = 'f179259e';
 
+// 模块级单例 —— 跨页面导航保持播放状态
+let sharedAudio = null;
+let sharedTracks = [];
+let sharedIdx = 0;
+
+function getAudio() {
+  if (sharedAudio) return sharedAudio;
+  sharedAudio = new Audio();
+  sharedAudio.preload = 'metadata';
+  return sharedAudio;
+}
+
 function formatTime(seconds) {
   if (!seconds) return '0:00';
   const m = Math.floor(seconds / 60);
@@ -13,15 +25,17 @@ function formatTime(seconds) {
 
 export default function MusicPlayer() {
   const [open, setOpen] = useState(false);
-  const [tracks, setTracks] = useState([]);
-  const [idx, setIdx] = useState(0);
+  const [tracks, setTracks] = useState(sharedTracks);
+  const [idx, setIdx] = useState(sharedIdx);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const containerRef = useRef(null);
-  const audioRef = useRef(null);
+  const handlersRef = useRef(null);
 
+  // 获取曲目列表（仅首次加载）
   useEffect(() => {
+    if (sharedTracks.length > 0) return; // 已加载过则跳过
     const tags = ['chillout+relaxing', 'ambient', 'chillout', 'relaxing', ''];
     (async () => {
       for (const tag of tags) {
@@ -32,6 +46,7 @@ export default function MusicPlayer() {
           );
           const data = await res.json();
           if (data.results?.length) {
+            sharedTracks = data.results;
             setTracks(data.results);
             break;
           }
@@ -40,47 +55,61 @@ export default function MusicPlayer() {
     })();
   }, []);
 
+  // 初始化 Audio 事件监听（仅一次）
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const audio = new Audio();
-    audio.preload = 'metadata';
-    audioRef.current = audio;
+    const audio = getAudio();
 
-    const handlers = {
+    handlersRef.current = {
       timeupdate: () => setProgress(audio.currentTime),
       loadedmetadata: () => setDuration(audio.duration),
       ended: () => {
         setPlaying(false);
-        setIdx((i) => (i + 1) % (tracks.length || 1));
+        setIdx((i) => {
+          const next = (i + 1) % (sharedTracks.length || 1);
+          sharedIdx = next;
+          return next;
+        });
       },
       play: () => setPlaying(true),
       pause: () => setPlaying(false),
     };
 
-    Object.entries(handlers).forEach(([event, handler]) =>
+    // 同步当前播放状态
+    setPlaying(!audio.paused);
+    setProgress(audio.currentTime);
+    setDuration(audio.duration);
+
+    Object.entries(handlersRef.current).forEach(([event, handler]) =>
       audio.addEventListener(event, handler)
     );
 
     return () => {
-      Object.entries(handlers).forEach(([event, handler]) =>
-        audio.removeEventListener(event, handler)
-      );
-      audio.pause();
-      audio.src = '';
+      if (handlersRef.current) {
+        Object.entries(handlersRef.current).forEach(([event, handler]) =>
+          audio.removeEventListener(event, handler)
+        );
+      }
     };
-  }, [tracks.length]);
+  }, []);
 
+  // 切换曲目
   useEffect(() => {
-    const audio = audioRef.current;
+    const audio = getAudio();
     const track = tracks[idx];
     if (!audio || !track) return;
-    audio.src = track.audio;
-    audio.load();
-    setProgress(0);
-    setDuration(0);
+
+    // 只在曲目变化时才重新加载
+    if (audio.src !== track.audio) {
+      audio.src = track.audio;
+      audio.load();
+      setProgress(0);
+      setDuration(0);
+    }
     audio.play().catch(() => {});
+    sharedIdx = idx;
   }, [idx, tracks]);
 
+  // 点击外部关闭下拉
   useEffect(() => {
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -92,8 +121,7 @@ export default function MusicPlayer() {
   }, []);
 
   const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const audio = getAudio();
     audio.paused ? audio.play().catch(() => {}) : audio.pause();
   }, []);
 

@@ -38,6 +38,10 @@ const config = {
 
   titleDelimiter: ' · ',
 
+  plugins: [
+    [require.resolve('./src/plugins/docs-index-plugin.js'), {}],
+  ],
+
   onBrokenLinks: 'warn',
 
   // 即使不使用国际化，也可以用此字段设置 html lang
@@ -161,6 +165,7 @@ const config = {
           },
           {to: '/notes', label: '学习笔记', position: 'left'},
           {to: '/docs/about', label: '关于', position: 'left'},
+          {to: '/ai-chat', label: 'AI 助手', position: 'right'},
           {
             href: 'https://github.com/Destiny-GPU/study-python',
             label: 'GitHub',

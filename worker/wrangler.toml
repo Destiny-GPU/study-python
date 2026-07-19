@@ -1,0 +1,7 @@
+name = "study-python-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+DOCS_INDEX_URL = "https://study-python-zj.pages.dev/docs-content.json"
+MODEL = "THUDM/GLM-Z1-9B-0414"
